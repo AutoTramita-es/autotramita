@@ -275,6 +275,13 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Preserve original completion evidence and timestamps, official revocation notice, post-closure review findings, approvals, resulting actions and immutable audit history.
 - Do not automatically declare the completed procedure legally void or perform corrective filings; any remedy must follow approved procedure-specific legal and authorization controls.
 
+## Controlled authorization of post-closure corrective actions (Step 73 — approved A)
+- An authorized employee may prepare a proposed post-closure correction, supporting documents and rationale, but cannot independently execute the proposed corrective filing or action.
+- A properly scoped Tenant OWNER/ADMIN or MANAGER must review and explicitly approve the proposed corrective action before execution; record approver, scope, decision, evidence and timestamps.
+- Supervisor approval does not confer legal authority to represent a client or file with a competent body. If the procedure requires a duly authorized Gestor Administrativo or other legally empowered representative, only such an authorized actor may submit or execute it, subject to verified mandate and applicable legal requirements.
+- If legal permissibility, required credentials, representation or consequences are uncertain, refer to LEGAL_REVIEW_REQUIRED and do not execute legally dependent steps until resolved.
+- Preserve original case closure and completion evidence, correction proposal, approvals, execution identity, submission proof, outcomes and immutable audit history. No automatic filings or silent alteration of the completed-case record.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -387,3 +394,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 102. Confirmed receipt revocation affecting a completed case creates a distinct POST_CLOSURE_REVIEW_REQUIRED review without rewriting the original closure status.
 103. Authorized supervisors assess consequences, escalating legal ambiguity centrally, with original completion and subsequent review actions independently audited.
 104. Revocation does not automatically void a completed proceeding or authorize corrective filings.
+105. Employees can propose post-closure corrections but execution requires prior approval by an appropriately scoped OWNER/ADMIN/MANAGER.
+106. Approval does not replace legally required Gestor Administrativo or other representative authorization; unresolved legal questions block dependent actions.
+107. Original closure, correction approval, legal authority, filing evidence and outcomes remain independently auditable.
