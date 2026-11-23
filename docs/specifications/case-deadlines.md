@@ -440,6 +440,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Distinguish internal work prioritization from statutory due dates; priority adjustments do not extend deadlines, imply a filing was made, or override legal review blocks.
 - Maintain full audit history of priority changes, computed inputs and manual overrides under Tenant access controls. Architecture only; no implementation or deployment authorized.
 
+## Dedicated critical-case backoffice queue (Step 92 — approved A)
+- Surface all active cases with effective CRITICAL priority in a dedicated, supervisor-visible backoffice queue regardless of their current operator assignment; enforce platform-role access and Tenant isolation.
+- Immediately notify authorized backoffice supervisors when a case enters CRITICAL, including the reason, applicable deadline, current assignee, blocking conditions and a secure case link.
+- Permit a supervisor to reassign a critical case to an eligible available operator with an auditable reason; reassignment does not change legal deadlines, suppress alerts, or bypass filing/legal-review blocks.
+- If no eligible operator is available, retain the case in the critical queue as unresolved and continue repeated, deduplicated escalation until an authorized response or resolution is recorded.
+- Remove a case from the critical queue only when its effective priority legitimately falls below CRITICAL due to verified change in underlying risk, not merely because someone acknowledged an alert or reassigned the case.
+- Record queue entry/exit, risk basis, alerts, acknowledgement, escalation, assignment changes and timestamps in immutable audit history. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
