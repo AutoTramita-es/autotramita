@@ -1280,6 +1280,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - The detailed invoice schema, applicable Spanish VAT rules, mandatory corrective invoice content, numbering/series and any electronic invoicing or anti-fraud requirements must be verified and specified separately before implementation; this step is a workflow decision, not a legal-compliance certification.
 - Architecture only; no implementation or deployment authorized.
 
+## Administrator-approved manual bank refunds with execution evidence (Step 191 — approved A)
+- Allow only an authorized AutoTramita platform administrator to approve a customer refund, with linked Tenant, invoice/corrective invoice or dispute, approved amount and currency, reason, beneficiary and approval timestamp.
+- Execute the actual bank transfer outside AutoTramita in phase 1; the platform must not initiate payments or connect to banking APIs. An approved refund remains APPROVED_PENDING_EXECUTION until an authorized administrator records independently verifiable execution evidence.
+- Record actual refund transfer date, executed amount, currency, bank reference, beneficiary confirmation and supporting proof, with immutable actor/timestamp audit history. Distinguish requested, approved, executed, partially executed where applicable, rejected and cancelled states, preventing duplicate recording and over-refunding.
+- Show the Tenant a permission-scoped status and confirmed executed amount in the authenticated financial portal, without disclosing internal bank credentials or unrelated payment details. Notify the Tenant of material approval/execution status changes.
+- Link any legally required corrective invoice, receivable adjustment and accounting treatment to the refund without double-counting. Do not treat refund approval as a completed payment, and do not silently edit an issued invoice or misstate the outstanding balance.
+- Retain evidence and administrative decisions, support reconciliation against actual bank records, and make no automatic refunds, payment initiation or external provider integration. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
