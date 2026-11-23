@@ -1094,6 +1094,13 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Reaffirm Step 167: no automatic volume-tier or other automatically activated discounts. Global and Tenant-specific sales price catalogs (Steps 164–165) remain distinct from manual discount grants.
 - Architecture only; no implementation or deployment authorized.
 
+## No minimum-margin guard on manual discounts (Step 169 — approved B)
+- Authorized AutoTramita platform administrators may manually grant a discount without a minimum permitted selling price or minimum expected contribution-margin condition.
+- The manual discount workflow must not present a special minimum-margin warning, require an additional justification specifically because of projected low or negative margin, or block approval based on expected profitability. The ordinary audit reason and administrator-only authorization established in Steps 167–168 still apply.
+- Existing internal profitability analytics and management alerts (Steps 145–162), including retrospective NEGATIVE_MARGIN and LOW_MARGIN indicators, remain in force and separate from discount approval. They must not operate as discount approval gates.
+- No automatic discount application, no silent retroactive changes to agreed case prices or issued invoices, and no automatic invoicing.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
