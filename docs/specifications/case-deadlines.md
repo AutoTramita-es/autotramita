@@ -322,6 +322,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Uploading a document does not mean that Tramisur has received, accepted or officially filed it. Provider receipt/acceptance and workflow transitions require independently recorded evidence.
 - Maintain applicable deadline alerts, legal authorization controls and Tenant/branch isolation throughout; no automated Tramisur integration in Phase 1.
 
+## Phase 1 two-stage document completeness approval (Step 78 — approved A)
+- The Tenant/dealership collects required case documents and explicitly marks the case as submitted for AutoTramita backoffice completeness review; this Tenant assertion does not itself establish readiness for Tramisur.
+- An authorized AutoTramita backoffice operator independently checks the documents against the centrally approved, procedure-specific checklist and records findings.
+- If items are missing, inconsistent or unusable, return the case to the appropriate Tenant/branch with actionable reasons and a request for correction or supplementary evidence; maintain document versions and audit history.
+- Only after backoffice approval may the case enter READY_FOR_TRAMISUR and be eligible for the controlled manual Tramisur handoff. Enforce this gate server-side.
+- Record Tenant submitter, reviewing backoffice actor, timestamps, checklist version, decision, reasons and supporting evidence. Backoffice approval establishes internal document readiness, not official acceptance by Tramisur or a competent authority.
+- Continue to enforce independent legal representation, statutory deadline and document authenticity safeguards; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
