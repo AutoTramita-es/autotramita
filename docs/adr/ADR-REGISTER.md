@@ -10,6 +10,7 @@
 | [ADR-006](ADR-006-service-catalog-case-workflows.md) | Configurable service catalog and case workflows | Accepted | 2026-11-23 |
 | [ADR-007](ADR-007-pricing-credit-payments.md) | Unified pricing, dealership credit and central payment collection | Accepted | 2026-11-23 |
 | [ADR-008](ADR-008-delivery-governance.md) | Architecture-first, module-by-module delivery with Claude Code | Accepted | 2026-11-23 |
+| [ADR-009](ADR-009-tenant-organization-membership-verification.md) | Tenant organization, memberships and verification | Accepted | 2026-11-23 |
 
 ## Conventions
 - `Accepted` means the documented core decision has been approved. Items explicitly marked **Open decisions** remain unresolved and must not be treated as implementation instructions.
