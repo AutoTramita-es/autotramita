@@ -1247,6 +1247,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Apply Tenant isolation, authorized access, anti-spam/abuse safeguards and an auditable process for handling repeated reopenings; do not automatically reject a legitimate reopened complaint solely because it was previously resolved.
 - Architecture only; no implementation or deployment authorized.
 
+## Central administrator dashboard for invoice disputes (Step 187 — approved A)
+- Provide a central, permission-restricted AutoTramita platform administrator dashboard covering invoice disputes across all Tenants, without requiring navigation into each Tenant account.
+- Display per-dispute Tenant, invoice reference, status, responsible administrator, submission and latest reopening dates, first substantive response deadline and status (Step 184), target final resolution deadline and status (Step 185), overdue flags, and last meaningful activity.
+- Support filtering and sorting by Tenant, date or date range, dispute status, responsible administrator, due/overdue state and reopened disputes. Allow direct authorized navigation to the linked dispute detail, messages, evidence and audit history.
+- Provide aggregate counts of open, awaiting information, overdue-first-response, overdue-resolution and reopened disputes, using consistent time calculations and retaining historical SLA cycles under Step 186 without double-counting a dispute as separate active cases.
+- Enforce administrator-only cross-Tenant access, role-based authorization, audit access to sensitive financial data, and preserve Tenant isolation for customer-facing interfaces. Dashboard does not authorize invoice modification, payment adjustments, suspension or dispute closure by itself.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
