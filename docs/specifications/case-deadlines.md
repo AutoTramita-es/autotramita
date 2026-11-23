@@ -70,9 +70,17 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Audit the reviewer, determination, status transition, deadline changes, notification events and any subsequent permissions changes. Notification delivery failure does not block the recorded review resolution.
 - Do not describe a deadline as confirmed until the authorized review is complete.
 
+## Official Spanish calendars and business-day computation (Step 47 — approved A)
+- Distinguish calendar days (días naturales) from legally applicable business days (días hábiles) for each procedure and deadline rule.
+- Use verified official Spanish national, autonomous-community and local holiday/non-working-day calendars where relevant to the competent authority and procedure.
+- Apply approved procedure-specific rules for the triggering event, start of counting, included/excluded days, deadline end, and any extension when the final day is non-working. Do not assume that every deadline uses the same counting convention.
+- Preserve the legal rule version, official calendar source/version, relevant jurisdiction and calculation inputs/outputs for audit and reproducibility.
+- If a required authoritative calendar or applicable jurisdiction cannot be established reliably, mark the deadline provisional and route for review rather than presenting it as legally confirmed.
+- Calendar updates must be versioned and assessed under controlled rule applicability; no silent bulk changes to existing confirmed case deadlines.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
-- Rule provenance, versioning, calendar and holiday calculations.
+- Authoritative calendar ingestion, source verification, update cadence and jurisdiction mapping.
 - Operational workflow and service-level targets for central legal review.
 - Priority levels, defaults, and due-date recalculation.
 - Alert deduplication, delivery failure, and audit details.
@@ -104,3 +112,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 24. Authorized review resolution updates case review status and any applicable confirmed statutory deadline.
 25. Responsible staff and authorized supervisors receive in-app and email notifications of resolution, including prior/new deadline, legal basis and reason when changed.
 26. Previously blocked actions are re-evaluated but never automatically executed, and review resolution is audited.
+27. Deadline calculations distinguish días naturales from días hábiles and apply the relevant verified official national, regional and local calendars.
+28. Calculation honors procedure-specific counting and final-day extension rules, with rule and calendar provenance retained.
+29. Missing or unverified applicable calendar data prevents a deadline from being presented as legally confirmed.
