@@ -903,6 +903,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Distinguish this internal management cost rate from an employee's wage, payroll entitlement, billable client rate or legally mandated payroll accounting.
 - Changes to rates do not modify statutory deadlines, case status, SLA measurements or customer pricing. Architecture only; no implementation or deployment authorized.
 
+## Fully loaded internal operator labor cost rate (Step 147 — approved A)
+- Define each operator-specific internal hourly cost rate from Step 146 as the estimated fully loaded cost of that operator to AutoTramita, not merely net pay or a base salary figure.
+- An authorized Backoffice administrator may incorporate gross salary/employer payroll cost, employer-borne social contributions and reasonably attributable employment-related labor costs when determining the final EUR/hour internal rate.
+- For case labor-cost calculations under Step 145, use one approved final effective-dated hourly EUR rate per operator and work interval; do not require payroll components or salary details to be entered into or calculated by the case-management system.
+- Preserve rate versioning, effective dates, administrative changes and historical cost reproducibility; rate calculations are internal management estimates, not payroll accounting, statutory wage determinations or client-facing fees.
+- Restrict access to the confidential rate and derived individual cost figures to appropriately authorized management. Do not expose them to Tenants, customers or unrelated operators.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
