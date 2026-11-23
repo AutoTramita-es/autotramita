@@ -568,6 +568,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Enforce Tenant/branch scope, notification deduplication and existing message visibility boundaries. These are internal customer-service response targets, not statutory deadlines, official filing promises or legal time extensions; statutory alerts and critical-case escalations remain independent.
 - Architecture only; no implementation or deployment authorized.
 
+## Automatic Tenant message priority classification (Step 107 — approved A)
+- Assign an initial message priority (CRITICAL, HIGH, NORMAL or LOW) from verified case statutory risk, case priority, the type of requested action and relevant message context; preserve message priority separately from case priority.
+- Messages requiring action on a case with verified imminent statutory deadline risk receive suitably elevated priority and the Step 106 response target; classification must never reduce independent case-level legal alerts or deadline controls.
+- Tenant text claiming urgency may flag the message for human review, but does not by itself establish or modify a verified statutory deadline, legal risk classification, or filing status.
+- Authorized Backoffice supervisors may increase message priority with a recorded reason, actor and timestamp; do not permit a manual override to suppress the verified legal-risk minimum.
+- Recalculate applicable response targets consistently when priority is legitimately raised, without silently resetting elapsed waiting time, masking an existing breach or implying a statutory deadline extension.
+- Log classification basis, relevant inputs, changes and notifications; enforce Tenant/branch access and avoid exposing internal risk rules or other Tenants' information.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
