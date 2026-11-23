@@ -845,6 +845,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Preserve original submission timestamp and overdue history through assignment changes; no silent SLA reset. This administrative target is separate from case statutory deadlines, critical escalations and case status.
 - Architecture only; no implementation or deployment authorized.
 
+## Escalation of overdue time corrections to Backoffice administrator (Step 140 — approved A)
+- If a time correction request remains undecided for one additional Backoffice working day after the two-working-day decision target in Step 139, automatically alert an appropriately authorized Backoffice administrator.
+- The administrator may explicitly take ownership of the pending request and approve or reject it, subject to server-side authority and separation-of-duties checks; the escalation itself never grants a decision to an otherwise unauthorized actor.
+- Preserve the original supervisor assignment, submission timestamp, original due time, overdue interval, administrator alert, any reassignment or takeover, and final decision with actor, reason and timestamps in the immutable audit history.
+- Do not automatically approve or reject an overdue request, silently reset its elapsed SLA, or count unconfirmed work time in confirmed aggregates before explicit authorized approval.
+- Escalation and correction decisions do not affect statutory deadlines, case workflow status or independent CRITICAL alerts.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
