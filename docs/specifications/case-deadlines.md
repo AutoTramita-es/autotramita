@@ -756,6 +756,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Analytics support human oversight and service improvement only: no automated employment, compensation, sanction or performance decisions. No changes to statutory deadlines or case legal outcomes.
 - Architecture only; no implementation or deployment authorized.
 
+## Personal Backoffice operator performance dashboard (Step 129 — approved A)
+- Give each active authorized Backoffice operator a private personal dashboard showing their own processed and completed case counts, comparable average handling duration, internal service-target adherence rate, voluntary service ratings associated with their assigned cases, and month-by-month trends.
+- Enforce server-side per-user scoping: operators may see only their own metrics, not other operators' individual statistics. Authorized Backoffice supervisors retain access to team and operator analytics under Step 128.
+- Distinguish actual operator-controlled handling time from Tenant-document and Tramisur/provider waiting periods, and contextualize metrics by case type, complexity, statutory urgency, assignment/reassignment and sample size.
+- Ratings associated with an operator's cases are not automatically attributable to that operator's conduct; avoid presenting complaints or voluntary feedback as verified individual fault or a definitive performance score.
+- Keep the dashboard internal, privacy-conscious, auditable and informational only; do not trigger automated employment decisions or change case outcomes, statutory deadlines or quality-review workflows.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
