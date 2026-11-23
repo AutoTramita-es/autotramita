@@ -20,7 +20,8 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 ## Branch selection and access
 - At any time a user workspace has exactly one selected ACTIVE TenantBranch within the active Tenant.
 - Remember the last selected branch separately for each User and Tenant; only reuse it if the branch is still ACTIVE and accessible.
-- If the remembered branch is inactive or access is lost, prompt for another accessible ACTIVE branch (or select the sole eligible branch automatically).
+- If the remembered branch is inactive or access is lost, apply the first-access branch selection rules below.
+- On first access (or when a remembered branch is unavailable), select the Tenant's ACTIVE primary branch automatically if the User is authorized for it; otherwise select the sole other eligible ACTIVE branch automatically; if multiple eligible branches remain, prompt the User to choose; if none, do not enter a branch workspace.
 - OWNER and ADMIN can select any ACTIVE branch of their Tenant; MANAGER and EMPLOYEE may select only explicitly assigned ACTIVE branches.
 - VIEWER branch selection follows explicit branch assignment and read-only privileges; no case-processing privileges.
 - A branch switch does not require reauthentication, but must revalidate membership, role, branch status, and assignment.
@@ -38,8 +39,9 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 8. OWNER/ADMIN can select any ACTIVE branch; MANAGER/EMPLOYEE only assigned ACTIVE branches.
 9. Switching Tenant or branch revalidates authorization server-side.
 10. A User without any eligible branch cannot process cases.
+11. On first access, an accessible ACTIVE primary branch is selected automatically.
+12. Without access to the primary branch, the only eligible ACTIVE branch is selected automatically; multiple eligible branches require user choice.
 
 ## Open design questions
-- When a user has multiple eligible branches but no remembered branch, should the system select the primary branch (if accessible) or require an explicit choice?
 - How long should an invitation remain valid, and how are invitations resent?
 - How should concurrent browser sessions maintain separate active workspace context?
