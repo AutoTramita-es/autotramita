@@ -205,6 +205,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Route unreadable, incomplete, contradictory, unverifiable or failed documents for authorized manual review; do not automatically dismiss statutory deadline alerts based on unverified extracted data.
 - Preserve the original uploaded document, extracted values, verification evidence, manual corrections, reviewers, and full audit history, with Tenant/branch access control and appropriate handling of sensitive case information.
 
+## Retry official CSV receipt verification on service unavailability (Step 64 — approved A)
+- If an official CSV (Código Seguro de Verificación) validation service is temporarily unavailable, retain the receipt's PENDING_REVIEW status and explicitly distinguish service unavailability from a failed authenticity check.
+- Automatically retry validation with bounded, progressively increasing delays and source-appropriate rate limits; log each attempt, timestamp, result and error without exposing sensitive tokens or receipt data in operational logs.
+- Permit case work independent of receipt authenticity verification to continue; do not represent the document as VERIFIED or use unverified extraction alone to dismiss statutory deadline alerts.
+- If a statutory deadline is near or uncertain, trigger the existing urgent deadline-risk notification and legal-review safeguards as applicable.
+- After persistent service unavailability, notify authorized users and route to manual review while retaining scheduled retries when appropriate; manual review must document evidence and cannot claim an unavailable official check succeeded.
+- When the service recovers, store the official verification result and evidence; any closure of an overrun review remains subject to authorized supervisory approval and audit.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -290,3 +298,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 75. Supported filing-receipt PDFs/images undergo attempted automatic extraction of filing timestamp, registration number and authority, with uncertainty recorded.
 76. When an official CSV or other supported validation mechanism exists, authenticity is checked separately from text extraction; statuses are VERIFIED, PENDING_REVIEW and VERIFICATION_FAILED.
 77. Failed or uncertain extraction/authenticity requires manual review, and no deadline alert is automatically cleared solely from OCR output.
+78. Temporary unavailability of official CSV verification retains PENDING_REVIEW and triggers controlled automatic retries with auditable attempts.
+79. Service unavailability is not treated as failed authenticity; independent case work may continue, but the receipt cannot be represented as verified.
+80. Persistent failures trigger authorized manual review and deadline-risk alerts when relevant, without automatically clearing deadline warnings.
