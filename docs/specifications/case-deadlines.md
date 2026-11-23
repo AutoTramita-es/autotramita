@@ -1305,6 +1305,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - The response SLA does not constitute a deadline for approval, banking execution or completion of the refund. Refund authorization and proof-based manual bank execution remain governed by Step 191, with Tenant-facing approved and executed statuses distinguished.
 - Preserve Tenant isolation, administrator-only financial approval, evidence history and all communication records. Architecture only; no implementation or deployment authorized.
 
+## Target decision SLA for Tenant refund requests (Step 194 — approved A)
+- Set an internal target for an authorized AutoTramita platform administrator to approve or reject each Tenant refund request under Step 192 within ten Backoffice working days of its submission, alongside the separate three-working-day first substantive response SLA under Step 193.
+- Calculate the decision target using the configured Backoffice working calendar and timezone; retain request receipt, decision due, actual decision, actor, rationale and breach timestamps in immutable audit history. This is an internal service target, not a representation of any applicable statutory refund deadline.
+- When the target expires without a reasoned administrator approval or rejection, create an auditable internal overdue alert and keep the request open until a real decision is recorded. Acknowledgement, initial response, staff recommendation or document request does not constitute the final decision.
+- If additional documents, bank reconciliation or other checks are needed, permit the request to remain open with recorded reason, next action and owner, without silently resetting or erasing the original decision deadline or breach history.
+- The decision SLA is distinct from actual bank-transfer execution and completion. An approved request remains pending execution until bank evidence is recorded under Step 191, and the Tenant portal must distinguish approval from funds actually returned.
+- Preserve administrator-only authorization, Tenant isolation, auditability and existing invoice correction controls. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
