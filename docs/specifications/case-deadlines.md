@@ -1172,6 +1172,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Reminders are informational payment communications, not legal enforcement notices, automatic debt collection, automatic bank reconciliation, or permission to suspend Tenant access. Those matters require separate decisions and applicable legal review.
 - Architecture only; no implementation or deployment authorized.
 
+## Administrator escalation for invoices 15 days overdue (Step 178 — approved A)
+- If an issued Tenant invoice still has a positive unpaid balance 15 calendar days after its contractual due date, automatically create an internal alert for an authorized AutoTramita administrator, using the invoice due-date timezone and manually reconciled payments from Step 176.
+- Include Tenant, invoice reference, due date, overdue duration, confirmed payments, outstanding balance, and prior reminder history (Step 177). Prevent duplicate alerts for the same threshold while preserving audit and administrator visibility.
+- The administrator alone decides on any follow-up: contacting the Tenant, negotiating an extension, or pursuing a separately authorized and legally compliant recovery measure. Record decisions, contacts, dates and supporting notes.
+- Never automatically suspend the Tenant, prevent new case submission, stop processing existing cases, block access, alter legal deadlines or interfere with Tramisur handoff merely because an invoice is overdue. Automatic blocking proposed as Step 178 option B is rejected.
+- If the invoice becomes fully paid before the threshold, do not generate the alert; after full payment, mark any outstanding alert resolved with history retained. Handle partial payments by alerting only on the remaining balance.
+- This is a management notification, not a formal legal demand or debt enforcement step. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
