@@ -837,6 +837,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Restrict individual employee time records to legitimate supervisory access, maintain privacy safeguards, and do not modify case status, legal deadlines, internal SLA history or critical escalations through an approval.
 - Architecture only; no implementation or deployment authorized.
 
+## Two-working-day supervisor decision target for time corrections (Step 139 — approved A)
+- Every submitted unconfirmed-work-time correction request under Steps 137–138 has an internal decision target of two Backoffice working days from submission, calculated using the approved Backoffice working calendar and relevant time zone.
+- An authorized Backoffice supervisor must explicitly approve or reject within that target; record decision actor, time, reason and original deadline for audit.
+- If the decision target expires while still pending, mark the request OVERDUE as an overdue indicator (not an approval decision), notify/remind the responsible authorized supervisor and retain it in the central review queue until explicitly resolved.
+- No automatic approval or rejection occurs on expiry. Pending or overdue unconfirmed intervals remain excluded from official confirmed active-work aggregates until an authorized approval.
+- Preserve original submission timestamp and overdue history through assignment changes; no silent SLA reset. This administrative target is separate from case statutory deadlines, critical escalations and case status.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
