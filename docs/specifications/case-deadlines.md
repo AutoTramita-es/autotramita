@@ -314,6 +314,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Tenant users see permitted case progress and actionable document requests but not confidential internal backoffice notes or another Tenant's information.
 - Audit every status transition with actor, timestamp, source/reason, and supporting evidence. No Tramisur API or automated status synchronization in Phase 1.
 
+## Phase 1 additional documents through Tenant portal (Step 77 — approved A)
+- When Tramisur requests supplementary documentation, an authorized AutoTramita backoffice operator records the provider's request, required document types, instructions and relevant dates on the existing case, setting ADDITIONAL_DOCUMENTS_REQUIRED.
+- Notify authorized users of the relevant Tenant/branch in-app and by email, disclosing only information appropriate for that Tenant; allow them to upload requested supplementary documents directly into the existing case.
+- Preserve the originals and all replacement or supplementary document versions, upload actor, timestamps, request-to-document association and audit history; never silently overwrite previous evidence.
+- Backoffice reviews the new documents for completeness and suitability, records review outcomes, and manually transmits the approved supplement to Tramisur through the agreed secure channel, recording the handoff manifest, recipient, operator and timestamp.
+- Uploading a document does not mean that Tramisur has received, accepted or officially filed it. Provider receipt/acceptance and workflow transitions require independently recorded evidence.
+- Maintain applicable deadline alerts, legal authorization controls and Tenant/branch isolation throughout; no automated Tramisur integration in Phase 1.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
