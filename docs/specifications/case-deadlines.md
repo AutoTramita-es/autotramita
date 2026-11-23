@@ -706,6 +706,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - When a verified provider response is recorded and the review leaves WAITING_FOR_PROVIDER, update the Tenant-visible status from actual workflow events and apply established significant-event notification rules.
 - Enforce Tenant/branch/case authorization, audit all status transitions, and avoid cross-Tenant disclosures. Architecture only; no implementation or deployment authorized.
 
+## Tenant notification after Backoffice review of Tramisur response (Step 123 — approved A)
+- In phase one, Backoffice manually records Tramisur's actual response through the agreed secure channel, including receipt time, responsible operator, source/evidence reference and review outcome; no automated Tramisur integration or implied provider confirmation.
+- Notify authorized Tenant users via in-app and email only after Backoffice has verified and recorded a provider response that materially changes the Tenant-visible error-review status or requires a specific Tenant action or document.
+- Do not send a Tenant notification for purely internal provider correspondence, repetitive acknowledgements or responses with no externally meaningful effect. Keep the portal's permitted status accurate and evidence-based.
+- Never forward private Tramisur correspondence, individual provider contacts, internal Backoffice notes or unapproved evidence to the Tenant; compose a concise approved Tenant-facing explanation and actionable request when relevant.
+- Deduplicate notification attempts, preserve audit records of the source response, verification, decision to notify, recipients and delivery, and enforce Tenant/branch/case authorization.
+- Statutory deadlines, CRITICAL escalations and mandatory legal alerts remain independent and may not be delayed by routine provider-message review. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
