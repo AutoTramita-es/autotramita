@@ -559,6 +559,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Preserve message-to-case linkage, sender and responder identities, delivery/read state and timestamps, including assignment changes. Enforce Tenant/branch access and strict separation from internal Backoffice notes and private Tramisur communications.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant message response service targets (Step 106 — approved A)
+- Track an internal first-substantive-response target for each actionable Tenant-to-Backoffice case message according to message priority: CRITICAL within 30 working minutes, HIGH within 2 working hours, NORMAL within 8 working hours, and LOW within 24 working hours.
+- Measure elapsed time against the approved Backoffice working schedule, calendar and time zone; begin at receipt, count only working time, and calculate the due time deterministically even for messages received outside working hours.
+- Record receipt timestamp, message priority and rationale, responsible Backoffice assignee, response deadline, first qualifying response timestamp, any supervisor escalation and immutable audit history.
+- A meaningful authorized Backoffice reply addressing the message or explicitly requesting necessary clarification qualifies as a response; automated acknowledgements, read receipts and internal notes alone do not satisfy the response target.
+- When the response target is breached, alert the authorized Backoffice supervisor and retain the outstanding message in the monitored queue until handled. Absence or reassignment does not silently reset or erase elapsed time or the breach.
+- Enforce Tenant/branch scope, notification deduplication and existing message visibility boundaries. These are internal customer-service response targets, not statutory deadlines, official filing promises or legal time extensions; statutory alerts and critical-case escalations remain independent.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
