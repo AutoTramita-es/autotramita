@@ -1189,6 +1189,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - The administrator may grant extensions even if the invoice is already overdue; existing escalation history remains auditable. Payment status continues to derive solely from confirmed manual bank allocations under Step 176.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant portal financial overview (Step 180 — approved A)
+- Provide an authenticated Tenant-scoped financial overview in the AutoTramita customer portal, with issued invoices, confirmed manually allocated payments, outstanding balances, overdue amounts, and any administrator-approved payment due-date extensions.
+- Show summary figures for total issued charges, total confirmed payments, outstanding receivables and overdue receivables for the selected period, with clear distinction between fully paid, partially paid, unpaid and overdue invoices.
+- Allow authorized Tenant users to filter invoice records by billing period and payment status, inspect due dates (including current approved extension), and download their own issued invoice PDFs from the secure archive established in Step 175.
+- Use only issued invoices and manually confirmed bank payment allocations from Step 176; do not display draft invoices as debts or unverified customer-reported payments as received. Prevent double counting of partial payments, adjustments and the same invoice across summaries.
+- Enforce strict Tenant isolation and explicit billing permissions within the Tenant; do not reveal other Tenants' invoices, internal Backoffice labor costs, provider contract fees, internal contribution margins or unrelated branches' confidential information.
+- Record financial data timestamps and explain that payment status is based on administrator-confirmed bank receipts rather than live bank integration. Preserve historical invoices and audit events; due-date extensions follow Step 179.
+- This is a read-only financial overview, not online payment initiation, accounting ledger integration, automatic collections or authorization to change prices. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
