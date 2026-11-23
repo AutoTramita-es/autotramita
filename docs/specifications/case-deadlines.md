@@ -534,6 +534,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Keep internal Backoffice work notes, supervisory escalations, private Tramisur correspondence, sensitive legal-review details and other Tenants' information out of Tenant-facing events. Enforce existing Tenant/branch permissions and audit event provenance.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant notifications for significant case milestones (Step 103 — approved A)
+- Send authorized Tenant users in-app and email notifications for meaningful, verified case milestones: Backoffice approval of required documentation, actual manual handoff to Tramisur, provider processing confirmed from reliable Backoffice-recorded evidence, and confirmed procedure completion.
+- Notify authorized Tenant users whenever supplementary documents or another Tenant action are required, with a secure case link and actionable description.
+- Do not generate a separate email for every minor internal state change or timeline event; show such Tenant-visible changes on the case timeline without unnecessary message volume.
+- Trigger notifications only after the corresponding milestone is durably recorded and supported; in phase one do not imply an automated Tramisur integration, filing, or completion that has not been confirmed.
+- Deduplicate retries and repeated events, retain notification delivery attempts and history, and enforce Tenant/branch access and privacy controls; never expose internal Backoffice notes or private provider correspondence.
+- Statutory deadline alerts, CRITICAL risk escalation and mandatory legal notifications remain independent and must not be suppressed by milestone-notification preferences.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
