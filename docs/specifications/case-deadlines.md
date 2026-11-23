@@ -165,6 +165,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Keep legally authority-dependent actions blocked server-side during unresolved review while allowing independent work; do not automatically execute blocked actions upon resolution.
 - Audit reminder and escalation schedules, attempted deliveries, recipients, and review completion. If the assigned employee is unavailable, use the existing reassignment safeguards rather than silently abandoning review.
 
+## Critical statutory deadline risk during authority review (Step 59 — approved A)
+- When a case remains AUTHORITY_REVIEW_REQUIRED and its legally confirmed statutory deadline is less than 24 elapsed hours away, flag CRITICAL_DEADLINE_RISK and give it the highest urgency on authorized case dashboards.
+- Immediately send in-app and email alerts to the responsible authorized employee and relevant authorized MANAGER/OWNER/ADMIN within Tenant and branch permissions.
+- Include the confirmed deadline, remaining time, reason for authority review, and secure case link; avoid leaking case details across Tenants or unauthorized branches.
+- If the deadline is provisional or legally disputed, prominently disclose uncertainty and escalate urgent legal verification rather than representing a guessed deadline as confirmed.
+- The critical flag does not change the legal deadline, waive mandatory authority review, lift server-side restrictions on legally dependent actions, or execute blocked actions.
+- Audit trigger time, recipients, delivery attempts, urgency status and eventual review resolution; prevent duplicate alerts for the same trigger while allowing material changes to retrigger assessment.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -235,3 +243,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 60. Outstanding AUTHORITY_REVIEW_REQUIRED cases trigger daily in-app and email reminders to the responsible authorized employee.
 61. After 48 elapsed hours without review completion, authorized supervisors receive an escalation, scoped to Tenant/branch permissions.
 62. Reminders and escalation continue as applicable until documented review resolution, and legally dependent actions remain blocked meanwhile.
+63. An unresolved authority review with a confirmed statutory deadline less than 24 hours away triggers CRITICAL_DEADLINE_RISK and immediate targeted in-app/email alerts.
+64. Critical cases appear with highest priority for authorized users; uncertain deadlines are explicitly labeled and escalated for urgent legal verification.
+65. Critical alerts do not change deadlines, bypass legal blocks or automatically execute actions, and all alerts are auditable.
