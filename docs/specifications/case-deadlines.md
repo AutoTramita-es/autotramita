@@ -1214,6 +1214,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Keep all dispute communications, evidence, decisions and timestamps in an immutable audit history; ensure any approved invoice correction or credit follows a separately authorized workflow and is linked back to the dispute.
 - Portal disputes are a communication and review channel, not automatic debt forgiveness, automatic refunds, automated legal adjudication or authority to suspend the Tenant. Architecture only; no implementation or deployment authorized.
 
+## Pause invoice payment reminders while a dispute is under review (Step 183 — approved A)
+- When an authorized Tenant billing user opens a valid invoice dispute under Step 182, automatically pause scheduled customer-facing payment reminders under Step 177 for that specific disputed invoice while the dispute remains open or under administrator review.
+- Preserve the invoice's original and effective due dates, outstanding balance, manually confirmed payments, previously sent reminders and immutable audit history. The pause is strictly a communications hold: it does not cancel the debt, change payment terms, mark the invoice paid, waive fees or automatically grant an extension.
+- On a recorded administrator resolution or formal closure of the dispute, resume reminder eligibility only if a positive confirmed unpaid balance remains, recalculating against the currently effective due date (including any separately approved Step 179 extension). Prevent catch-up bursts or duplicate sends for reminder milestones that elapsed during the hold; define resumption behavior explicitly in implementation acceptance criteria.
+- Record pause/resumption reasons, dispute linkage, timestamps, acting administrator on closure and notification scheduling changes. A new valid dispute can create a new audited hold; guard against abuse and overlapping dispute states without exposing confidential internal notes to the Tenant.
+- Do not silently suppress the internal 15-day administrator overdue alert under Step 178; distinguish internal financial oversight from customer-facing reminders. Any special handling of internal alerts must be separately authorized.
+- This is an architectural decision only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
