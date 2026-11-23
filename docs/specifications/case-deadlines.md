@@ -237,6 +237,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Where authenticity, applicability or legal validity remains ambiguous, escalate to LEGAL_REVIEW_REQUIRED; do not silently clear statutory deadline warnings or override legally dependent action blocks.
 - Retain the original document, source, supporting evidence, method, reviewer, decision, rationale, timestamps and full audit history with Tenant/branch isolation.
 
+## Match filing receipt to the correct case (Step 68 — approved A)
+- Compare available filing-receipt identifiers against the associated case, including VIN, vehicle registration plate, applicant identity, procedure type and application/filing reference number, accounting for procedure-specific applicability and normalised representations.
+- A material contradiction sets DOCUMENT_CASE_MISMATCH and prevents automatically accepting the receipt as evidence of filing for that case, even if the document itself is officially authentic.
+- Missing or unreadable identifiers yield an explicitly incomplete/uncertain match assessment, not a falsely asserted mismatch or successful match.
+- An authorized case employee may supply clarification and evidence; only a properly scoped OWNER/ADMIN or MANAGER may approve a documented resolution following review. Unresolved legal ambiguity follows LEGAL_REVIEW_REQUIRED.
+- Preserve extracted and case-side comparison values, source document, comparison outcome, discrepancies, supporting evidence, reviewer decision and full audit history.
+- Neither official document verification nor a case-match decision alone automatically clears statutory deadline alerts or overrides established legal blocks.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -334,3 +342,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 87. Official filing receipts without CSV are accepted for evidence review and checked using other official mechanisms where available.
 88. When electronic official validation is unavailable, authorized supervisors may manually accept documented evidence, clearly distinguished from official verification.
 89. Legal ambiguity escalates to central legal review; evidence and decisions remain auditable without automatic removal of deadline alerts or legal restrictions.
+90. Filing receipts are checked against available case-specific identifiers, including VIN, plate, applicant, procedure and application reference.
+91. Material contradictions set DOCUMENT_CASE_MISMATCH and block automatic acceptance; missing data is reported as an incomplete match assessment.
+92. Authorized supervisory review is required to resolve mismatches, with full comparison evidence and audit trail retained.
