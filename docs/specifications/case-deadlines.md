@@ -282,6 +282,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If legal permissibility, required credentials, representation or consequences are uncertain, refer to LEGAL_REVIEW_REQUIRED and do not execute legally dependent steps until resolved.
 - Preserve original case closure and completion evidence, correction proposal, approvals, execution identity, submission proof, outcomes and immutable audit history. No automatic filings or silent alteration of the completed-case record.
 
+## Registry and authorization of professional representatives (Step 74 — approved A)
+- Maintain a centrally governed registry of professional representatives, including Gestores Administrativos and other legally permitted representative categories; store verified identity, professional registration number and Colegio Oficial where applicable, professional status, scope and provenance of verification.
+- Support linking a representative to one or more Tenants without granting cross-Tenant access to cases, clients or mandates.
+- Maintain case/client/procedure-specific proof of representation (mandate, power of attorney or other legally sufficient authority), its scope, validity, issuer, evidence and revocation/expiry where applicable.
+- Before a filing requiring representation, separately verify the actor's legally required professional entitlement and the mandate to act for that client and procedure, according to centrally approved procedure-specific rules. Do not assume every filing requires a Gestor Administrativo.
+- Block legally dependent submission when required entitlement or mandate is absent, expired, revoked or unverified; escalate uncertain legal requirements to LEGAL_REVIEW_REQUIRED.
+- Preserve verification provenance, evidence, decisions and immutable audit logs. Tenant supervisor approval does not substitute for legal authorization, and registration records alone do not establish a client mandate.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -397,3 +405,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 105. Employees can propose post-closure corrections but execution requires prior approval by an appropriately scoped OWNER/ADMIN/MANAGER.
 106. Approval does not replace legally required Gestor Administrativo or other representative authorization; unresolved legal questions block dependent actions.
 107. Original closure, correction approval, legal authority, filing evidence and outcomes remain independently auditable.
+108. A centrally governed professional representative registry records identity, applicable registration and Colegio, verified status, scope and evidence.
+109. Representative-to-Tenant associations remain isolated; client/procedure-specific representation mandates are tracked separately.
+110. Filing authorization independently checks required professional entitlement and client mandate, blocking submission if either legally required check is unresolved.
