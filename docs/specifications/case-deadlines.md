@@ -1163,6 +1163,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Corrections or reversals require separately authorized, auditable compensating records; never silently delete historical payment entries. Tenant-visible payment status must reflect confirmed records only.
 - Manual payment confirmation does not automatically change legal case statuses, initiate Tramisur filings or create bank transactions. Architecture only; no implementation or deployment authorized.
 
+## Automated overdue invoice reminders (Step 177 — approved A)
+- For issued Tenant invoices with an established payment due date, automatically schedule email reminders three calendar days before the due date, on the due date, and seven calendar days after the due date when an unpaid balance remains.
+- Use the invoice's applicable due-date timezone and deterministic calendar-day scheduling; never send a reminder for an unissued draft, a fully paid invoice or an invoice with no confirmed outstanding balance.
+- Compute the outstanding amount from manually confirmed bank payment allocations under Step 176, including partial payments. Reminders for partially paid invoices must reference only the remaining payable amount, not the original full amount as if nothing had been paid.
+- Once an authorized administrator confirms full payment, suppress all pending future payment reminders for that invoice. If a correction or reversal restores a balance, recalculate eligibility with audit controls and duplicate-send prevention.
+- Send to the Tenant's authorized billing contact(s) with an authenticated portal link; avoid exposing unrelated Tenant details or confidential internal financial data. Record reminder type, scheduled time, send attempt/outcome, retries and idempotency key.
+- Reminders are informational payment communications, not legal enforcement notices, automatic debt collection, automatic bank reconciliation, or permission to suspend Tenant access. Those matters require separate decisions and applicable legal review.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
