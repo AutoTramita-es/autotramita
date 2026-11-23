@@ -877,6 +877,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Clearly identify these as internal operational reports, not payroll or official legal records; exports must not modify original time records, task/case status, statutory deadlines or SLA outcomes.
 - Architecture only; no implementation or deployment authorized.
 
+## Backoffice team-wide work-time reporting (Step 144 — approved A)
+- Provide authorized Backoffice supervisors with an aggregated team work-time report limited to operators within their actual supervisory scope.
+- Show total approved/confirmed active-work hours and breakdowns by operator, case and procedure type, alongside separately identified PAUSED and WAITING_FOR_TENANT / WAITING_FOR_PROVIDER durations. Waiting time is not operator labor.
+- Show average case processing time and monthly trends, clearly distinguishing elapsed case duration from operator-declared active work and explaining relevant provider/Tenant waiting effects; avoid misleading productivity comparisons.
+- Exclude pending, rejected and otherwise unconfirmed time from approved active-work totals, while allowing authorized visibility into separate pending amounts. Avoid overlapping interval double counting and reconcile team totals with individual reports under Steps 142–143.
+- Allow authorized export to PDF and Excel (.xlsx), with period, generation time, metric definitions, scoped access checks at generation/download and complete export audit history.
+- Restrict team and individual employee analytics to authorized management, not Tenants or unrelated operators; apply privacy safeguards and do not make automatic employment or disciplinary decisions based on this report.
+- Reporting does not alter task/case statuses, statutory deadlines, internal SLAs or CRITICAL escalations. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
