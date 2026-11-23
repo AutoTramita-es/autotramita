@@ -1023,6 +1023,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Deduplicate unchanged alerts, audit issuance and review, and distinguish estimated contribution margin from accounting net profit. No alert may automatically alter customer prices, invoices, cases, provider handling or statutory deadlines.
 - Architecture only; no implementation or deployment authorized.
 
+## Automatic monthly Tenant margin decline alerts (Step 161 — approved A)
+- For each Tenant, compare estimated total AutoTramita-attributable contribution margin for the latest completed calendar month against the immediately preceding completed month, using consistent Tenant grouping and financial definitions from Steps 145–160.
+- When a Tenant's margin declines by more than the configurable default threshold of 20%, alert appropriately authorized AutoTramita management internally. Display the change in case volume, AutoTramita net revenue excluding IVA, approved labor costs, company-borne external costs and estimated contribution margin, with supporting case/procedure breakdowns.
+- Permit an authorized AutoTramita administrator to configure the Tenant-level decline threshold, with effective dates, reason, actor and historical versions; preserve the threshold and evidence underlying previously issued alerts.
+- Evaluate only sufficiently complete, comparable closed calendar months. If the prior-month margin is zero or negative, or inputs are missing or materially provisional, avoid misleading percentage comparisons and instead indicate unavailable or manual review required.
+- Deduplicate repeat notifications for unchanged data, preserve alert and review audit trails, and ensure cross-Tenant profitability data is visible only to appropriately authorized AutoTramita management, never to Tenants or unrelated operators.
+- These are management alerts only: no automatic changes to customer prices, invoices, case handling, provider processing or statutory deadlines. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
