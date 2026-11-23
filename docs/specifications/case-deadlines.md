@@ -1050,6 +1050,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Provider fee schedule changes never automatically alter customer-facing prices, invoices, case state, Tramisur filing actions or statutory deadlines. Phase 1 remains manual provider coordination without API integration.
 - Restrict contractual rates, invoice comparisons and margin effects to authorized AutoTramita management. Architecture only; no implementation or deployment authorized.
 
+## Central AutoTramita sales price catalog (Step 164 — approved A)
+- Maintain an AutoTramita-owned central sales price catalog by centrally defined procedure type, distinct from external provider contractual fee schedules under Step 163.
+- For each procedure price, store the amount excluding IVA, currency (EUR default), effective-from date/time, authorizing administrator, reason or supporting commercial reference, and immutable version history. Only appropriately authorized AutoTramita administrators may create or change catalog prices.
+- Use the applicable sales catalog price as an indicative baseline for new cases and expected contribution-margin analysis against estimated internal labor and company-borne external direct costs; distinguish projected margins from actual recognized case profitability.
+- Preserve the case's explicitly agreed customer-facing price and its source catalog version, if any. Catalog changes must not retroactively alter previously agreed case prices, issued invoices, historical recognized revenue or prior margin calculations.
+- Keep official administrative fees and other client-funded pass-through disbursements separate from AutoTramita service pricing and revenue, and apply relevant IVA treatment only under separately approved tax/billing requirements.
+- A catalog entry is not authorization to automatically issue invoices, change contractual terms, file with Tramisur or alter legal deadlines. Restrict internal costs and projected margin details to authorized AutoTramita management.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
