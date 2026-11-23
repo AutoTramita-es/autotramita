@@ -1110,6 +1110,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Price display is informational until the separately defined customer acceptance/contractual commitment step; it must not itself automatically issue an invoice, change legal deadlines or initiate provider filing.
 - Architecture only; no implementation or deployment authorized.
 
+## Mandatory customer price acceptance before case submission (Step 171 — approved A)
+- Require an authorized Tenant user to explicitly accept the presented AutoTramita service price before submitting a case to Backoffice; server-side validation must prevent submission without a valid acceptance.
+- Present the applicable service price excluding IVA, any administrator-approved manual discount and resulting service subtotal, with known official fees displayed separately and clearly marked as confirmed, estimated or not yet known (Step 170). Do not imply unknown fees are fixed.
+- Persist an immutable acceptance record linking the case, Tenant, acting User, timestamp and timezone, procedure type, global or Tenant-specific catalog version, approved manual discount reference, accepted service amount/currency excluding IVA, and the exact price disclosure/terms version displayed.
+- A subsequent catalog or negotiated price update must not silently alter an already accepted case price. Material pre-submission changes to procedure selection, pricing inputs or approved discount invalidate the pending acceptance and require a new explicit confirmation.
+- Preserve auditability of any subsequent separately authorized commercial correction; do not retroactively overwrite the original acceptance or automatically amend issued invoices.
+- Price acceptance is not by itself payment capture, issuance of an invoice, confirmation of unknown government fees, authorization to perform regulated legal representation, or automatic transmission to Tramisur.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
