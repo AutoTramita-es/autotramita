@@ -173,6 +173,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - The critical flag does not change the legal deadline, waive mandatory authority review, lift server-side restrictions on legally dependent actions, or execute blocked actions.
 - Audit trigger time, recipients, delivery attempts, urgency status and eventual review resolution; prevent duplicate alerts for the same trigger while allowing material changes to retrigger assessment.
 
+## Statutory deadline exceeded: escalation and review (Step 60 — approved A)
+- When a legally confirmed statutory deadline passes and the case remains unresolved, flag STATUTORY_DEADLINE_EXCEEDED and surface it in a dedicated overdue queue for authorized Tenant/branch users.
+- Immediately notify the responsible authorized employee and relevant authorized supervisors through in-app and email channels, respecting Tenant and branch access boundaries.
+- Record the confirmed due date, elapsed overdue duration, trigger timestamp, notifications, review actions and outcomes in the case audit trail.
+- Do not infer that missing a deadline automatically makes the procedure irrecoverably lost, legally invalid or impossible to remedy; consequences depend on the specific procedure and applicable law.
+- Require an authorized review of legal consequences and available next steps, escalating legal uncertainty to the central LEGAL_REVIEW_REQUIRED workflow as needed.
+- Do not silently alter statutory dates, bypass existing legally dependent action restrictions, or execute actions automatically on escalation.
+- If the deadline is unconfirmed or disputed, do not label it as a confirmed statutory breach; instead display uncertainty and escalate urgent verification.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -246,3 +255,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 63. An unresolved authority review with a confirmed statutory deadline less than 24 hours away triggers CRITICAL_DEADLINE_RISK and immediate targeted in-app/email alerts.
 64. Critical cases appear with highest priority for authorized users; uncertain deadlines are explicitly labeled and escalated for urgent legal verification.
 65. Critical alerts do not change deadlines, bypass legal blocks or automatically execute actions, and all alerts are auditable.
+66. An unresolved case past a legally confirmed statutory deadline is flagged STATUTORY_DEADLINE_EXCEEDED and shown in an authorized overdue queue.
+67. Responsible employees and authorized supervisors receive immediate in-app/email escalation; due date, overdue duration and review activity are audited.
+68. Deadline expiry triggers procedure-specific review of legal consequences and remedies, without assuming the case is irrecoverably lost or automatically executing actions.
