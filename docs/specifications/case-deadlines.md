@@ -738,6 +738,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Preserve privacy, Tenant and case authorization, audit history, and a separation from statutory deadlines, the completed case status and any distinct post-completion error-review process. This is an internal service-quality target, not a legal response deadline.
 - Architecture only; no implementation or deployment authorized.
 
+## Central Backoffice customer satisfaction dashboard (Step 127 — approved A)
+- Provide an access-controlled central Backoffice quality dashboard for authorized supervisors, using actual voluntary case-linked ratings and Step 125 quality follow-up tasks.
+- Show average star rating together with rating count, proportion of 1–2-star ratings, open and resolved low-rating quality-review tasks, average elapsed Backoffice working time to the first qualifying documented Tenant contact attempt, and monthly satisfaction trends.
+- Support filtering by reporting period and procedure type; use consistent definitions and denominator disclosure, and show insufficient sample size rather than misleading precision when applicable.
+- Distinguish an attempted contact from successful contact, and quality-review task closure from substantive resolution of a case error; avoid treating missing voluntary ratings as neutral or positive feedback.
+- Restrict aggregate dashboard access to appropriately authorized AutoTramita Backoffice quality/supervisory personnel, apply minimum-cell-size or equivalent safeguards against identifying individual Tenants in narrow breakdowns, and prevent cross-Tenant data disclosure.
+- Preserve traceability to authorized underlying tasks, audit dashboard access where appropriate, and do not alter completed cases, statutory deadlines, or provider workflows.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
