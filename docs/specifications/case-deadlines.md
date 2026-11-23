@@ -398,6 +398,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Assignment does not itself confer licensed professional representation rights or permission to perform Tramisur's legally restricted filings.
 - Keep Tenant and platform backoffice role boundaries and Tenant isolation enforced. Architecture only; no implementation or deployment authorized.
 
+## Automatic workload-based backoffice assignment (Step 87 — approved A)
+- When a Tenant submits a case for AutoTramita backoffice review, automatically assign one primary backoffice operator from the pool of active, available and appropriately authorized operators.
+- Select the eligible operator with the fewest currently active assigned cases; use a deterministic fair tie-breaker to distribute equal-load assignments rather than repeatedly favoring one operator.
+- Make assignment atomically under concurrent case submissions to avoid race conditions and systematic overload. Record assignment method, selected operator, timestamp and decision basis in the audit trail.
+- An authorized backoffice supervisor may manually reassign a case with an auditable reason; preserve all prior task and assignment history and route future notifications to the new operator.
+- If no eligible operator is available, retain the case in an unassigned backoffice queue and notify the supervisor; keep statutory deadline alerts active.
+- Automated workload assignment grants no legal representation authority and does not automate Tramisur handoff or official filing. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
