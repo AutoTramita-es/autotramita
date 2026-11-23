@@ -628,6 +628,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Apply server-side Tenant, branch, case and field-level authorization at generation and download; exclude internal Backoffice notes, private Tramisur correspondence, other-Tenant data and unreleased documents. Audit report generation and download.
 - Report generation must not change the underlying case, document, legal-deadline or official-receipt states. Architecture only; no implementation or deployment authorized.
 
+## Unique report ID, QR verification and PDF integrity (Step 114 — approved A)
+- Assign each generated informational case PDF report a globally unique, immutable report identifier and an issuance timestamp with explicit time zone; each regeneration is a distinct issued report/version.
+- Embed a QR code linking to an HTTPS AutoTramita verification endpoint. The QR code must not contain personal data, case details, authorization credentials, or a publicly usable bearer token.
+- Record a SHA-256 cryptographic digest of the finalized issued PDF bytes, report identifier, issuing system context, issue time, permitted case reference, and audit provenance. Verification must compare the submitted or downloaded PDF's digest with the trusted issuance record; simply scanning the QR code cannot establish that a separately held PDF has not been modified.
+- Verification pages must enforce authentication and case/Tenant/branch authorization for nonpublic information; an unauthenticated QR scan must not disclose personal, vehicle or procedural details. Treat access and validation attempts as security-relevant events.
+- Distinguish valid issued report, altered/nonmatching file, unknown identifier, and withdrawn/superseded report as applicable without rewriting original audit records. Report integrity verification is not a governmental attestation, official filing receipt, qualified electronic signature, or proof that a procedure is completed.
+- Retain previous issued versions and their digests under applicable retention policies; secure generation, downloads and report verification against unauthorized cross-Tenant access.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
