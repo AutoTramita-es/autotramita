@@ -601,6 +601,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Sharing a document through chat does not by itself certify authenticity, mark checklist items approved, prove official filing or completion, or alter statutory deadlines and case state.
 - Apply existing attachment validation, notification deduplication and secure message delivery controls. Architecture only; no implementation or deployment authorized.
 
+## Unified Tenant-visible case document archive (Step 111 — approved A)
+- Each case provides an authorized Tenant-facing Documents tab that consolidates all documents explicitly available to that Tenant, regardless of whether uploaded via a checklist/form, attached to a Tenant message, or deliberately shared by Backoffice.
+- Provide filtering and organization by document category, workflow/review status, and upload/share date, plus secure preview or download where the file format permits.
+- Show the actual current review state and document version history; retain replaced, rejected and superseded versions with provenance and audit records, subject to authorization and retention rules. Never imply an attachment is approved solely because it appears in the archive.
+- Reference a canonical case document and its versions from both messaging and checklist views to avoid uncontrolled copies, conflicting statuses or accidental replacement.
+- Apply server-side Tenant, branch, case and document-level authorization on listing, preview, download, search and exports. Default-deny internal Backoffice materials, private Tramisur correspondence and provider-only files unless a specific document/version has been deliberately reviewed and released to the Tenant.
+- Archive visibility and document sharing do not by themselves certify authenticity, change case state, prove official submission or alter statutory deadlines.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
