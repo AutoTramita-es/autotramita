@@ -157,6 +157,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If authority applicability remains legally ambiguous, escalate to the established central LEGAL_REVIEW_REQUIRED process; a Tenant user's acknowledgment alone cannot certify or override disputed statutory rules.
 - Review status and required actions are visible only within permitted Tenant and branch access scope. Completion does not automatically execute previously blocked actions or silently change statutory deadlines.
 
+## Reminders and 48-hour escalation for authority review (Step 58 — approved A)
+- For each case flagged AUTHORITY_REVIEW_REQUIRED, record the timestamp when review became required and track its outstanding status.
+- Send daily in-app and email reminders to the responsible active, authorized case employee until review is completed; respect Tenant and branch visibility and avoid duplicate notifications for the same daily reminder cycle.
+- If review remains incomplete 48 elapsed hours after the flag was set, escalate through in-app and email notices to authorized branch/tenant supervisors (relevant MANAGER where assigned, OWNER/ADMIN as permitted), without exposing case details outside authorized scope.
+- Continue daily reminders and maintain the outstanding review flag until an authorized reviewer confirms competence or initiates an appropriate correction or legal-review path; merely sending or reading a notice does not count as completion.
+- Keep legally authority-dependent actions blocked server-side during unresolved review while allowing independent work; do not automatically execute blocked actions upon resolution.
+- Audit reminder and escalation schedules, attempted deliveries, recipients, and review completion. If the assigned employee is unavailable, use the existing reassignment safeguards rather than silently abandoning review.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -224,3 +232,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 57. Potentially affected cases receive AUTHORITY_REVIEW_REQUIRED until an authorized user explicitly confirms authority or initiates a correction.
 58. Review records actor, timestamp, outcome and rationale; legally authority-dependent actions remain blocked while independent work continues.
 59. Unresolved legal ambiguity escalates to LEGAL_REVIEW_REQUIRED, and acknowledgment never silently modifies statutory rules or triggers blocked actions.
+60. Outstanding AUTHORITY_REVIEW_REQUIRED cases trigger daily in-app and email reminders to the responsible authorized employee.
+61. After 48 elapsed hours without review completion, authorized supervisors receive an escalation, scoped to Tenant/branch permissions.
+62. Reminders and escalation continue as applicable until documented review resolution, and legally dependent actions remain blocked meanwhile.
