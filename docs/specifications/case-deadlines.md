@@ -1146,6 +1146,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Invoice issuance must ultimately comply with separately specified Spanish tax and invoicing rules (including IVA, required invoice fields, numbering, timing and any applicable electronic-invoicing obligations). This architectural decision does not assert that a draft or statement is a compliant tax invoice.
 - Record preparation, review, approval, issue and delivery events with immutable audit history. No automatic payment collection, no automatic Tramisur handoff and no implementation or deployment authorized.
 
+## Tenant invoice delivery via portal and email notice (Step 175 — approved A)
+- After the required administrator approval and formal issuance under Step 174, publish the issued invoice to the appropriate Tenant's authenticated portal invoice archive and make its PDF available for authorized Tenant users to view and download.
+- Automatically send an email notification to the Tenant's designated billing contact(s) that a new invoice is available, preferably linking to an authenticated portal view rather than exposing confidential invoice details or unauthenticated file URLs in email.
+- Record invoice issuance time, portal publication time, notification attempt and outcome, delivery status where technically ascertainable, and any retry/error events in an immutable audit trail. Do not equate an email send success with proof that the recipient read the message.
+- Apply strict Tenant isolation and billing-role access controls. Neither other Tenants nor unauthorized branch-only users may access another Tenant's invoices; internal labor rates, external provider contract rates and contribution margins are never exposed.
+- Keep issued invoice versions immutable; any later correction follows an authorized correction/credit workflow rather than silent replacement. Preserve the invoice archive subject to applicable retention requirements.
+- Email notification and portal availability are triggered only after a legally valid invoice has been issued, not on mere draft creation or approval. No automatic payment collection or Tramisur filing is implied.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
