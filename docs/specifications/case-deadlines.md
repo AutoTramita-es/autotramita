@@ -1238,6 +1238,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - A first reply, acknowledgement, or request for information does not itself constitute final resolution. Final resolution requires a recorded reasoned outcome and Tenant-facing notification; any invoice correction, payment adjustment or due-date change remains governed by its own authorization and compliance process.
 - Customer-facing payment reminders remain paused while the dispute remains open under Step 183, without modifying the payable balance or underlying due date. Architecture only; no implementation or deployment authorized.
 
+## Reopening resolved Tenant invoice disputes (Step 186 — approved A)
+- Permit an appropriately authorized Tenant billing user to reopen a previously resolved invoice dispute against the same issued invoice when dissatisfied with the resolution or when providing new evidence; require a written reason and permit supporting documents.
+- Preserve the original dispute identifier, original decision, prior response and resolution timestamps, supporting evidence, messages, all closure and reopening events, and an immutable audit history. Do not erase or silently overwrite earlier outcomes.
+- Notify the authorized AutoTramita administrator of the reopening, restore an active review status and provide the Tenant with a visible acknowledgement and status.
+- Start a new auditable review cycle on reopening: a three-Backoffice-working-day first substantive response target (Step 184) and a ten-Backoffice-working-day resolution target (Step 185), measured from reopening. Retain previous cycles' targets, outcomes and SLA breaches; do not reset historical metrics.
+- While the reopened dispute is active, pause customer-facing automatic payment reminders for the linked invoice under Step 183; resume eligibility after a recorded resolution if an outstanding balance remains. Reopening does not alter the invoice, outstanding amount, due date, confirmed payments, or internal administrator overdue oversight.
+- Apply Tenant isolation, authorized access, anti-spam/abuse safeguards and an auditable process for handling repeated reopenings; do not automatically reject a legitimate reopened complaint solely because it was previously resolved.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
