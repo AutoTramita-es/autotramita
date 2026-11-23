@@ -448,6 +448,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Remove a case from the critical queue only when its effective priority legitimately falls below CRITICAL due to verified change in underlying risk, not merely because someone acknowledged an alert or reassigned the case.
 - Record queue entry/exit, risk basis, alerts, acknowledgement, escalation, assignment changes and timestamps in immutable audit history. Architecture only; no implementation or deployment authorized.
 
+## Critical case assignment acknowledgement (Step 93 — approved A)
+- A backoffice operator assigned a CRITICAL case must explicitly acknowledge taking responsibility for its urgent handling; assignment alone is not acknowledgement and acknowledgement does not mean the case has been processed, filed, or resolved.
+- Require acknowledgement within 15 minutes of the applicable backoffice working schedule after assignment. Count only working minutes; if assigned outside working hours, the 15-minute clock starts at the next working period. Store the applicable schedule/time zone and audit calculation.
+- If the acknowledgement deadline expires, immediately escalate to an authorized backoffice supervisor, with the current critical risk and assignment context. The supervisor may explicitly reassign the case to another eligible available operator; record actor, reason, old/new assignee, timestamps and acknowledgement lifecycle.
+- A reassignment requires a fresh acknowledgement from the new assignee. Acknowledgement must be authorized for the current assignee and current assignment version, preventing stale confirmations after reassignment.
+- Statutory deadline alerts and critical-case escalation remain active independently of business-hour acknowledgement timing; the 15-minute acknowledgement window must never imply a legal extension or suspend urgent legal-risk monitoring.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
