@@ -290,6 +290,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Block legally dependent submission when required entitlement or mandate is absent, expired, revoked or unverified; escalate uncertain legal requirements to LEGAL_REVIEW_REQUIRED.
 - Preserve verification provenance, evidence, decisions and immutable audit logs. Tenant supervisor approval does not substitute for legal authorization, and registration records alone do not establish a client mandate.
 
+## Initial operating model: manual Tramisur handoff (business priority clarification)
+- Phase 1: each Tenant/dealership receives customer requests, collects and processes supporting documents, and submits a prepared case through AutoTramita.
+- AutoTramita's internal backoffice reviews documents, requests missing information, prepares the case and coordinates manual handoff with external provider Tramisur. Tramisur handles the agreed official filing/representation activities within its actual legal authority; AutoTramita records returned status, evidence and outcome for the Tenant.
+- For the initial release, do not require automated professional-registry integrations, automated gestor verification or automated provider submission. Record the responsible external provider and manually verified authority/mandate where legally required; preserve existing legal authorization and filing safeguards.
+- Phase 2, only after observing actual operations: consider automation of repeatable checks and provider exchange.
+- Phase 3, subject to growth and applicable professional requirements: optionally employ an in-house licensed Gestor Administrativo and adapt the workflow.
+- Step 74 representative-registry design is a future-capability specification, not a Phase 1 implementation requirement. Step 75 periodic automated professional-status verification is deferred, not approved.
+- This is an architecture/business-priority decision only: no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
