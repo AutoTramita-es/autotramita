@@ -610,6 +610,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Archive visibility and document sharing do not by themselves certify authenticity, change case state, prove official submission or alter statutory deadlines.
 - Architecture only; no implementation or deployment authorized.
 
+## Bulk download of Tenant-visible case documents as ZIP (Step 112 — approved A)
+- Provide an authorized Tenant user with a Download all (ZIP) action from the case Documents tab to export the case documents and versions that user is permitted to access at the time of the request.
+- Organize ZIP entries by document category and include a human-readable manifest with document name, category, current review status, version, and relevant dates; distinguish current from superseded versions without implying that rejected or pending files are approved.
+- Apply server-side Tenant, branch, case, document and version authorization before inclusion and again when delivering the generated archive; exclude internal Backoffice notes, private Tramisur correspondence, provider-only files and any document not explicitly released to that Tenant.
+- Generate archives securely with safe filenames/paths, size and resource limits, non-public temporary storage and short-lived access; prevent cross-Tenant leakage, stale permissions and unauthorized reuse of export links.
+- Audit requesting user, case, request/completion timestamps, included document identifiers/versions, outcome and download access; respect retention and data protection requirements.
+- ZIP export does not constitute document approval, official filing evidence, legal certification or a change in statutory deadlines.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
