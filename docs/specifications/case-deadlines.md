@@ -551,6 +551,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Route requests for required documents through the established versioned checklist, upload and Backoffice approval workflow; a chat message or attachment alone must not mark documentation approved or a case submitted to Tramisur.
 - Messaging does not imply legal representation, official filing, completion, or any pause/extension of statutory deadlines. Architecture only; no implementation or deployment authorized.
 
+## Assigned Backoffice operator owns Tenant case messages (Step 105 — approved A)
+- Route each new Tenant-visible case message to the case's currently assigned primary Backoffice operator; notify that operator and maintain a visible unread/actionable message queue.
+- Authorized Backoffice supervisors may monitor unanswered messages across their scope and, if the assigned operator is unavailable, respond within the Tenant-visible conversation or explicitly reassign the case under existing audited reassignment controls.
+- Do not automatically transfer case ownership solely because a message arrives while an operator is OFFLINE or AWAY; retain existing assignment and planned-absence rules.
+- Flag messages involving statutory deadlines or other verified CRITICAL risks for prompt supervisor visibility and independent legal-deadline escalation; a message's wording alone must not silently change the verified statutory priority.
+- Preserve message-to-case linkage, sender and responder identities, delivery/read state and timestamps, including assignment changes. Enforce Tenant/branch access and strict separation from internal Backoffice notes and private Tramisur communications.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
