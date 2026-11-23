@@ -860,6 +860,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Notification delivery must not itself modify the decision, case status, statutory deadlines, internal SLA measurements or critical escalations.
 - Architecture only; no implementation or deployment authorized.
 
+## Personal daily and monthly work-time report (Step 142 — approved A)
+- Provide each Backoffice operator with a private personal report of their own task work-time records, browsable by day and month.
+- Show total supervisor-approved/confirmed active-work time, breakdown by case and task, separately recorded PAUSED intervals, and actual WAITING_FOR_TENANT and WAITING_FOR_PROVIDER durations without treating elapsed waiting as operator labor.
+- Show flagged unconfirmed intervals and pending correction requests separately from approved active-work totals; rejected corrections remain historically visible but do not count as approved time.
+- Reconcile totals to immutable timer events and approved corrections under Steps 135–141, prevent double counting across overlapping timers, and distinguish calendar elapsed time from Backoffice working-time measurements where relevant.
+- Limit operator access to their own report; appropriately authorized Backoffice supervisors may view reports within their oversight scope. Other operators and Tenants cannot access these employee records.
+- Use reports for operational capacity and cost planning, not automatic employment or disciplinary decisions; reporting does not alter statutory deadlines, internal SLA outcomes, or case statuses.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
