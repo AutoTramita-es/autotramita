@@ -895,6 +895,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Internal cost analytics do not automatically set or modify the customer's sales price, invoice, employee compensation, case status, statutory deadlines or internal SLAs.
 - Architecture only; no implementation or deployment authorized.
 
+## Operator-specific effective-dated internal hourly cost rates (Step 146 — approved A)
+- Maintain an individual confidential internal hourly labor cost rate in EUR for each Backoffice operator, managed only by an appropriately authorized Backoffice administrator.
+- Every rate version has a recorded effective-from date/time and audit metadata (actor, change timestamp, old/new value and reason); prevent overlapping applicable rate periods and define the applicable rate deterministically for each approved work interval.
+- Calculate historical case labor costs using the operator-specific rate effective when the work was performed; later changes must not silently rewrite past historical calculations or approved records. Preserve calculation and rate-version provenance.
+- Enforce strict server-side access to rate values and derived sensitive operator cost details. Do not expose rates to Tenants, customers, other operators or unauthorized exports.
+- Distinguish this internal management cost rate from an employee's wage, payroll entitlement, billable client rate or legally mandated payroll accounting.
+- Changes to rates do not modify statutory deadlines, case status, SLA measurements or customer pricing. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
