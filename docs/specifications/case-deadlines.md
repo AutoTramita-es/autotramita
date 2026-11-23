@@ -936,6 +936,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Support comparison of procedure types and trends over time, with privacy-safe aggregation and appropriate access controls; no Tenant or unrelated operator access to confidential cost, revenue or margin figures.
 - These management estimates do not automatically change client prices, invoices, statutory deadlines, case states or Tramisur processing. Architecture only; no implementation or deployment authorized.
 
+## Internal profitability analytics by Tenant (Step 151 — approved A)
+- Provide authorized AutoTramita Backoffice management with internal profitability analytics grouped by legal-entity Tenant (dealership or other business customer), using the case-level contribution-margin definitions established in Steps 145–150.
+- For each Tenant and selected period, display number of processed cases, AutoTramita-attributable net revenue excluding IVA, approved internal Backoffice labor cost, company-borne direct external costs, estimated contribution margin and monthly trends.
+- Permit management comparison across Tenants, with consistent inclusion criteria and clear indication of provisional or missing revenue/cost inputs; preserve traceability to source cases and avoid double counting.
+- Show official charges and other client-funded pass-through disbursements separately, excluding them from AutoTramita revenue and company-borne expenses; do not conflate estimated contribution margin with net accounting profit.
+- Strictly restrict cross-Tenant comparisons, confidential rates, provider fees and internal margins to authorized AutoTramita management. Tenant portal users may access only their own explicitly permitted operational and commercial data, never AutoTramita's internal profitability analytics or another Tenant's information.
+- Analytics do not automatically change customer prices, invoices, legal deadlines, case states or Tramisur processing. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
