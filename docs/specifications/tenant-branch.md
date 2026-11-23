@@ -12,7 +12,7 @@ A Tenant represents one company or autónomo. Each Tenant has one or more branch
 | --- | --- | --- |
 | id | UUID | Immutable primary key |
 | tenant_id | UUID | Required; references Tenant |
-| code | varchar(20) | Required; unique within tenant; immutable after creation; normalize for comparison |
+| code | varchar(20) | System-generated BR-0001, BR-0002, etc.; tenant-unique; immutable and never reused |
 | name | varchar(150) | Required; editable, not unique |
 | address_line1 | varchar(255) | Optional at creation; required before ACTIVE |
 | address_line2 | varchar(255) | Optional |
@@ -28,6 +28,13 @@ A Tenant represents one company or autónomo. Each Tenant has one or more branch
 | updated_at | timestamptz | Required |
 
 A branch must have a tenant-safe composite key/constraint to support cross-entity composite foreign keys. A tenant's branch codes are unique within that tenant; separate tenants may reuse codes. UUIDs remain stable across renaming. Branch codes are immutable after creation and may never be reused for another branch within the same Tenant, including after deactivation. Names, addresses, email and phone remain editable.
+
+## Branch code allocation
+- The system, not the user, generates branch codes within each Tenant, starting with `BR-0001`, then `BR-0002`, `BR-0003`, and so on.
+- Each Tenant maintains its own independent code sequence. The code is assigned on branch creation, including DRAFT branches.
+- Code allocation must be concurrency-safe and protected by a tenant-scoped uniqueness constraint. Two simultaneous branch creations cannot receive the same code.
+- Codes are immutable and never reassigned, even if a branch is deactivated or closed. Gaps in the sequence are acceptable; do not renumber.
+- The display format has a minimum four-digit zero-padded number; it may grow beyond four digits when needed without changing existing codes.
 
 ## Activation prerequisites
 - A branch can be drafted/created with only tenant, immutable code and name, in addition to its generated identifiers and timestamps.
@@ -116,9 +123,9 @@ Before deactivating MAR-02, move all unfinished cases to another active branch a
 17. A branch with incomplete physical address cannot receive new cases.
 18. DRAFT branches have never been active; only DRAFT -> ACTIVE, ACTIVE -> INACTIVE and INACTIVE -> ACTIVE transitions are valid.
 19. Only OWNER/ADMIN can create, edit, activate, deactivate or reactivate branches; MANAGER/EMPLOYEE/VIEWER cannot.
+20. Branch codes are automatically allocated per Tenant in BR-0001 format, remain immutable and non-reusable, and are unique under concurrent creation.
 
 ## Pending detail decisions
-- Branch code format and normalization rules (code is immutable and never recycled).
 - Definition of finished vs unfinished Case statuses and bulk transfer UX.
 - Precise atomic transition mechanics and branch-assignment audit schema.
 
