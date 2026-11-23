@@ -213,6 +213,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - After persistent service unavailability, notify authorized users and route to manual review while retaining scheduled retries when appropriate; manual review must document evidence and cannot claim an unavailable official check succeeded.
 - When the service recovers, store the official verification result and evidence; any closure of an overrun review remains subject to authorized supervisory approval and audit.
 
+## Official CSV verification failure and mandatory review (Step 65 — approved A)
+- When a reachable official verification service affirmatively reports an invalid CSV code or a mismatch between the submitted receipt and its official record, set receipt verification status to VERIFICATION_FAILED, distinguishing this outcome from transient service unavailability.
+- Immediately alert the responsible authorized employee and relevant authorized supervisor via in-app and email notifications within Tenant and branch scope.
+- Do not treat the receipt as verified evidence of timely filing, automatically dismiss statutory deadline warnings, or permit legally dependent actions based on that unverified receipt.
+- Require a documented manual review to distinguish transcription/format errors, incorrect document selection, official-record mismatch, and other explanations. Escalate unresolved legal ambiguity to LEGAL_REVIEW_REQUIRED.
+- Preserve the original document, supplied CSV, official service response/evidence, timestamps, reviewer findings, corrections and full audit trail. Any subsequent successful verification must be recorded as a new result, not overwrite the failure history.
+- An invalid or mismatched CSV alone is not proof of intentional fraud; do not automatically accuse the user or make a fraud determination.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -301,3 +309,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 78. Temporary unavailability of official CSV verification retains PENDING_REVIEW and triggers controlled automatic retries with auditable attempts.
 79. Service unavailability is not treated as failed authenticity; independent case work may continue, but the receipt cannot be represented as verified.
 80. Persistent failures trigger authorized manual review and deadline-risk alerts when relevant, without automatically clearing deadline warnings.
+81. An affirmative invalid CSV or official document mismatch sets VERIFICATION_FAILED and immediately alerts responsible authorized case users and supervisors.
+82. Failed verification prevents treating the receipt as authenticated proof of timely filing and requires documented manual review, with escalation of legal uncertainty.
+83. Preserve original document, official validation result and correction history; invalid CSV alone is not treated as proof of intentional fraud.
