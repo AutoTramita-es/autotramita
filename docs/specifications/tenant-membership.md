@@ -111,6 +111,14 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - Email delivery failures are retried or logged independently and must not block membership suspension/revocation, case flagging, or in-app notification creation.
 - Respect current role, Tenant and branch authorization when displaying notification contents and linked case lists.
 
+## Daily reassignment reminders
+- Once per day, check for unfinished cases still flagged as requiring reassignment after a member's suspension or revocation.
+- Send an aggregated daily reminder via both in-app notification and email to eligible active OWNER, ADMIN and affected-branch MANAGER recipients.
+- Each reminder includes only the count of cases the recipient is currently authorized to view, with a link to the access-controlled reassignment queue.
+- Send at most one aggregated reminder per recipient and Tenant per calendar day, even when several branches or former employees have outstanding cases.
+- Stop reminders automatically once no eligible cases remain; avoid sending empty reminders.
+- Reminder delivery failures must not block case processing, and retry logic must not create duplicate daily reminders.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -159,5 +167,8 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 45. Reassignment alerts are delivered in-app and by email to eligible authorized recipients.
 46. In-app alerts remain unread until opened or marked read and link to an access-controlled reassignment queue.
 47. Email delivery failure cannot block core membership or case operations, and notification detail access is reauthorized.
+48. Outstanding reassignment cases trigger daily in-app and email reminders to authorized recipients.
+49. A recipient receives no more than one aggregated reminder per Tenant per day, containing only an authorized case count.
+50. Reminders stop when no outstanding reassignment cases remain; delivery failures do not block case operations.
 
 ## Open design questions
