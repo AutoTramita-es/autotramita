@@ -812,6 +812,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Use this information for capacity planning and cost analysis with appropriate employee privacy and transparency safeguards; do not automate disciplinary, compensation or performance judgments based on tracked time.
 - Statutory and internal deadlines, alerts and escalations remain independent of time-tracking operations. Architecture only; no implementation or deployment authorized.
 
+## Inactivity confirmation and automatic stop for work timers (Step 136 — approved A)
+- For an explicitly started Backoffice task work timer under Step 135, if two elapsed hours pass without a qualifying recorded operator interaction, request an explicit confirmation that work is continuing, offering continue or stop actions.
+- If no response is recorded within the following fifteen elapsed minutes, automatically stop the timer and flag the unconfirmed interval for subsequent authorized review; retain start, prompt, response/timeout, auto-stop timestamps, actor/system source and audit history.
+- Define inactivity narrowly as lack of recorded interaction, not proof that the operator was not working; do not use intrusive employee surveillance or infer continuous productive effort from a running timer.
+- A timely explicit continuation confirmation permits the timer to continue and begins a new inactivity observation period; stopping manually ends the interval immediately. Handle concurrent tabs/devices and delayed responses idempotently.
+- Keep unconfirmed time distinguishable from confirmed operator-declared time in reports until reviewed; corrections require the Step 135 mandatory reason and immutable prior history. Timer prompts and auto-stop must not change task/case workflow status, acknowledge CRITICAL tasks, satisfy substantive-action targets, or alter statutory/internal deadlines and escalations.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
