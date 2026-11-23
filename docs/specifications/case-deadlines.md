@@ -182,6 +182,13 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Do not silently alter statutory dates, bypass existing legally dependent action restrictions, or execute actions automatically on escalation.
 - If the deadline is unconfirmed or disputed, do not label it as a confirmed statutory breach; instead display uncertainty and escalate urgent verification.
 
+## Controlled closure of statutory deadline overrun review (Step 61 — approved A)
+- The responsible authorized employee may submit an explanation and supporting evidence for a case flagged STATUTORY_DEADLINE_EXCEEDED, but may not independently close the overrun review.
+- Only an authorized Tenant OWNER/ADMIN or MANAGER with the relevant branch/case scope may approve closure after reviewing the explanation, evidence and applicable consequences.
+- Where legal consequences or possible remedies remain ambiguous, route to the existing central LEGAL_REVIEW_REQUIRED process; Tenant supervisory approval cannot override unresolved central legal review.
+- Closure marks the overrun review as resolved or dispositioned, not the historical breach as erased: retain the original due date, exceeded flag/history, explanation, evidence, approver, decision rationale and timestamps in immutable audit history.
+- Closure must not silently alter statutory deadlines, remove independent legal restrictions, or automatically execute previously blocked actions. Enforce Tenant isolation and branch authorization server-side.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -258,3 +265,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 66. An unresolved case past a legally confirmed statutory deadline is flagged STATUTORY_DEADLINE_EXCEEDED and shown in an authorized overdue queue.
 67. Responsible employees and authorized supervisors receive immediate in-app/email escalation; due date, overdue duration and review activity are audited.
 68. Deadline expiry triggers procedure-specific review of legal consequences and remedies, without assuming the case is irrecoverably lost or automatically executing actions.
+69. Responsible employees may submit overrun explanations and evidence but cannot independently close the overrun review.
+70. Closure requires an authorized OWNER/ADMIN or appropriately scoped MANAGER; unresolved legal ambiguity requires central legal review.
+71. Closure retains permanent overrun history and audit evidence, and does not silently change statutory deadlines or lift unrelated legal blocks.
