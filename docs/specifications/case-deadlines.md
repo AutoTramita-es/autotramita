@@ -517,6 +517,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Audit estimate methodology/version, provenance and meaningful revisions while enforcing Tenant/branch data isolation.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant notification for material estimate delays (Step 101 — approved A)
+- Notify authorized Tenant case participants via in-app notification and email when the newly estimated completion range ends more than two applicable working days after the upper bound of the previously displayed estimate range.
+- Compare successive published, reliable ranges using the relevant working-day calendar and time zone; record the old/new range, basis for comparison and decision. Do not trigger misleading notifications when estimates are unavailable or unsupported.
+- Include the updated indicative completion range, a clear non-sensitive explanation (such as outstanding Tenant documents or a documented wait for Tramisur), and a secure link to the case. Never disclose internal Backoffice notes or unverified provider claims.
+- Smaller estimate adjustments update the portal without separate delay emails; deduplicate repeated notifications for the same material change while allowing new notices for subsequent material delays.
+- Retain the prior estimate, recalculation reason, notification delivery attempts and timestamps in the audit trail.
+- These estimates and notifications are informational, not statutory deadlines or service guarantees, and must not affect independent legal-deadline alerts, priority or review blocks.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
