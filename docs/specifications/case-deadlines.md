@@ -102,6 +102,13 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If competent authority or calendar applicability cannot be reliably established, mark the deadline provisional, flag LEGAL_REVIEW_REQUIRED, and route it to authorized central review instead of asserting a legally confirmed date.
 - Preserve Tenant/branch access controls and audit any corrections to authority, jurisdiction or calendar selection.
 
+## Competent authority suggestion and correction (Step 51 — approved A)
+- On case creation, suggest the competent administrative authority from the procedure type, relevant location and other approved case facts using centrally governed authority/jurisdiction mappings.
+- An authorized Tenant user with case-edit rights may correct the suggested authority, but must provide a reason; record old/new authority, actor, timestamp and justification in the audit trail.
+- When an authority correction could change statutory deadlines, re-evaluate the applicable legal rule and official calendar under the controlled applicability process; never silently replace a confirmed deadline without traceability.
+- If authority or deadline applicability cannot be reliably verified, flag LEGAL_REVIEW_REQUIRED and present the suggested authority and deadline as provisional pending central review.
+- Server-side authorization, Tenant isolation and branch scope apply to authority changes. A user's correction does not itself modify shared legal rules or certify legal applicability.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -148,3 +155,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 36. Statutory deadline calculations select the calendar based on procedure and competent authority rather than dealership address by default.
 37. Each calculation retains competent authority, jurisdiction, calendar version and rule version for audit.
 38. Uncertain authority or calendar applicability triggers LEGAL_REVIEW_REQUIRED and prevents presenting a provisional deadline as legally confirmed.
+39. New cases receive a suggested competent authority based on approved procedure, location and case-fact mappings.
+40. Authorized users may correct the suggested authority only with a recorded reason and full audit history.
+41. Corrections that affect deadlines trigger controlled rule/calendar reassessment; uncertainty flags LEGAL_REVIEW_REQUIRED rather than certifying a guess.
