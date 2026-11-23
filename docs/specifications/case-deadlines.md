@@ -1068,6 +1068,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Only appropriately authorized AutoTramita personnel may view and manage other Tenants' confidential pricing. Tenant-facing display of its own agreed prices must follow separately approved commercial and portal permissions.
 - Price configuration does not automatically issue invoices, initiate provider filings, change case states or affect statutory deadlines. Architecture only; no implementation or deployment authorized.
 
+## Tenant-specific volume discount schedules (Step 166 — approved A)
+- Support contractually agreed, configurable volume-based discounts for individual Tenants based on their monthly eligible case volume, with tier thresholds and percentage discounts approved by authorized AutoTramita administrators.
+- Apply discounts to AutoTramita service prices excluding IVA, using the applicable Tenant-specific price (Step 165) or global catalog fallback (Step 164), never to statutory administrative fees or customer-funded pass-through disbursements.
+- Keep tier values and example percentages illustrative only; no specific default brackets or rates are approved. Store the contract reference, effective period, eligible-case definition, counting calendar/timezone, tier schedule version, approval actor and audit history.
+- Define and record the applicable pricing/discount decision for each case under the agreed contract rules. Avoid unapproved retroactive repricing; issued invoices and historically agreed case prices remain unchanged unless a separately authorized credit or adjustment process applies.
+- Preserve discount calculation provenance, applicable tier and counted volume; protect against duplicate, canceled or ineligible cases inflating the count, and handle month-end reconciliations transparently.
+- Volume discounts may affect estimated AutoTramita revenue and contribution-margin reporting but must not automatically issue or modify invoices, initiate Tramisur processing, change case states or statutory deadlines.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
