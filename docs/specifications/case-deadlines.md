@@ -730,6 +730,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Track the quality-review task separately from official case/procedure statuses, with supervisor oversight and no automatic provider communication or corrective filing.
 - Architecture only; no implementation or deployment authorized.
 
+## Low-rating customer contact service target (Step 126 — approved A)
+- For every 1- or 2-star service rating that triggers the Step 125 quality-review task, Backoffice must substantively review the complaint and make a genuine, documented attempt to contact the Tenant within one Backoffice working day of rating receipt.
+- Calculate the internal deadline using the approved Backoffice working calendar and time zone. Record receipt, due time, reviewer, contact attempt timestamp, channel, permitted contact destination/reference and outcome; merely opening the task or sending an automated acknowledgment does not satisfy the target.
+- If no qualifying attempt is recorded by the deadline, automatically notify the authorized Backoffice supervisor and retain the overdue task until appropriately addressed; operator absence or reassignment does not erase the original deadline or breach.
+- If the Tenant does not respond, document the attempt and leave the quality-review task open until an authorized, reasoned disposition is recorded; do not falsely imply successful contact or resolution.
+- Preserve privacy, Tenant and case authorization, audit history, and a separation from statutory deadlines, the completed case status and any distinct post-completion error-review process. This is an internal service-quality target, not a legal response deadline.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
