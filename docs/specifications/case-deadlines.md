@@ -1230,6 +1230,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - The dispute remains open until resolved through the separately authorized review process. Customer-facing payment reminders remain paused while the dispute is open under Step 183, without changing the invoice balance, effective due date or internal overdue oversight.
 - Retain Tenant-visible response history and restricted internal SLA/audit records, enforcing strict Tenant isolation. Architecture only; no implementation or deployment authorized.
 
+## Target resolution SLA for Tenant invoice disputes (Step 185 — approved A)
+- Set an internal target to reach a substantive final resolution of each Tenant invoice dispute within ten Backoffice working days from submission under Step 182, in addition to the separate three-working-day first substantive response SLA under Step 184.
+- Calculate and audit the target against the configured Backoffice working calendar and timezone. Retain submission, target, resolution, and any breach timestamps; this is an operational service target and must not be represented as a statutory deadline.
+- If resolution has not been recorded by the ten-working-day target, generate an auditable internal overdue alert to the authorized AutoTramita administrator and keep the dispute open and visible until it is genuinely resolved.
+- Where bank reconciliation, external verification, or further Tenant evidence is required, allow the dispute to remain open beyond the target with recorded reason, next action, responsible party and follow-up; do not silently reset or erase the original target and breach history.
+- A first reply, acknowledgement, or request for information does not itself constitute final resolution. Final resolution requires a recorded reasoned outcome and Tenant-facing notification; any invoice correction, payment adjustment or due-date change remains governed by its own authorization and compliance process.
+- Customer-facing payment reminders remain paused while the dispute remains open under Step 183, without modifying the payable balance or underlying due date. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
