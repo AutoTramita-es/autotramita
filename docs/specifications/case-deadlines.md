@@ -306,6 +306,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Maintain immutable audit history and Tenant isolation. External handoff must respect personal-data minimization, authorized recipient checks and existing mandate/legal-filing controls; transmission alone is not proof of official filing.
 - No Tramisur API, automated provider integration, or deployment is authorized in Phase 1. Future automation remains a separate architecture decision.
 
+## Phase 1 manual Tramisur processing statuses (Step 76 — approved A)
+- Track external-provider handoff progress with READY_FOR_TRAMISUR (prepared, not yet transmitted), SENT_TO_TRAMISUR (handoff recorded), IN_PROCESS (provider processing confirmed), ADDITIONAL_DOCUMENTS_REQUIRED (provider requests a documented supplement), and COMPLETED (official outcome and supporting evidence recorded).
+- Only authorized AutoTramita backoffice staff update provider-facing workflow statuses based on actual communications and evidence from Tramisur; do not imply that SENT_TO_TRAMISUR means an official filing was submitted.
+- ADDITIONAL_DOCUMENTS_REQUIRED captures the request, required items and responsible follow-up; once supplied, return to the appropriate confirmed processing state rather than silently completing the case.
+- COMPLETED requires a documented outcome and relevant official receipt or evidence as applicable; unresolved legal, deadline or document-verification blockers retain their independent controls.
+- Tenant users see permitted case progress and actionable document requests but not confidential internal backoffice notes or another Tenant's information.
+- Audit every status transition with actor, timestamp, source/reason, and supporting evidence. No Tramisur API or automated status synchronization in Phase 1.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
