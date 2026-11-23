@@ -1031,6 +1031,16 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Deduplicate repeat notifications for unchanged data, preserve alert and review audit trails, and ensure cross-Tenant profitability data is visible only to appropriately authorized AutoTramita management, never to Tenants or unrelated operators.
 - These are management alerts only: no automatic changes to customer prices, invoices, case handling, provider processing or statutory deadlines. Architecture only; no implementation or deployment authorized.
 
+## External service-provider cost and profitability analytics (Step 162 — approved A)
+- Provide authorized AutoTramita management with internal analytics grouped by external professional service provider, initially Tramisur, and extensible to additional legally authorized providers in later phases.
+- For a selected period and provider, display associated case count, average and total provider fees borne by AutoTramita, average observed provider handling time based on actual documented handoff/response milestones, and estimated AutoTramita case contribution margin under Steps 145–161.
+- Source provider identity, amounts, dates and evidence from the audited per-case external cost ledger (Step 148) and manually verified Backoffice–Tramisur workflow (Steps 74–77, 121–123). Do not infer unconfirmed provider actions, filing dates or durations.
+- Distinguish provider handling time from Tenant waiting, Backoffice work time and other delays. Clearly identify incomplete data and avoid presenting simple provider comparisons as proof of provider quality or causation.
+- Where a case has multiple providers, avoid double counting case revenue or contribution margin: define a primary-provider grouping for whole-case comparisons and separately attribute provider-specific fees and time intervals, with transparent methodology.
+- Restrict confidential provider commercial terms, internal costs and margins to authorized AutoTramita management; no Tenant-facing provider profitability analytics.
+- Phase 1 remains a manual secure handoff and manual status/evidence update with Tramisur; no provider API, automated filing or integration is authorized by this analytics requirement.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
