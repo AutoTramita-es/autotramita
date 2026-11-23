@@ -252,6 +252,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - For cross-Tenant matches, enforce strict non-disclosure: never reveal another Tenant's identity, client details, documents, case identifiers or other confidential metadata. Any platform-level deduplication must be access-controlled and privacy-reviewed, with a generic warning only.
 - Record match basis, reviewer, decision, related-case justification within permitted Tenant scope, timestamps and audit history. Do not automatically clear deadline alerts or bypass document-case matching and authenticity checks.
 
+## Recheck official receipts for subsequent revocation (Step 70 — approved A)
+- For authorities and receipt types supporting repeat official validation, periodically revalidate previously verified receipts with rate limits, source-specific schedules and auditable outcomes.
+- Only an affirmative official revocation or cancellation result sets RECEIPT_REVOKED; a service outage, timeout or unverifiable response must not be treated as revocation.
+- Immediately alert the responsible authorized employee and appropriately scoped OWNER/ADMIN/MANAGER through in-app and email notifications, with Tenant and branch isolation.
+- Prevent reliance on a revoked receipt as currently valid evidence of timely filing; reassess the case's statutory deadline and procedural consequences under centrally approved legal rules and applicable transitional provisions.
+- If legal effects are uncertain, flag LEGAL_REVIEW_REQUIRED and block only legally dependent actions; never automatically declare a missed deadline or perform remediation.
+- Preserve the original receipt, previous verification decisions, official revocation evidence, timestamps, affected-case assessments, notices and full audit history. Any subsequent restoration or correction requires a new documented official result or authorized review.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -355,3 +363,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 93. Potential duplicate receipts are detected by document fingerprint, CSV or issuer-scoped official registration identifiers and flagged POSSIBLE_DUPLICATE_RECEIPT.
 94. Reuse for genuinely related cases requires authorized supervisory review and documented justification, not automatic rejection.
 95. Cross-Tenant duplicate detection must not reveal any other Tenant's identity or confidential information; all review outcomes are audited.
+96. Previously verified receipts are periodically rechecked for official revocation where the issuing authority supports it.
+97. Confirmed official cancellation marks RECEIPT_REVOKED, immediately alerts authorized case users and prompts deadline/legal reassessment.
+98. Service unavailability is not revocation; preserve all verification history and route uncertain legal effects to central review without automatically declaring a missed deadline.
