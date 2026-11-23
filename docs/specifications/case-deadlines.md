@@ -996,6 +996,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Exports are informational internal management reports and do not automatically alter prices, invoices, case states, legal deadlines or Tramisur handling.
 - Architecture only; no implementation or deployment authorized.
 
+## Automated monthly financial reports (Step 158 — approved A)
+- At the beginning of each calendar month, automatically generate an internal financial management report covering the immediately preceding calendar month, with a clearly defined reporting timezone, period boundaries and generation timestamp.
+- Include AutoTramita-attributable net revenue excluding IVA, approved internal labor cost, company-borne direct external costs, estimated contribution margins, and comparisons by Tenant, originating Branch and procedure type, consistent with Steps 145–157. Show customer-funded pass-through disbursements separately and identify incomplete or provisional financial records.
+- Make the report available in secure PDF and Excel (.xlsx) formats to appropriately authorized AutoTramita Backoffice management, subject to server-side authorization checks at generation and download.
+- Notify authorized management in-app and optionally by email that the report is ready, without attaching confidential financial files to ordinary email or exposing sensitive details in the notification.
+- Record generation, report period, report version, source-data cut-off, failures/retries, access and downloads in the audit trail. Avoid duplicate reports on job retries and preserve immutable issued snapshots; later corrections require a clearly identified new version rather than silent overwriting.
+- Monthly reporting is informational and must not automatically change customer pricing, invoices, case status, legal deadlines or Tramisur processing.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
