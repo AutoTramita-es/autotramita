@@ -95,9 +95,16 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Retry failed checks with controlled backoff and alert administrators about persistent failures, without publishing unverified data or blocking other valid sources.
 - Calendar polling frequency does not imply that a specific source guarantees daily publication or machine-readable access.
 
+## Applicable calendar by competent authority and procedure (Step 50 — approved A)
+- Select the legally applicable calendar according to the administrative procedure, competent authority, and verified jurisdictional rules, not automatically from the TenantBranch or dealership postal address.
+- Consider national, autonomous-community and local non-working days only where they are applicable to that authority and procedure.
+- Record the competent authority, selected jurisdiction/calendar identifier and version, applicable statutory rule version, and calculation inputs/outputs for each deadline.
+- If competent authority or calendar applicability cannot be reliably established, mark the deadline provisional, flag LEGAL_REVIEW_REQUIRED, and route it to authorized central review instead of asserting a legally confirmed date.
+- Preserve Tenant/branch access controls and audit any corrections to authority, jurisdiction or calendar selection.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
-- Specific source connectors and mapping between procedure/competent authority and applicable jurisdiction.
+- Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
 - Operational workflow and service-level targets for central legal review.
 - Priority levels, defaults, and due-date recalculation.
 - Alert deduplication, delivery failure, and audit details.
@@ -138,3 +145,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 33. Configured authoritative calendar sources are checked at least every 24 hours when available, with check timestamps, results and errors recorded.
 34. New or changed calendars enter PENDING_REVIEW and notify platform administrators; ACTIVE versions remain unchanged pending approval.
 35. Failed checks retry without publishing unverified data, and persistent failures are surfaced to administrators.
+36. Statutory deadline calculations select the calendar based on procedure and competent authority rather than dealership address by default.
+37. Each calculation retains competent authority, jurisdiction, calendar version and rule version for audit.
+38. Uncertain authority or calendar applicability triggers LEGAL_REVIEW_REQUIRED and prevents presenting a provisional deadline as legally confirmed.
