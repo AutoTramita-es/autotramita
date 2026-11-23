@@ -126,6 +126,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Never silently reassign competent authority or recalculate confirmed statutory deadlines for existing cases as a consequence of registry updates; assess applicability and route ambiguous impacts for legal review.
 - Do not assume all official sources offer structured APIs or automated access; any connector must respect source terms and be validated separately.
 
+## Daily monitoring of authority registry sources (Step 54 — approved A)
+- Check each configured, available verified official authority source at least once every 24 hours, respecting access restrictions and rate limits.
+- Detect candidate updates to competent authorities and their jurisdictions, preserving source reference, observed differences, check timestamp, result and any errors.
+- Place changes in PENDING_REVIEW and notify authorized AutoTramita platform administrators; only explicit approval may activate them.
+- Continue to use the last approved ACTIVE registry version until replacement approval, while clearly signaling possible staleness if checks fail.
+- Retry failed checks with controlled backoff, escalate persistent failures and keep a monitoring audit trail.
+- Daily monitoring does not authorize automated changes to existing case authority assignments or confirmed statutory deadlines.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -181,3 +189,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 45. Official authority sources are monitored periodically, with candidate changes retained as PENDING_REVIEW and old/new differences shown to platform administrators.
 46. Only authorized platform administrators approve publication of registry changes; source provenance, prior versions and approvals remain auditable.
 47. Registry monitoring never silently changes existing case authority assignments or confirmed legal deadlines.
+48. Available verified authority sources are checked at least once every 24 hours, recording timestamps, outcomes and errors.
+49. Detected changes remain PENDING_REVIEW until approved, and the last approved registry stays active meanwhile.
+50. Failures are retried and persistent errors escalated without publishing unverified authority data.
