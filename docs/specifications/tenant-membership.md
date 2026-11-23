@@ -89,6 +89,13 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - Only OWNER can revoke an ADMIN membership; OWNER changes follow OWNER safeguards. Never revoke the Tenant's last ACTIVE OWNER.
 - Log revocation actor, affected User, Tenant, prior status, time and optional reason.
 
+## Unfinished case ownership after membership suspension or revocation
+- Suspending or revoking a membership never transfers or deletes the Tenant's cases. Every case remains linked to its original TenantBranch, with its documents, status and complete audit history preserved.
+- Any unfinished case assigned to the affected member is flagged as requiring reassignment; it must not remain actionable by that member.
+- An authorized OWNER or ADMIN may reassign these cases to an eligible active member. A MANAGER may reassign cases only within branches assigned to that MANAGER, subject to normal case permissions.
+- Do not automatically assign these cases to an ADMIN or change their TenantBranch as a side effect of membership suspension or revocation.
+- Reassignment records the former and new assignee, actor, time and affected case; completed cases retain historical authorship.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -127,5 +134,8 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 35. REVOKED membership cannot be directly reactivated; return requires a new invitation and newly approved grants.
 36. Case authorship, history and audit references survive revocation subject to retention requirements.
 37. Revocation cannot remove the last ACTIVE OWNER and does not affect other Tenants.
+38. Suspension or revocation flags unfinished cases assigned to the member for reassignment without moving them from their branch.
+39. OWNER/ADMIN or authorized branch MANAGER can reassign such cases; reassignment is audited.
+40. Case documents, status and history remain intact, and no automatic assignment to ADMIN occurs.
 
 ## Open design questions
