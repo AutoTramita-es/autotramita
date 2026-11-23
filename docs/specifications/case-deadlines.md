@@ -919,6 +919,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Restrict confidential cost analytics to authorized Backoffice management; client-facing amounts must be governed separately by agreed commercial terms, billing permissions and applicable tax/accounting rules.
 - Recording or updating costs does not automatically change customer prices, invoices, statutory deadlines, case status or Tramisur filing actions. Architecture only; no implementation or deployment authorized.
 
+## Internal case profitability and contribution margin (Step 149 — approved A)
+- Provide authorized AutoTramita Backoffice management with an internal case-level estimated contribution margin: recognized AutoTramita-attributable revenue excluding IVA minus approved internal labor costs under Steps 145–147 minus external direct costs borne by AutoTramita under Step 148.
+- Calculate contribution margin percentage as estimated contribution margin divided by AutoTramita-attributable net revenue, multiplied by 100, only when revenue is positive; otherwise display an appropriately labeled unavailable/undefined percentage.
+- Exclude official fees and other amounts collected or paid strictly on behalf of the customer from AutoTramita revenue and company-borne expenses, while showing them separately as pass-through amounts. Do not conflate pass-through payments with company turnover or profitability.
+- Distinguish case-level contribution margin from net accounting profit: central overhead, financing, corporate income tax and other unallocated costs are not necessarily included. Clearly label estimates, provisional revenue/cost data and the period/version of source records.
+- Ensure that unconfirmed labor time is not counted as approved labor cost and that pending, corrected, refunded or disputed amounts do not silently distort the metric; preserve auditable provenance and recalculation history.
+- Restrict revenue, cost and margin details to appropriately authorized internal management; never disclose confidential labor rates, provider terms or profitability in Tenant-facing case views or exports.
+- Profitability reporting must not automatically modify client prices, invoices, statutory deadlines, case status or provider filings. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
