@@ -1059,6 +1059,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - A catalog entry is not authorization to automatically issue invoices, change contractual terms, file with Tramisur or alter legal deadlines. Restrict internal costs and projected margin details to authorized AutoTramita management.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant-specific sales price schedules (Step 165 — approved A)
+- Allow authorized AutoTramita administrators to maintain negotiated sales prices for individual Tenants and procedure types, distinct from the global AutoTramita sales catalog established in Step 164 and from external provider fee schedules.
+- When pricing a new case, use the applicable approved Tenant-specific procedure price if one is effective; otherwise fall back to the applicable global procedure price. Record the pricing source and effective catalog version on the case.
+- Store amounts excluding IVA, currency (EUR default), effective-from date/time, authorizing administrator, commercial rationale or contract reference where available, and immutable version/change history. Tenant users cannot unilaterally alter negotiated prices.
+- Changes to a Tenant price schedule apply prospectively and do not silently change agreed prices on existing cases, issued invoices, historical recognized revenue or contribution-margin calculations.
+- Keep official fees and other customer-funded pass-through disbursements separate from AutoTramita service revenue; do not infer that a negotiated price changes applicable IVA or legal requirements.
+- Only appropriately authorized AutoTramita personnel may view and manage other Tenants' confidential pricing. Tenant-facing display of its own agreed prices must follow separately approved commercial and portal permissions.
+- Price configuration does not automatically issue invoices, initiate provider filings, change case states or affect statutory deadlines. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
