@@ -953,6 +953,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Restrict access to authorized AutoTramita management; do not expose confidential cost or margin details to Tenants or unrelated operators.
 - Architecture only; no implementation or deployment authorized.
 
+## Configurable low-margin threshold (Step 153 — approved A)
+- Allow an authorized AutoTramita administrator to configure an internal minimum acceptable case contribution-margin percentage (illustrative threshold: 15%), with effective dates, actor, rationale and versioned audit history.
+- Flag a case as LOW_MARGIN when its estimated contribution margin is positive but its margin percentage is below the currently applicable threshold; distinguish this from NEGATIVE_MARGIN under Step 152. Zero margin should be treated as below target but not mislabeled as negative; undefined percentages due to missing or nonpositive revenue require explicit incomplete/undefined treatment.
+- Notify the appropriately authorized Backoffice supervisor, provide revenue, approved labor cost, company-borne external cost, margin, threshold and provenance, and permit a reasoned review with an audit trail. Avoid duplicate alerts for an unchanged condition.
+- Changes to the threshold apply prospectively to new evaluations; preserve historical threshold versions and previously generated alerts rather than silently rewriting past determinations. Current operational indicators may be recalculated under the current effective threshold while retaining historical evaluations.
+- Exclude client-funded pass-through official charges from AutoTramita revenue/cost margins. Financial inputs that are incomplete must be clearly marked provisional.
+- Financial alerts are internal only and do not automatically alter customer prices, invoices, case handling, Tramisur processing or statutory deadlines.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
