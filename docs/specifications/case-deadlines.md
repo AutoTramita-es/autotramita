@@ -1041,6 +1041,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Phase 1 remains a manual secure handoff and manual status/evidence update with Tramisur; no provider API, automated filing or integration is authorized by this analytics requirement.
 - Architecture only; no implementation or deployment authorized.
 
+## Versioned external provider fee schedules and variance alerts (Step 163 — approved A)
+- Maintain an internal contractual fee schedule for each external service provider (initially Tramisur), segmented by centrally defined procedure type, with fee amount excluding IVA, currency, effective-from date/time, supporting contractual reference where available, and audited version history.
+- Only appropriately authorized AutoTramita administrators may create, approve or change fee schedules. Record actor, timestamp, rationale and effective period; preserve historical versions rather than overwriting earlier agreed fees.
+- For each case and provider service, compare the actual evidenced provider charge in the external cost ledger (Step 148) with the contractually applicable fee version at the relevant agreed service date, and flag material or any nonzero unexplained variance for authorized Backoffice review. Distinguish approved extras, taxes, credits, discounts and corrected invoices from genuine unexplained deviations.
+- Keep agreed reference fees separate from actual incurred/approved company-borne expenses: profitability and financial reporting use actual appropriately classified case costs, not automatically substituted catalog prices.
+- Preserve the fee version, comparison basis, evidence and variance-review outcome for audit; subsequent catalog updates do not silently recalculate or rewrite historical incurred costs or earlier variance determinations.
+- Provider fee schedule changes never automatically alter customer-facing prices, invoices, case state, Tramisur filing actions or statutory deadlines. Phase 1 remains manual provider coordination without API integration.
+- Restrict contractual rates, invoice comparisons and margin effects to authorized AutoTramita management. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
