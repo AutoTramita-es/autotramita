@@ -577,6 +577,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Log classification basis, relevant inputs, changes and notifications; enforce Tenant/branch access and avoid exposing internal risk rules or other Tenants' information.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant-visible case message delivery, read and reply states (Step 108 — approved A)
+- For each Tenant-authored case message, expose clear Tenant-facing states: SENT (durably accepted by AutoTramita), READ (first opened by an authorized Backoffice participant), and REPLIED (a qualifying Backoffice response has been sent).
+- Record server-side sent, first-read and first-qualifying-reply timestamps, the authorized actor and corresponding message identifiers. Preserve a complete event history rather than overwriting audit facts.
+- Mark READ only upon an authenticated, authorized explicit message view, not mere email delivery, notification preview, background polling, or access by an unauthorized user.
+- Mark REPLIED only upon a substantive Backoffice reply associated with the message or its actionable conversation thread; automated acknowledgements, read receipts and internal notes do not qualify.
+- Read receipts must not pause, satisfy or reset the Step 106 response target; REPLIED does not imply that the underlying case, requested documents, legal filing or procedure is resolved.
+- Enforce Tenant/branch permissions and separate internal Backoffice/Tramisur communications from Tenant-visible message states. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
