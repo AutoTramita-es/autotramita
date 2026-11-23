@@ -788,6 +788,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Preserve distinctions between active work and genuine WAITING_FOR_TENANT, WAITING_FOR_INFORMATION or WAITING_FOR_PROVIDER conditions, and do not imply automated time tracking of actual effort solely from status duration.
 - Architecture only; no implementation or deployment authorized.
 
+## Manual task pause with mandatory reason (Step 133 — approved A)
+- Permit an authorized assigned Backoffice operator to move an eligible IN_PROGRESS task to PAUSED only with a mandatory meaningful reason, such as an interruption or internal consultation, and subject to server-side workflow and assignment authorization.
+- Record the actor, original and new status, reason, pause start and end timestamps/time zones, and cumulative paused duration, preserving the full audit history and distinguishing declared pause duration from actual working effort.
+- Require an explicit authorized transition out of PAUSED to resume work or move to an appropriate genuine waiting state; do not silently infer that a provider or Tenant is being awaited from a generic pause.
+- Keep paused tasks visible in the operator's task list and authorized supervisor oversight, including any due/overdue flags.
+- PAUSED must not automatically stop, extend, reset or satisfy statutory deadlines, internal service targets, CRITICAL acknowledgments, substantive-action targets, alerts or escalations. Any exception to an internal clock would require a separately approved auditable rule.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
