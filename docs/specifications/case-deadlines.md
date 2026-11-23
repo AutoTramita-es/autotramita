@@ -1005,6 +1005,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Monthly reporting is informational and must not automatically change customer pricing, invoices, case status, legal deadlines or Tramisur processing.
 - Architecture only; no implementation or deployment authorized.
 
+## Month-over-month financial comparisons and trends (Step 159 — approved A)
+- Provide an authorized internal financial dashboard comparing AutoTramita-attributable net revenue excluding IVA, approved internal labor costs, company-borne direct external costs and estimated contribution margin across calendar months, including a rolling 12-month trend.
+- Show absolute and percentage month-over-month changes against the immediately preceding comparable month. Where the previous value is zero or missing, mark percentage change as undefined rather than displaying a misleading percentage.
+- Allow filtering and comparison at the AutoTramita-wide level and by Tenant, originating financial Branch (Step 156) and procedure type, respecting consistent case attribution, reporting timezone, accounting/reporting period definitions and no double counting.
+- Distinguish complete and provisional periods, incomplete or corrected financial records, and pass-through customer-funded disbursements; avoid interpreting missing data or an unfinished current month as a verified business decline.
+- Base figures on the contribution-margin definitions of Steps 145–158; distinguish these management estimates from accounting net profit and preserve report versions, provenance and historical corrections.
+- Restrict dashboards and underlying confidential costs, provider terms and margins to appropriately authorized AutoTramita management, not Tenants or unrelated operators.
+- Analytics must not automatically alter prices, invoices, cases, provider processing or statutory deadlines. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
