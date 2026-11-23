@@ -722,6 +722,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - The feedback measures the AutoTramita service experience, not an official authority decision or independently verified Tramisur performance. Any subsequent public publication would require a separate policy and appropriate permission.
 - Architecture only; no implementation or deployment authorized.
 
+## Low-rating Backoffice quality follow-up (Step 125 — approved A)
+- When an authorized Tenant user submits a voluntary 1- or 2-star AutoTramita service rating for a completed case, automatically create one auditable Backoffice quality-review task linked to the rating and case; ensure idempotency and avoid duplicate tasks from retries.
+- Notify the authorized Backoffice supervisor and assign an eligible responsible operator for review of the rating, optional comment, and relevant case history; the operator may contact the Tenant where appropriate and records the investigation, actions, and outcome.
+- Keep feedback private, apply case/Tenant access controls, preserve the original rating and audit trail, and do not automatically reopen or change the completed case or alter legal deadlines.
+- If feedback plausibly alleges a case error, permit Backoffice to initiate the separate controlled post-completion error-review process under Steps 118–123; a low score alone does not establish an error or authorize official correction.
+- Track the quality-review task separately from official case/procedure statuses, with supervisor oversight and no automatic provider communication or corrective filing.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
