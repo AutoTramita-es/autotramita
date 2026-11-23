@@ -1297,6 +1297,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Validate requested and approved amounts against confirmed payments, prior refunds and any legally required corrective invoices to prevent double refunds, overpayment and inconsistent balances; retain linked financial adjustments and audit trails.
 - Architecture only; no implementation or deployment authorized.
 
+## First substantive response SLA for Tenant refund requests (Step 193 — approved A)
+- For every Tenant-initiated refund request under Step 192, require an authorized AutoTramita administrator to provide a first substantive Tenant-facing response within three Backoffice working days from request submission.
+- Calculate the internal operational deadline using the configured Backoffice working calendar and timezone. Record submission, response due, actual substantive response, and breach timestamps in an immutable audit trail; this is an internal service target, not a claim about Spanish statutory refund deadlines.
+- A qualifying response must address the refund request with an initial assessment, specific missing-evidence request, documented decision or concrete next action. Opening, reading, assigning or sending a generic acknowledgment does not satisfy the response SLA.
+- If the three-working-day target passes without a qualifying response, create an auditable internal overdue alert for the responsible administrator or authorized escalation queue; keep it visible until a substantive response is recorded.
+- The response SLA does not constitute a deadline for approval, banking execution or completion of the refund. Refund authorization and proof-based manual bank execution remain governed by Step 191, with Tenant-facing approved and executed statuses distinguished.
+- Preserve Tenant isolation, administrator-only financial approval, evidence history and all communication records. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
