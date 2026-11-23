@@ -1077,6 +1077,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Volume discounts may affect estimated AutoTramita revenue and contribution-margin reporting but must not automatically issue or modify invoices, initiate Tramisur processing, change case states or statutory deadlines.
 - Architecture only; no implementation or deployment authorized.
 
+## Manual-only discounts — supersedes Step 166 (Step 167 — approved correction)
+- This decision explicitly supersedes Step 166's automatic Tenant-specific monthly volume discount schedules and resolves the Step 167 progressive-versus-retroactive automatic discount question as not applicable.
+- AutoTramita must NEVER automatically activate, award, calculate-and-apply, or adjust a customer discount based on monthly case count, a volume threshold, a pricing tier or any other automatic trigger. Historical case volume may be displayed as decision-support information only.
+- Discounts may be entered and explicitly approved **only manually** by an appropriately authorized AutoTramita administrator, either for a specific Tenant's negotiated pricing arrangement or for a specific case, according to the separately approved pricing scope.
+- Record the approved fixed EUR amount or percentage, scope, underlying pre-discount service price excluding IVA, effective date, reason, approving actor, applicable commercial reference and immutable audit history. Keep official administrative fees and customer-funded pass-through disbursements outside the discount basis.
+- Do not automatically reprice already agreed cases or modify issued invoices. Any later adjustment requires its own separately authorized and auditable correction/credit workflow.
+- Preserve Steps 164–165 for global and Tenant-specific sales catalogs; they do not confer automatic discount authority. Remove Step 166 automatic tier logic from the planned implementation scope and treat any contradictory language in Step 166 as superseded by this section.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
