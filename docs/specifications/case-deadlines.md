@@ -465,6 +465,16 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Preserve statutory deadline monitoring, CRITICAL queue visibility and legal-review blocks independently of this operational timer. The internal 30-minute window never extends a statutory deadline.
 - Architecture only; no implementation or deployment authorized.
 
+## Waiting for Tenant documents on critical cases (Step 95 — approved A)
+- Introduce WAITING_FOR_TENANT as a documented operational waiting condition for cases requiring supplementary documents from the Tenant; preserve the distinct provider handoff lifecycle and statutory-risk priority.
+- Record each outstanding requested document/item, request timestamp, responsible Tenant party, requester, delivery channel, applicable internal response expectation and immutable communication history.
+- Notify authorized Tenant users through the existing case portal, allow uploads into the same case, preserve document versions, and trigger Backoffice review upon submission. Do not treat an uploaded replacement as approved until the established review gate is passed.
+- While a valid, actionable Tenant request remains outstanding, do not classify the Backoffice operator as inactive merely because no further operator action is possible; maintain explicit supervision for other pending tasks and do not erase previously triggered acknowledgement or first-action failures.
+- Preserve CRITICAL priority, dedicated critical queue, statutory alerts and supervisor escalation whenever legal deadline risk persists. Waiting for Tenant documents does not suspend, reset or extend any statutory deadline or remove legal-review restrictions.
+- Use urgent, deduplicated Tenant reminders consistent with deadline severity and existing document reminder rules; log alerts and responses.
+- When the Tenant submits requested material, clear or update the waiting condition as appropriate and return the case to the responsible Backoffice operator for substantive review, with notification and audit. Partial submission leaves unresolved items pending.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
