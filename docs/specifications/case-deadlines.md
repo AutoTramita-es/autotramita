@@ -134,6 +134,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Retry failed checks with controlled backoff, escalate persistent failures and keep a monitoring audit trail.
 - Daily monitoring does not authorize automated changes to existing case authority assignments or confirmed statutory deadlines.
 
+## Urgent authority-jurisdiction changes (Step 55 — approved A)
+- Detect potentially urgent official changes to authority competence, including changes with imminent effective dates, and flag the proposed registry update URGENT_REVIEW for priority handling.
+- Promptly alert authorized AutoTramita platform administrators, including official source reference, claimed effective date, affected authority and jurisdiction, and the detected differences.
+- Before approval or activation, an authorized platform reviewer must verify the legal basis, effective date, territorial/procedural scope, and any transitional provisions; retain the approval and evidence in the audit trail.
+- Identify potentially affected existing cases for targeted review without silently reassigning authorities, changing confirmed statutory deadlines, or executing legally dependent actions.
+- If applicability is unclear, flag affected cases LEGAL_REVIEW_REQUIRED and use existing controlled legal-review safeguards; urgency does not waive verification.
+- Preserve prior approved registry versions and support an auditable distinction between detection, approval and legal effective date.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -192,3 +200,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 48. Available verified authority sources are checked at least once every 24 hours, recording timestamps, outcomes and errors.
 49. Detected changes remain PENDING_REVIEW until approved, and the last approved registry stays active meanwhile.
 50. Failures are retried and persistent errors escalated without publishing unverified authority data.
+51. Imminent authority-jurisdiction changes are flagged URGENT_REVIEW and promptly escalated to platform administrators.
+52. Activation requires verified legal basis, effective date, territorial/procedural scope and transitional applicability, with approval audit.
+53. Potentially affected existing cases are flagged for review; no automatic authority reassignment or silent deadline changes occur.
