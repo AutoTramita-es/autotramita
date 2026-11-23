@@ -654,6 +654,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Report generation must never independently decide that a procedure is complete, prove official filing, certify a government action or suppress legal alerts; preserve Tramisur phase-one manual evidence and authorization controls.
 - Architecture only; no implementation or deployment authorized.
 
+## Post-completion Tenant–Backoffice messaging (Step 117 — approved A)
+- Keep the authorized Tenant-visible case conversation available after a case is confirmed COMPLETED, subject to normal retention, Tenant/branch permissions and security controls.
+- A new post-completion Tenant message creates a traceable Backoffice follow-up task linked to the closed case, assigned to the responsible eligible operator or routed to supervisor oversight if unavailable, with the established message response targets and notifications.
+- Preserve the original COMPLETED status, completion evidence, issued reports, official receipts and historical timeline; receiving or replying to a message does not automatically reopen the case, alter legal deadlines, invalidate documents or trigger an official corrective filing.
+- Backoffice reviews the follow-up and records its disposition, including whether clarification suffices or a controlled post-closure review/correction is necessary. Any official corrective action follows the previously approved supervisor authorization and legally authorized representative rules (Steps 72–73).
+- Retain an auditable history of messages, follow-up tasks, decisions, responsible actors and timestamps, while strictly separating Tenant-visible correspondence from internal Backoffice and private Tramisur communications.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
