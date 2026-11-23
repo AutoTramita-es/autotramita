@@ -853,6 +853,13 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Escalation and correction decisions do not affect statutory deadlines, case workflow status or independent CRITICAL alerts.
 - Architecture only; no implementation or deployment authorized.
 
+## Operator notification of time correction decisions (Step 141 — approved A)
+- Upon an explicit approval or rejection of an unconfirmed-work-time correction request under Steps 137–140, automatically send an in-app notification to the requesting operator, including decision outcome, decision time, reviewer role, and the recorded rationale.
+- For approved requests, display the authorized corrected/recognized work duration and its relationship to the originally unconfirmed interval; for rejected requests, display the reason for rejection and maintain the unconfirmed status of the original interval.
+- Link the notification to the operator's authorized request detail and preserve full decision and notification audit history; avoid duplicate notifications on retries and do not disclose other employees' requests.
+- Notification delivery must not itself modify the decision, case status, statutory deadlines, internal SLA measurements or critical escalations.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
