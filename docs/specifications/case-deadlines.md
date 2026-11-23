@@ -365,6 +365,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - READY_FOR_TRAMISUR requires every applicable mandatory checklist item to be satisfied by an approved current document, plus separate overall backoffice readiness approval and existing legal/deadline controls. Individual document approval alone never establishes official acceptance by Tramisur.
 - Architecture/specification only; no implementation or deployment authorized.
 
+## Rejected-document notifications and correction tasks (Step 83 — approved A)
+- When authorized backoffice staff set a document to REJECTED or REPLACEMENT_REQUIRED, automatically create or update a case-linked correction task for the responsible Tenant/branch user, avoiding duplicate open tasks for the same document requirement.
+- Notify the responsible eligible Tenant user in-app and by email, with the document type, actionable rejection/replacement reason and secure case link; avoid sensitive document contents in email and enforce Tenant/branch access on opening.
+- Permit authorized Tenant users to upload a replacement as a new preserved version within the existing case. Notify the relevant backoffice review queue when a replacement passes upload validation and is ready for fresh manual review.
+- Keep the task open until the required document is approved by backoffice, or an explicitly authorized and audited determination establishes that the requirement no longer applies; uploading alone does not close it.
+- Track task ownership, creation, notification, reassignment, resubmission, review, closure and timestamps in the case audit trail; preserve prior document decisions and versions.
+- Maintain statutory deadline reminders and independent readiness, authenticity and legal-authorization gates. No implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
