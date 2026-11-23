@@ -339,6 +339,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Backoffice remains responsible for the second-stage readiness review and approval before READY_FOR_TRAMISUR; checklist completion alone does not authorize handoff or official filing.
 - Template changes require centrally governed approval and explicit effective dates; preserve historical case context and apply legal-transition rules where relevant.
 
+## Dynamic conditional document checklist (Step 80 — approved A)
+- Derive the applicable mandatory and conditionally mandatory document items from the centrally approved, versioned procedure template and case attributes, including applicant category, vehicle provenance and other legally relevant fields.
+- Re-evaluate checklist applicability whenever an authorized Tenant user changes a relevant case attribute; display newly required items and the reason/condition for each requirement.
+- Preserve previously uploaded files, document versions and all historical checklist applicability decisions, even if a document is no longer currently required. Do not silently discard evidence.
+- Audit the old and new attribute values, actor, timestamp, rule/template version, affected checklist items and resulting readiness state.
+- If a material change affects an already backoffice-approved case before handoff, invalidate its prior document-readiness approval and require a fresh backoffice review before READY_FOR_TRAMISUR or transmission; do not silently reopen or undo a completed official filing.
+- Unclear legal applicability is escalated for review rather than arbitrarily resolved by a Tenant user; preserve statutory deadlines and independent filing authorization controls.
+- Architecture only: no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
