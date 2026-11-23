@@ -869,6 +869,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Use reports for operational capacity and cost planning, not automatic employment or disciplinary decisions; reporting does not alter statutory deadlines, internal SLA outcomes, or case statuses.
 - Architecture only; no implementation or deployment authorized.
 
+## PDF and Excel export of personal work-time reports (Step 143 — approved A)
+- Permit a Backoffice operator to export their own daily/monthly work-time report under Step 142 as PDF or Excel (.xlsx), with selected reporting period and generation timestamp.
+- Include authorized case/task references, approved/confirmed active-work totals, recorded pause and provider/Tenant waiting durations, and clearly separate pending or rejected unconfirmed time from approved totals; preserve consistent units and avoid double counting.
+- Permit an appropriately authorized Backoffice supervisor to export reports only for operators within their legitimate oversight scope; enforce permissions server-side at export generation and download.
+- Audit each export with requesting actor, report subject, reporting period, format, timestamp and outcome; protect generated files and downloads against unauthorized access and cross-Tenant or external disclosure.
+- Clearly identify these as internal operational reports, not payroll or official legal records; exports must not modify original time records, task/case status, statutory deadlines or SLA outcomes.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
