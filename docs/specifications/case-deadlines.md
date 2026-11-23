@@ -1128,6 +1128,16 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Statement generation does not itself issue a legally compliant invoice, charge a payment method, mark an invoice paid, or authorize Tramisur filings. Those workflows require separate decisions and approvals.
 - Architecture only; no implementation or deployment authorized.
 
+## Billing eligibility upon confirmed case completion (Step 173 — approved A)
+- Include a case's AutoTramita service charge in the consolidated monthly Tenant statement (Step 172) for the calendar billing month in which Backoffice records its evidence-supported, confirmed completion, not the month when the Tenant originally submitted the case.
+- Example: a case submitted on 25 November and confirmed completed on 3 December is eligible for the December statement.
+- Pending, in-progress, waiting-for-Tenant and waiting-for-provider cases remain excluded from completed-case service billing until completion is confirmed.
+- Record immutable completion timestamp, timezone, confirming actor, evidence and linked case price acceptance (Step 171). Generate billing eligibility idempotently, ensuring each eligible service line is included in no more than one regular monthly statement.
+- Preserve historical statement snapshots; a later post-closure review or correction does not silently move the charge between months or duplicate it. Any authorized adjustment is a separate auditable financial event.
+- Customer-funded official fees and other pass-through amounts remain separately classified and subject to their own confirmed-incurrence and billing rules; do not infer that an unconfirmed fee is chargeable merely because the case closed.
+- Completion-based statement eligibility does not itself issue a tax invoice, collect payment or determine statutory tax recognition; those require separately approved invoicing and accounting rules.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
