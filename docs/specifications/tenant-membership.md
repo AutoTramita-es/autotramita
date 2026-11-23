@@ -28,6 +28,13 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - Default case lists and case creation are scoped to the selected branch. A User cannot bypass server-side branch scope by changing client-supplied identifiers.
 - A tenant may have several branches but one selected branch per user session; access to all branches for OWNER/ADMIN means they may switch to any branch, not automatically combine case lists.
 
+## Independent session workspace context
+- Each authenticated session maintains its own active Tenant and active TenantBranch. Switching either in one session must not switch other existing sessions.
+- A User may work in BR-0001 on a desktop and BR-0002 on a mobile device at the same time, provided both are authorized.
+- The most recently used Tenant and last used branch per Tenant are User preferences used only to initialize new sessions, never to override active workspace contexts in other sessions.
+- Every session independently revalidates Tenant membership, branch assignment, and status for protected requests; revocation or suspension takes effect across sessions regardless of saved preferences.
+- Workspace context must be server-validated and session-bound, not trusted from a client-provided Tenant or branch identifier.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -41,7 +48,9 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 10. A User without any eligible branch cannot process cases.
 11. On first access, an accessible ACTIVE primary branch is selected automatically.
 12. Without access to the primary branch, the only eligible ACTIVE branch is selected automatically; multiple eligible branches require user choice.
+13. Switching Tenant or branch in one session does not modify the active workspace of another session.
+14. Last-used Tenant and branch preferences initialize new sessions only, subject to current authorization.
+15. Revoked access is enforced in every session independently.
 
 ## Open design questions
 - How long should an invitation remain valid, and how are invitations resent?
-- How should concurrent browser sessions maintain separate active workspace context?
