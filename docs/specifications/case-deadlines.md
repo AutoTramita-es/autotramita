@@ -689,6 +689,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If Tenant information is missing, record WAITING_FOR_INFORMATION and the outstanding request, but do not silently erase the original target or imply a statutory suspension. Any justified internal clock treatment requires an explicit auditable rule.
 - These are internal Backoffice service targets, not legal deadlines, guarantees of Tramisur response or government correction completion. Architecture only; no implementation or deployment authorized.
 
+## Waiting for Tramisur in post-completion error review (Step 121 — approved A)
+- Introduce WAITING_FOR_PROVIDER as a distinct post-completion error-review status when Backoffice has actually sent a documented question or evidence request to Tramisur through the agreed secure manual phase-one channel.
+- Record provider identity, request purpose, responsible Backoffice operator, actual dispatch timestamp and time zone, permitted evidence reference, expected response if agreed, and the eventual provider response and receipt timestamp. Do not imply an automated Tramisur API or delivery confirmation without evidence.
+- Keep the error-review task open and supervisor-visible, with separate clocks for the Step 120 internal review target and elapsed provider waiting time; entering WAITING_FOR_PROVIDER must not erase, reset or silently suspend an internal SLA breach.
+- After two Backoffice working days without a recorded substantive provider reply, remind the assigned Backoffice operator; after four Backoffice working days, escalate to the authorized Backoffice supervisor. Compute against the approved Backoffice working calendar and deduplicate reminders.
+- On receipt of a substantive provider response, record evidence and return the task to UNDER_REVIEW or the next properly authorized state; preserve full status history and audit.
+- Tenant-facing updates may explain that an external provider response is awaited, without disclosing private Tramisur correspondence or unverified assertions. Statutory deadlines, CRITICAL risk escalations and legally required corrective actions remain independent of provider waiting.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
