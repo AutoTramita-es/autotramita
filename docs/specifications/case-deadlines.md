@@ -886,6 +886,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Restrict team and individual employee analytics to authorized management, not Tenants or unrelated operators; apply privacy safeguards and do not make automatic employment or disciplinary decisions based on this report.
 - Reporting does not alter task/case statuses, statutory deadlines, internal SLAs or CRITICAL escalations. Architecture only; no implementation or deployment authorized.
 
+## Internal labor cost per case (Step 145 — approved A)
+- Calculate an internal Backoffice labor cost for each case from approved/confirmed active-work durations attributable to that case multiplied by the applicable confidential internal hourly cost rate for each operator; sum across authorized operators and tasks without double counting.
+- Allow authorized management to review internal labor costs by case, procedure type, operator scope and aggregate Backoffice team, distinguishing labor cost from total operational cost, provider fees, taxes and customer charges.
+- Exclude unconfirmed or rejected time from recognized labor cost until approved under Steps 137–141; show any pending amount separately if authorized. PAUSED and WAITING_FOR_TENANT / WAITING_FOR_PROVIDER durations are not active labor hours.
+- Protect operator cost rates and derived confidential cost details with server-side access controls; do not expose them to Tenants, customers, unrelated operators or in Tenant-facing exports.
+- Use the applicable effective-dated internal cost rate for each recorded work interval, retaining the rate/version and calculation provenance for reproducible historical reporting; corrections must be auditable.
+- Internal cost analytics do not automatically set or modify the customer's sales price, invoice, employee compensation, case status, statutory deadlines or internal SLAs.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
