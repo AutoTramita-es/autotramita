@@ -43,6 +43,13 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - An authorized OWNER or ADMIN may resend an invitation, generating a new token with a fresh 168-hour lifetime; any earlier outstanding invitation link for that membership is immediately invalidated.
 - Expired, superseded, or revoked invitations cannot be accepted; invitation issuance, resending, and acceptance are audited.
 
+## Invitation identity verification
+- An invitation can be accepted only by an authenticated User whose verified email address matches the invitation recipient email (using the platform's canonical email comparison rules).
+- If the recipient has no User account, they must register and verify the invited email address before accepting.
+- If authenticated as a different account or with an unverified/mismatched email, acceptance is denied without consuming the invitation token.
+- Token expiry, single-use state, membership authorization, and email match must be checked atomically at acceptance; never grant TenantMembership solely from possession of an invitation link.
+- The invitation's 168-hour expiry is not extended by account registration or email verification.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -62,5 +69,8 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 16. Invitations expire 168 hours after issuance and cannot be accepted thereafter.
 17. Resending an invitation invalidates its predecessor and starts a new 168-hour window.
 18. Invitation tokens are single-use and cannot be accepted twice.
+19. Invitation acceptance requires an authenticated User with the matching verified email address.
+20. A new recipient must register and verify their invited email before acceptance; a mismatched account cannot accept.
+21. Identity verification does not extend the original invitation expiry.
 
 ## Open design questions
