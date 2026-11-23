@@ -381,6 +381,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Record notification schedule, delivery attempts, recipient, escalation, actor, task state, timestamps and any authorized reassignment or closure in the audit trail.
 - No automated Tramisur integration, implementation or deployment authorized.
 
+## Primary responsible Tenant employee per case (Step 85 — approved A)
+- Every active case has one primary responsible eligible Tenant employee, scoped to the case's active branch, for operational ownership of document requests, correction tasks, reminders and case follow-up.
+- An appropriately authorized branch MANAGER or Tenant ADMIN/OWNER may reassign case responsibility within existing branch-membership permissions; record old/new assignee, actor, reason and timestamp without rewriting history.
+- On membership suspension, revocation, loss of branch access or departure, retain the case and all evidence, flag unfinished cases for reassignment and notify eligible supervisors according to the existing reassignment/escalation policy.
+- Transfer outstanding actionable tasks and future case notifications to the new eligible assignee without erasing previous task, reminder or audit records; no cross-Tenant access or unauthorized branch visibility.
+- Supervisors retain oversight within their authorized scope, while the single assignee remains the default operational recipient. Statutory deadlines and urgent alerts remain independent of reassignment.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
