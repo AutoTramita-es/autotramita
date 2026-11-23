@@ -637,6 +637,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Retain previous issued versions and their digests under applicable retention policies; secure generation, downloads and report verification against unauthorized cross-Tenant access.
 - Architecture only; no implementation or deployment authorized.
 
+## Immutable historical versions of issued case PDF reports (Step 115 — approved A)
+- When relevant case data changes after a report has been issued, a newly generated informational PDF is a separate issuance with its own unique report ID, QR verification reference, timestamp and SHA-256 digest.
+- Preserve every previously issued report and its trusted issuance record and original bytes without overwriting or mutating historical files, hashes or issuance timestamps, subject to applicable lawful retention and erasure obligations.
+- Maintain an explicit ordered report-issuance history for each case. Distinguish the most recently issued report from earlier historical reports; the latter may no longer reflect the current case state, but remain authentic records of what was issued at that time.
+- On authorized verification of an earlier report, display its original issue time and historical/superseded status with a clear warning that the current case data may have changed. Do not conflate a historical report with a forged, altered or legally revoked document.
+- New issuance does not automatically invalidate an older report's integrity verification or alter official receipts, legal deadlines or case workflow states. Reverify any presented PDF against the hash of its own issuance, not the latest report.
+- Enforce Tenant/branch access controls on history, downloads and verification, and audit report generation and verification events. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
