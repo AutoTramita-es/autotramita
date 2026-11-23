@@ -1014,6 +1014,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Restrict dashboards and underlying confidential costs, provider terms and margins to appropriately authorized AutoTramita management, not Tenants or unrelated operators.
 - Analytics must not automatically alter prices, invoices, cases, provider processing or statutory deadlines. Architecture only; no implementation or deployment authorized.
 
+## Automatic monthly contribution-margin decline alerts (Step 160 — approved A)
+- After monthly financial reporting closes for a calendar month, compare AutoTramita-wide estimated contribution margin with the immediately preceding completed calendar month, using consistent definitions from Steps 145–159 and sufficiently reliable finalized-period inputs.
+- If the current month's total contribution margin has declined by more than a configurable default threshold of 20% relative to the previous month, notify appropriately authorized AutoTramita management in-app and optionally by email without exposing confidential figures in ordinary email.
+- Show the absolute and percentage change in contribution margin, underlying changes in AutoTramita-attributable net revenue excluding IVA and company-borne direct costs, and a breakdown of contributing Tenants and procedure types; use originating-Branch attribution consistently when drilling down.
+- Permit only an authorized AutoTramita administrator to change the threshold, with effective-dated version history, reason and audit. Preserve previously issued alerts and the threshold used at evaluation.
+- When the previous month's margin is zero or negative, or financial inputs are materially incomplete/noncomparable, do not calculate a misleading decline percentage; mark the comparison unavailable or requiring manual review rather than generating an unsupported automatic percentage alert.
+- Deduplicate unchanged alerts, audit issuance and review, and distinguish estimated contribution margin from accounting net profit. No alert may automatically alter customer prices, invoices, cases, provider handling or statutory deadlines.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
