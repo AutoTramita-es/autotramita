@@ -245,6 +245,13 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Preserve extracted and case-side comparison values, source document, comparison outcome, discrepancies, supporting evidence, reviewer decision and full audit history.
 - Neither official document verification nor a case-match decision alone automatically clears statutory deadline alerts or overrides established legal blocks.
 
+## Detect duplicate filing receipts safely (Step 69 — approved A)
+- Detect potential reuse of filing receipts by comparing document cryptographic fingerprints, official CSV identifiers and official filing/registration references, with normalization and issuer scoping to avoid false positives.
+- Mark candidate duplicates POSSIBLE_DUPLICATE_RECEIPT; a match is a review signal, not automatic proof of improper reuse or fraud.
+- Allow one authentic receipt to support multiple related cases only where its scope and case identifiers substantiate that relationship and an authorized, appropriately scoped Tenant OWNER/ADMIN or MANAGER approves the association.
+- For cross-Tenant matches, enforce strict non-disclosure: never reveal another Tenant's identity, client details, documents, case identifiers or other confidential metadata. Any platform-level deduplication must be access-controlled and privacy-reviewed, with a generic warning only.
+- Record match basis, reviewer, decision, related-case justification within permitted Tenant scope, timestamps and audit history. Do not automatically clear deadline alerts or bypass document-case matching and authenticity checks.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -345,3 +352,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 90. Filing receipts are checked against available case-specific identifiers, including VIN, plate, applicant, procedure and application reference.
 91. Material contradictions set DOCUMENT_CASE_MISMATCH and block automatic acceptance; missing data is reported as an incomplete match assessment.
 92. Authorized supervisory review is required to resolve mismatches, with full comparison evidence and audit trail retained.
+93. Potential duplicate receipts are detected by document fingerprint, CSV or issuer-scoped official registration identifiers and flagged POSSIBLE_DUPLICATE_RECEIPT.
+94. Reuse for genuinely related cases requires authorized supervisory review and documented justification, not automatic rejection.
+95. Cross-Tenant duplicate detection must not reveal any other Tenant's identity or confidential information; all review outcomes are audited.
