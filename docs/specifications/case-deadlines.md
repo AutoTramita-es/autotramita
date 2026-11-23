@@ -189,6 +189,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Closure marks the overrun review as resolved or dispositioned, not the historical breach as erased: retain the original due date, exceeded flag/history, explanation, evidence, approver, decision rationale and timestamps in immutable audit history.
 - Closure must not silently alter statutory deadlines, remove independent legal restrictions, or automatically execute previously blocked actions. Enforce Tenant isolation and branch authorization server-side.
 
+## Official proof of timely submission (Step 62 — approved A)
+- Support attaching an official filing receipt (justificante de presentación) to a case, preserving the original document, issuer/competent authority, official registration or entry number where available, and the recorded submission date and time including timezone when available.
+- Compare the verified official filing timestamp against the legally applicable statutory deadline and procedure-specific rules; document the comparison and source evidence.
+- A responsible employee may upload and describe the receipt but cannot independently dismiss an exceeded-deadline alert. An authorized scoped OWNER/ADMIN/MANAGER may close the overrun review after validating evidence and applicability.
+- If verified evidence establishes timely submission, distinguish an initial automated overrun alert from a legally confirmed missed filing; retain the alert and correction history without inaccurately preserving a disproven breach as fact.
+- Inconsistent, incomplete, unauthenticated or legally ambiguous evidence requires review and, when necessary, escalation to LEGAL_REVIEW_REQUIRED rather than automatic clearance.
+- Keep the original receipt, evidence metadata, verification outcome, approver, decision rationale, and complete audit trail; do not silently change statutory rules or execute blocked actions.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -268,3 +276,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 69. Responsible employees may submit overrun explanations and evidence but cannot independently close the overrun review.
 70. Closure requires an authorized OWNER/ADMIN or appropriately scoped MANAGER; unresolved legal ambiguity requires central legal review.
 71. Closure retains permanent overrun history and audit evidence, and does not silently change statutory deadlines or lift unrelated legal blocks.
+72. Cases can retain official filing receipts with original document, competent authority, registration identifier and submission timestamp.
+73. Verified official submission time is compared with the applicable statutory deadline; an authorized supervisor may resolve an overrun alert on proof of timely filing.
+74. Conflicting or unverifiable evidence requires review; the original alert, evidence, decision and correction history remain auditable without mislabeling a disproven breach.
