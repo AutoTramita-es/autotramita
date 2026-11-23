@@ -1086,6 +1086,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Preserve Steps 164–165 for global and Tenant-specific sales catalogs; they do not confer automatic discount authority. Remove Step 166 automatic tier logic from the planned implementation scope and treat any contradictory language in Step 166 as superseded by this section.
 - Architecture only; no implementation or deployment authorized.
 
+## Administrator-exclusive manual discount authority (Step 168 — approved A)
+- Only an appropriately authorized AutoTramita platform administrator may create, enter, approve, amend, revoke or discontinue a manual customer discount, whether Tenant-scoped or case-scoped.
+- Backoffice operators, Backoffice supervisors and Tenant users have no independent authority to create, propose through a privileged discount workflow, approve or modify discounts. The Step 168 option allowing an operator proposal-and-approval workflow was explicitly rejected.
+- Enforce this authorization server-side and in the user interface. Record administrator identity, timestamp, reason, discount scope, amount or percentage, relevant effective dates and all historical changes in an immutable audit trail.
+- Changes must not silently reprice already agreed cases or modify issued invoices; any correction requires a separately authorized and audited commercial adjustment process.
+- Reaffirm Step 167: no automatic volume-tier or other automatically activated discounts. Global and Tenant-specific sales price catalogs (Steps 164–165) remain distinct from manual discount grants.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
