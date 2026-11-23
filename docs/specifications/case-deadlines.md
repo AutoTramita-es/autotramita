@@ -46,10 +46,18 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Maintain historical rule versions and case-level calculation provenance. Ensure recalculation and notifications remain Tenant/branch access-controlled and avoid duplicate alerts.
 - This design does not itself validate any specific statutory deadline or transitional provision.
 
+## Central legal review of ambiguous deadlines (Step 44 — approved A)
+- Cases marked LEGAL_REVIEW_REQUIRED are routed to an explicitly authorized AutoTramita platform reviewer, with qualified legal expertise consulted when necessary.
+- Tenant staff may report incorrect case facts and submit supporting documents for correction under existing case permissions, but cannot interpret or change centrally governed statutory rules on their own.
+- The platform reviewer records a reasoned determination, the applicable legal source and rule version, evidence considered, reviewer identity, timestamp and any authorized correction or recalculation in an audit trail.
+- Until review is resolved, the disputed deadline must not be represented as legally verified; preserve the previously recorded value as provisional and clearly flag uncertainty.
+- Review outcomes affecting shared rules follow central rule version governance. Case-specific factual corrections do not silently alter the global rule.
+- Access to case evidence and reviewer actions must respect Tenant isolation and confidentiality.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Rule provenance, versioning, calendar and holiday calculations.
-- Who reviews and resolves LEGAL_REVIEW_REQUIRED cases and how corrections are approved.
+- Operational workflow and service-level targets for central legal review.
 - Priority levels, defaults, and due-date recalculation.
 - Alert deduplication, delivery failure, and audit details.
 
@@ -71,3 +79,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 15. A new statutory rule version applies to existing cases only when verified transitional provisions and case facts establish applicability.
 16. Any controlled deadline recalculation records previous/new values, rule version, legal source and reason.
 17. Ambiguous transitional applicability preserves the recorded deadline and flags LEGAL_REVIEW_REQUIRED pending authorized review.
+18. Only an authorized platform reviewer can resolve legal-rule ambiguity, recording legal basis, evidence and audit history.
+19. Tenant staff can submit case-fact corrections and evidence but cannot independently change statutory rules.
+20. Pending review, disputed deadlines remain clearly provisional rather than presented as legally verified.
