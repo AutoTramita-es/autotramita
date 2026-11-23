@@ -268,6 +268,13 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Do not automatically conclude that every related filing is legally invalid or that every deadline was missed. Retain the official revocation source, affected-case associations, assessments, notifications, decisions and audit trail.
 - Maintain the existing LEGAL_REVIEW_REQUIRED and deadline escalation safeguards; no automatic execution of blocked actions or silent clearance of existing alerts.
 
+## Post-closure review after official receipt revocation (Step 72 — approved A)
+- If an officially revoked receipt was relied upon by a previously completed/closed case, create a distinct post-closure review flagged POST_CLOSURE_REVIEW_REQUIRED; do not silently change the original completed status or rewrite the case's historical outcome.
+- Notify the responsible authorized Tenant supervisor and other relevant scoped case users, and assess whether the revocation affects the specific completed procedure, legal deadline, evidence or subsequent obligations.
+- A properly scoped OWNER/ADMIN/MANAGER oversees the post-closure review; unresolved legal uncertainty escalates to LEGAL_REVIEW_REQUIRED and applicable legally dependent actions remain blocked.
+- Preserve original completion evidence and timestamps, official revocation notice, post-closure review findings, approvals, resulting actions and immutable audit history.
+- Do not automatically declare the completed procedure legally void or perform corrective filings; any remedy must follow approved procedure-specific legal and authorization controls.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -377,3 +384,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 99. Official receipt revocation identifies all linked cases, including privacy-safe cross-Tenant associations, and flags REVOKED_RECEIPT_REVIEW_REQUIRED per affected case.
 100. Each affected case receives an independent legal/deadline assessment and targeted notifications without exposing another Tenant's data.
 101. Revocation alone does not establish invalidity of all linked proceedings; preserve evidence, review decisions and audit history.
+102. Confirmed receipt revocation affecting a completed case creates a distinct POST_CLOSURE_REVIEW_REQUIRED review without rewriting the original closure status.
+103. Authorized supervisors assess consequences, escalating legal ambiguity centrally, with original completion and subsequent review actions independently audited.
+104. Revocation does not automatically void a completed proceeding or authorize corrective filings.
