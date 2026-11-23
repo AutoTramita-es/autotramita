@@ -415,6 +415,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If no operator is eligible, cases remain in the unassigned queue with supervisor notification and independent statutory deadline monitoring.
 - Architecture only; no implementation or deployment authorized.
 
+## Preserve backoffice case ownership across logout (Step 89 — approved A)
+- When a backoffice operator logs out or becomes effectively OFFLINE at the end of the workday, retain ownership of all unfinished assigned cases and their history; do not bulk reassign solely because the operator is offline.
+- The operator can resume assigned work on return, subject to active account and permissions; the operator is ineligible for new automatic assignments until effective availability becomes AVAILABLE.
+- Continue independent monitoring of statutory deadlines, urgent case risks, open tasks and supervisory escalation while the assignee is offline; offline status must never suppress urgent alerts.
+- Authorized backoffice supervisors may manually reassign urgent or otherwise necessary cases to eligible operators, recording the reason, old/new assignee, actor and timestamp and routing future notifications appropriately.
+- Distinguish ordinary end-of-day logout from suspension, revocation, prolonged absence or account removal, which remain subject to existing case reassignment and access safeguards.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
