@@ -373,6 +373,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Track task ownership, creation, notification, reassignment, resubmission, review, closure and timestamps in the case audit trail; preserve prior document decisions and versions.
 - Maintain statutory deadline reminders and independent readiness, authenticity and legal-authorization gates. No implementation or deployment authorized.
 
+## Missing-document reminders and escalation (Step 84 — approved A)
+- For an open Tenant correction task requiring supplementary or replacement documentation, send an in-app and email reminder to the eligible assigned Tenant user at 24 hours after the documented request, and another at 48 hours, provided the required upload remains outstanding.
+- At 72 hours without submission, escalate to an appropriately scoped active branch MANAGER or Tenant ADMIN/OWNER; avoid duplicate escalations and never disclose case information outside authorized Tenant/branch scope.
+- When a replacement is submitted and awaits backoffice review, suspend missing-upload reminders while keeping the correction task open until approval; backoffice rejection or a new replacement request creates a documented follow-up cycle with its own notification timeline, without erasing prior cycles.
+- Statutory deadline alerts and imminent-risk escalation operate independently and immediately when warranted; the 24/48/72-hour schedule must never delay legal-deadline warnings.
+- Record notification schedule, delivery attempts, recipient, escalation, actor, task state, timestamps and any authorized reassignment or closure in the audit trail.
+- No automated Tramisur integration, implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
