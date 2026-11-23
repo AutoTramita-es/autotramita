@@ -944,6 +944,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Strictly restrict cross-Tenant comparisons, confidential rates, provider fees and internal margins to authorized AutoTramita management. Tenant portal users may access only their own explicitly permitted operational and commercial data, never AutoTramita's internal profitability analytics or another Tenant's information.
 - Analytics do not automatically change customer prices, invoices, legal deadlines, case states or Tramisur processing. Architecture only; no implementation or deployment authorized.
 
+## Automatic negative-margin case alerts (Step 152 — approved A)
+- When a case's estimated AutoTramita-attributable net revenue is lower than the sum of approved internal labor cost and company-borne direct external costs under Steps 145–151, flag it internally as NEGATIVE_MARGIN and notify an authorized Backoffice supervisor.
+- Display the underlying revenue, labor cost, external company-borne cost and estimated negative contribution margin, with source provenance and an explicit provisional/uncertain label when any financial inputs are incomplete.
+- Permit an authorized supervisor to investigate and record a reasoned conclusion, actor and timestamp; preserve the alert and review audit trail. Recalculate on material approved revenue/cost changes and avoid duplicate notifications for the same unchanged condition.
+- Exclude official charges and other amounts passed through on behalf of a customer from both company revenue and company-borne costs; do not confuse contribution margin with full net profit.
+- NEGATIVE_MARGIN is internal financial oversight only, not a legal or case-processing hold: do not automatically change client pricing, invoices, case status, provider handling, statutory deadlines or critical legal-risk alerts.
+- Restrict access to authorized AutoTramita management; do not expose confidential cost or margin details to Tenants or unrelated operators.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
