@@ -87,9 +87,17 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Calendar approval is distinct from rule applicability: activation does not indiscriminately recalculate existing case deadlines. Any required updates follow controlled applicability and audit procedures.
 - The design does not assume that every authority exposes a machine-readable feed; source-specific acquisition methods require separate validation.
 
+## Daily official calendar checks (Step 49 — approved A)
+- Check each configured, available authoritative BOE, autonomous-community and local calendar source at least once every 24 hours, subject to source availability and responsible access limits.
+- Detect newly published or changed calendar data and store it as PENDING_REVIEW with source, jurisdiction, year, retrieval timestamp and differences; notify authorized AutoTramita platform administrators.
+- Continue using the last approved ACTIVE version until a replacement has been verified and approved; never automatically activate unreviewed data.
+- Record each check time, source, outcome and errors for operational monitoring and audit.
+- Retry failed checks with controlled backoff and alert administrators about persistent failures, without publishing unverified data or blocking other valid sources.
+- Calendar polling frequency does not imply that a specific source guarantees daily publication or machine-readable access.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
-- Specific source connectors, calendar polling cadence, and mapping between procedure/competent authority and applicable jurisdiction.
+- Specific source connectors and mapping between procedure/competent authority and applicable jurisdiction.
 - Operational workflow and service-level targets for central legal review.
 - Priority levels, defaults, and due-date recalculation.
 - Alert deduplication, delivery failure, and audit details.
@@ -127,3 +135,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 30. Official calendars are periodically retrieved from verified BOE, regional or local sources where available, with new/changed datasets held as PENDING_REVIEW.
 31. Only authorized platform administrators may approve calendar versions for ACTIVE legal deadline calculations; provenance and prior versions remain auditable.
 32. Failed calendar retrieval preserves existing approved data while signaling staleness; unapproved data cannot affect statutory deadlines.
+33. Configured authoritative calendar sources are checked at least every 24 hours when available, with check timestamps, results and errors recorded.
+34. New or changed calendars enter PENDING_REVIEW and notify platform administrators; ACTIVE versions remain unchanged pending approval.
+35. Failed checks retry without publishing unverified data, and persistent failures are surfaced to administrators.
