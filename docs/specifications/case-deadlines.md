@@ -491,6 +491,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Apply Tenant and branch-level authorization to all displayed case data and uploads. Never expose internal Backoffice notes, private supervisory escalation details, Tramisur coordination or cross-Tenant information in the Tenant portal.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant-facing estimated case completion date (Step 98 — approved A)
+- Display a clearly labeled, non-binding estimated completion date in the authorized Tenant case portal when sufficient reliable information exists, derived from procedure type, document readiness, current workflow status, and supported processing-duration assumptions.
+- Distinguish estimated completion from statutory deadlines, official filing dates, legal guarantees and contractual commitments; do not imply that a projected date changes any statutory requirement.
+- Recalculate or withdraw the estimate when material inputs change, including outstanding Tenant documentation, Backoffice review, manual handoff to Tramisur, provider waiting time, or other documented delays. Explain meaningful changes in plain Tenant-visible language without exposing internal notes.
+- During the phase-one manual Tramisur workflow, use only validated, maintainable assumptions or actual provider updates; do not invent provider SLAs, real-time integration signals or precise dates without sufficient evidence.
+- If confidence or data sufficiency is inadequate, show an explicit 'Estimate currently unavailable' state instead of a fabricated date. Preserve estimation provenance, version and change history for authorized audit.
+- Apply existing Tenant/branch access controls. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
