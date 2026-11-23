@@ -119,6 +119,13 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - Stop reminders automatically once no eligible cases remain; avoid sending empty reminders.
 - Reminder delivery failures must not block case processing, and retry logic must not create duplicate daily reminders.
 
+## Escalation of overdue reassignment
+- For each unfinished case flagged for reassignment following membership suspension or revocation, start a 72-hour elapsed-time threshold at the moment the case becomes unassigned.
+- If the case remains awaiting reassignment at that threshold, mark it URGENT_REASSIGNMENT and notify every active OWNER and ADMIN of that Tenant via in-app notification and email.
+- Send the escalation once per case per outstanding reassignment episode; ordinary daily reminders continue until reassignment.
+- Upon valid reassignment, clear the urgent marker and stop associated reminders; record the escalation and resolution in the audit log.
+- Do not expose case details outside the Tenant or to recipients who have lost access. Email failures must not block escalation state changes.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -170,5 +177,8 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 48. Outstanding reassignment cases trigger daily in-app and email reminders to authorized recipients.
 49. A recipient receives no more than one aggregated reminder per Tenant per day, containing only an authorized case count.
 50. Reminders stop when no outstanding reassignment cases remain; delivery failures do not block case operations.
+51. Cases still awaiting reassignment 72 hours after being flagged become URGENT_REASSIGNMENT.
+52. All active Tenant OWNER/ADMIN members receive an in-app and email escalation without duplicate alerts for the same episode.
+53. Daily reminders continue until reassignment; reassignment clears urgency and records escalation and resolution in audit history.
 
 ## Open design questions
