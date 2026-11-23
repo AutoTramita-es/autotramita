@@ -698,6 +698,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Tenant-facing updates may explain that an external provider response is awaited, without disclosing private Tramisur correspondence or unverified assertions. Statutory deadlines, CRITICAL risk escalations and legally required corrective actions remain independent of provider waiting.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant-facing provider-waiting status for error review (Step 122 — approved A)
+- When a post-completion error review is genuinely in WAITING_FOR_PROVIDER under Step 121, show authorized Tenant users the neutral status label “Čeka se odgovor vanjskog pružatelja usluge” (localized appropriately for the portal).
+- Show the verified date the Backoffice inquiry was actually sent and the latest confirmed Tenant-visible status change; never invent provider acknowledgment, response time, estimated resolution or official filing progress.
+- Expose only a minimal, understandable waiting explanation. Do not disclose private Tramisur correspondence, individual contacts, internal Backoffice notes, provider-only evidence, or sensitive operational details.
+- Keep the underlying case COMPLETED and the error review open, while internal provider-wait reminders, supervisor escalation, statutory alerts and critical-risk handling continue independently.
+- When a verified provider response is recorded and the review leaves WAITING_FOR_PROVIDER, update the Tenant-visible status from actual workflow events and apply established significant-event notification rules.
+- Enforce Tenant/branch/case authorization, audit all status transitions, and avoid cross-Tenant disclosures. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
