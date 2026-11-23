@@ -81,6 +81,14 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - Suspending or changing an OWNER must never leave the Tenant without at least one ACTIVE OWNER.
 - Record actor, subject, Tenant, transition, reason if provided, and timestamp in the audit log.
 
+## Membership revocation and historical retention
+- An authorized OWNER or ADMIN may revoke a TenantMembership within their existing role-management authority: ACTIVE -> REVOKED or SUSPENDED -> REVOKED.
+- Revocation immediately denies access to the affected Tenant across every session without affecting the global User identity or other Tenant memberships.
+- REVOKED memberships are not directly reactivated. A returning employee must receive and accept a new invitation, with freshly approved role and branch assignments; no former grants are restored automatically.
+- Preserve historical membership identifiers, actor references on cases, processing history, and audit records subject to applicable retention and privacy obligations; do not physically delete these links merely because membership was revoked.
+- Only OWNER can revoke an ADMIN membership; OWNER changes follow OWNER safeguards. Never revoke the Tenant's last ACTIVE OWNER.
+- Log revocation actor, affected User, Tenant, prior status, time and optional reason.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -115,5 +123,9 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 31. Suspension immediately blocks the affected Tenant across every session without affecting other Tenant memberships or the global User.
 32. Reactivation restores the membership without an invitation only after current role and branch permissions are validated.
 33. Suspension cannot remove the last ACTIVE OWNER and both transitions are audited.
+34. Authorized revocation of ACTIVE or SUSPENDED membership immediately blocks the Tenant across all sessions.
+35. REVOKED membership cannot be directly reactivated; return requires a new invitation and newly approved grants.
+36. Case authorship, history and audit references survive revocation subject to retention requirements.
+37. Revocation cannot remove the last ACTIVE OWNER and does not affect other Tenants.
 
 ## Open design questions
