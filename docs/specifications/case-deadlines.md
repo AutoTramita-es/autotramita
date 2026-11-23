@@ -330,6 +330,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Record Tenant submitter, reviewing backoffice actor, timestamps, checklist version, decision, reasons and supporting evidence. Backoffice approval establishes internal document readiness, not official acceptance by Tramisur or a competent authority.
 - Continue to enforce independent legal representation, statutory deadline and document authenticity safeguards; no implementation or deployment authorized.
 
+## Central procedure-specific document checklists (Step 79 — approved A)
+- AutoTramita centrally governs versioned document checklist templates per procedure type, with mandatory and conditionally mandatory items and clearly defined conditions.
+- When a Tenant/dealership creates a case, the platform selects the applicable approved checklist version and shows the required items and completion state.
+- Tenant users may upload and replace evidence but cannot delete, bypass or mark centrally mandatory requirements as inapplicable without an authorized, documented exception review.
+- Backoffice may request additional case-specific documents with a recorded reason; such additions do not silently modify the central template.
+- Store checklist template/version, applicability decisions, item-to-document associations, completion and review outcomes, actors and timestamps in the case audit history.
+- Backoffice remains responsible for the second-stage readiness review and approval before READY_FOR_TRAMISUR; checklist completion alone does not authorize handoff or official filing.
+- Template changes require centrally governed approval and explicit effective dates; preserve historical case context and apply legal-transition rules where relevant.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
