@@ -221,6 +221,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Preserve the original document, supplied CSV, official service response/evidence, timestamps, reviewer findings, corrections and full audit trail. Any subsequent successful verification must be recorded as a new result, not overwrite the failure history.
 - An invalid or mismatched CSV alone is not proof of intentional fraud; do not automatically accuse the user or make a fraud determination.
 
+## Manual correction of extracted CSV with official re-verification (Step 66 — approved A)
+- An authorized case employee may correct an inaccurately extracted Código Seguro de Verificación (CSV) by comparing it against the unchanged original official receipt.
+- Preserve the original extracted value, corrected value, actor, timestamp, reason and any prior official verification responses in the case audit history; do not alter the source document.
+- After correction, automatically request a fresh verification from the relevant supported official service, subject to the existing unavailability/retry safeguards.
+- Until official validation succeeds or an authorized alternative evidence review is completed, do not represent the receipt as VERIFIED or use it as authenticated proof of timely submission.
+- A previous VERIFICATION_FAILED result remains in historical records even if a later verification succeeds; the current verification state may transition to PENDING_REVIEW during recheck and to VERIFIED only upon qualifying verification.
+- A corrected CSV does not automatically dismiss deadline alerts, change statutory deadlines, unblock legally dependent actions, or close an overrun review without the established authorization and audit requirements.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -312,3 +320,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 81. An affirmative invalid CSV or official document mismatch sets VERIFICATION_FAILED and immediately alerts responsible authorized case users and supervisors.
 82. Failed verification prevents treating the receipt as authenticated proof of timely filing and requires documented manual review, with escalation of legal uncertainty.
 83. Preserve original document, official validation result and correction history; invalid CSV alone is not treated as proof of intentional fraud.
+84. Authorized employees may correct incorrectly extracted CSV values against the original receipt, with old/new values and actor recorded.
+85. CSV correction triggers a fresh official verification while the document remains unverified pending success or authorized alternative evidence review.
+86. Prior verification failures remain auditable and CSV correction alone never clears statutory deadline alerts or legal blocks.
