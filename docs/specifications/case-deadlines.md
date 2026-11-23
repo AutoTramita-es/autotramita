@@ -299,6 +299,13 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Step 74 representative-registry design is a future-capability specification, not a Phase 1 implementation requirement. Step 75 periodic automated professional-status verification is deferred, not approved.
 - This is an architecture/business-priority decision only: no implementation or deployment authorized.
 
+## Phase 1 manual handoff to Tramisur (Step 75 — approved A)
+- The Tenant/dealership collects customer documents and prepares the case; AutoTramita internal backoffice validates completeness and assembles a case-specific handoff package for Tramisur.
+- An authorized AutoTramita backoffice operator transmits the package using an agreed secure channel; record the handoff timestamp, responsible operator, recipient/provider, channel reference, manifest/version of transmitted documents, and current handoff status.
+- Tramisur handles the agreed official procedure within its legal authorization and returns case outcome, filing receipt and other official evidence through the agreed secure channel. Backoffice records the response, documents, status and timestamps and notifies the authorized Tenant users.
+- Maintain immutable audit history and Tenant isolation. External handoff must respect personal-data minimization, authorized recipient checks and existing mandate/legal-filing controls; transmission alone is not proof of official filing.
+- No Tramisur API, automated provider integration, or deployment is authorized in Phase 1. Future automation remains a separate architecture decision.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
