@@ -1288,6 +1288,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Link any legally required corrective invoice, receivable adjustment and accounting treatment to the refund without double-counting. Do not treat refund approval as a completed payment, and do not silently edit an issued invoice or misstate the outstanding balance.
 - Retain evidence and administrative decisions, support reconciliation against actual bank records, and make no automatic refunds, payment initiation or external provider integration. Architecture only; no implementation or deployment authorized.
 
+## Tenant-initiated refund requests through the portal (Step 192 — approved A)
+- Allow an appropriately authorized Tenant billing user to submit a refund request in the authenticated portal linked to a specific issued invoice, identifying the requested amount and currency, reason and optional supporting documents.
+- Record submitting Tenant/User, invoice reference, request timestamp, evidence, status, administrator assignment and all communications in an immutable auditable history. Enforce Tenant isolation and prevent disclosure of other customers' financial data.
+- Notify an authorized AutoTramita platform administrator of each new request. The administrator reviews the underlying invoice, payment and any correction/dispute history and explicitly approves or rejects the request with a reason; approval must be restricted to administrators, not assigned Backoffice staff.
+- Show Tenant-facing request statuses such as SUBMITTED, UNDER_REVIEW, MORE_INFORMATION_REQUIRED, APPROVED_PENDING_EXECUTION, REJECTED, PARTIALLY_EXECUTED and EXECUTED, keeping approved versus actually transferred amounts distinct.
+- An approved request follows the manual bank refund workflow in Step 191: funds are transferred outside AutoTramita and execution is recorded only against bank evidence. Submission or approval must not automatically initiate a transfer, alter invoice PDFs, forgive receivables, or represent a payment as completed.
+- Validate requested and approved amounts against confirmed payments, prior refunds and any legally required corrective invoices to prevent double refunds, overpayment and inconsistent balances; retain linked financial adjustments and audit trails.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
