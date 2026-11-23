@@ -150,6 +150,13 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Record notification creation, recipients, delivery attempts/status where available and acknowledgment/read status where supported; do not equate a successful send with confirmed human receipt.
 - Notification alone never modifies case authority or statutory deadlines and never automatically performs legally dependent actions.
 
+## Mandatory review acknowledgment for affected cases (Step 57 — approved A)
+- When an approved authority change potentially affects an existing case, mark that case AUTHORITY_REVIEW_REQUIRED until an authorized case user explicitly reviews its competent authority.
+- The authorized reviewer must either confirm the existing authority is correct under the applicable rule or initiate a documented correction; record reviewer, timestamp, outcome and rationale/evidence in the audit trail.
+- While authority review is outstanding, block only server-side actions legally dependent on the disputed authority; independent case work may continue.
+- If authority applicability remains legally ambiguous, escalate to the established central LEGAL_REVIEW_REQUIRED process; a Tenant user's acknowledgment alone cannot certify or override disputed statutory rules.
+- Review status and required actions are visible only within permitted Tenant and branch access scope. Completion does not automatically execute previously blocked actions or silently change statutory deadlines.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -214,3 +221,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 54. Approved authority changes trigger targeted in-app and email notices only to Tenants with potentially affected cases, scoped to responsible employees and authorized supervisors.
 55. Notices describe the change, effective date and securely link to affected cases; Tenant and branch isolation is enforced.
 56. Notification delivery attempts and outcomes are audited, and notices never silently modify case authority or statutory deadlines.
+57. Potentially affected cases receive AUTHORITY_REVIEW_REQUIRED until an authorized user explicitly confirms authority or initiates a correction.
+58. Review records actor, timestamp, outcome and rationale; legally authority-dependent actions remain blocked while independent work continues.
+59. Unresolved legal ambiguity escalates to LEGAL_REVIEW_REQUIRED, and acknowledgment never silently modifies statutory rules or triggers blocked actions.
