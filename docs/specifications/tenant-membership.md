@@ -50,6 +50,14 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - Token expiry, single-use state, membership authorization, and email match must be checked atomically at acceptance; never grant TenantMembership solely from possession of an invitation link.
 - The invitation's 168-hour expiry is not extended by account registration or email verification.
 
+## Activation on invitation acceptance
+- A valid invitation accepted by the authenticated User with the matching verified email activates the invited TenantMembership immediately: INVITED -> ACTIVE.
+- The membership receives the role and branch assignments approved and recorded at invitation issuance, provided those grants remain authorized and applicable at acceptance time.
+- No second OWNER/ADMIN approval is required for ordinary permitted role grants.
+- Existing elevated-role safeguards remain in force: only OWNER may grant ADMIN; adding OWNER requires confirmation from an existing OWNER and must not be bypassed by invitation acceptance.
+- Acceptance and activation are atomic, idempotency-safe, and recorded in the audit log with the inviter, accepting User, Tenant, role, assigned branches and timestamp.
+- Membership activation does not override Tenant suspension, closed Tenant status, branch inactivity or other access controls.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -72,5 +80,8 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 19. Invitation acceptance requires an authenticated User with the matching verified email address.
 20. A new recipient must register and verify their invited email before acceptance; a mismatched account cannot accept.
 21. Identity verification does not extend the original invitation expiry.
+22. Accepting a valid invitation automatically transitions the invited membership to ACTIVE with the authorized invited role and branch assignments.
+23. No second approval is required for ordinary grants; OWNER/ADMIN elevated-role safeguards still apply.
+24. Invitation acceptance and activation are atomic and audited; inactive Tenants or branches do not become accessible.
 
 ## Open design questions
