@@ -526,6 +526,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - These estimates and notifications are informational, not statutory deadlines or service guarantees, and must not affect independent legal-deadline alerts, priority or review blocks.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant-facing case progress timeline (Step 102 — approved A)
+- Provide authorized Tenant users a chronological, case-specific timeline of externally meaningful, confirmed milestones: case opened, documents submitted, Backoffice document review, manually handed to Tramisur, provider processing in progress, and procedure completed.
+- Show actual recorded dates/times and localized milestone labels; mark stages as completed only on supporting workflow events or evidence. Do not imply a Tramisur handoff, official filing or completion before it actually occurred and was recorded by authorized Backoffice staff.
+- Add supplementary-document requests, replacement submissions, material status changes and other relevant Tenant-actionable events to the timeline, preserving chronological history rather than overwriting earlier milestones.
+- Permit repeat cycles (e.g., multiple document reviews and requests) without fabricating a strictly linear process; distinguish current status, pending future steps and confirmed completed milestones.
+- Keep internal Backoffice work notes, supervisory escalations, private Tramisur correspondence, sensitive legal-review details and other Tenants' information out of Tenant-facing events. Enforce existing Tenant/branch permissions and audit event provenance.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
