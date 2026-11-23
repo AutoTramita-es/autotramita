@@ -1198,6 +1198,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Record financial data timestamps and explain that payment status is based on administrator-confirmed bank receipts rather than live bank integration. Preserve historical invoices and audit events; due-date extensions follow Step 179.
 - This is a read-only financial overview, not online payment initiation, accounting ledger integration, automatic collections or authorization to change prices. Architecture only; no implementation or deployment authorized.
 
+## Tenant financial statement exports in PDF and Excel (Step 181 — approved A)
+- Allow appropriately authorized Tenant billing users to select a date range and export a consolidated informational financial statement in PDF and Excel (.xlsx) formats from the Tenant portal.
+- Include issued invoices and invoice references, invoice dates and effective due dates (including administrator-approved extensions under Step 179), confirmed manually reconciled payment allocations and dates (Step 176), and remaining outstanding balances. Distinguish paid, partially paid, unpaid and overdue items, and include appropriate period totals without double counting.
+- Reflect the same Tenant-isolated and permission-filtered figures as the financial overview under Step 180. Exclude other Tenants' information and confidential AutoTramita internal labor costs, provider contract rates and contribution margins.
+- Clearly label the exported report as an informational account statement, not a tax invoice, official bank statement or independent proof of payment. Include Tenant identity, reporting period, generation timestamp/timezone and data-as-of timestamp, plus references to original issued invoices.
+- Secure exports with authenticated authorization, audit export actor/time/filters, and apply access controls and retention to generated files. Ensure PDF and Excel exports reconcile to the same snapshot and display partial payments and adjustments consistently.
+- No bank integration, automatic payment collection, issuance of new invoices or change to existing financial records is implied. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
