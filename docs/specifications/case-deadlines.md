@@ -109,6 +109,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If authority or deadline applicability cannot be reliably verified, flag LEGAL_REVIEW_REQUIRED and present the suggested authority and deadline as provisional pending central review.
 - Server-side authorization, Tenant isolation and branch scope apply to authority changes. A user's correction does not itself modify shared legal rules or certify legal applicability.
 
+## Central registry of competent administrative authorities (Step 52 — approved A)
+- Maintain a single platform-wide registry of Spanish administrative authorities relevant to supported procedures, including DGT and other competent bodies.
+- Each authority record includes official name, official identifier where available, jurisdiction/territorial competence, supported procedure types, source references, effective dates and status as applicable.
+- All Tenants use the same approved registry; Tenant OWNER/ADMIN/MANAGER/EMPLOYEE users cannot edit centrally governed authority definitions.
+- Only explicitly authorized AutoTramita platform administrators may approve and publish registry changes. Preserve version history, source provenance and audit records.
+- Authority registry updates must not silently change existing case jurisdiction, legal deadline, or confirmed competent authority; assess effects through controlled applicability and review.
+- Registry entries and mappings must not be treated as legally verified without authoritative source review.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -158,3 +166,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 39. New cases receive a suggested competent authority based on approved procedure, location and case-fact mappings.
 40. Authorized users may correct the suggested authority only with a recorded reason and full audit history.
 41. Corrections that affect deadlines trigger controlled rule/calendar reassessment; uncertainty flags LEGAL_REVIEW_REQUIRED rather than certifying a guess.
+42. A centrally governed registry stores administrative authority names, available official identifiers, jurisdictions and supported procedures for all Tenants.
+43. Only authorized platform administrators may approve registry changes, with official source provenance, version history and audit records.
+44. Registry changes do not silently change existing cases or confirmed statutory deadlines.
