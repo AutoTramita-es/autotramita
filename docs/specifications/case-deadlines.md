@@ -406,6 +406,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If no eligible operator is available, retain the case in an unassigned backoffice queue and notify the supervisor; keep statutory deadline alerts active.
 - Automated workload assignment grants no legal representation authority and does not automate Tramisur handoff or official filing. Architecture only; no implementation or deployment authorized.
 
+## Backoffice operator availability states (Step 88 — approved A)
+- Maintain availability states AVAILABLE (eligible for new case assignment), BUSY (continues existing work but no new assignments), AWAY (absent, no new assignments) and OFFLINE (not currently logged in, no new assignments).
+- Automatic workload-based assignment from Step 87 considers only active, appropriately authorized operators whose effective availability is AVAILABLE at the assignment instant.
+- Operators may update their own work availability; authorized backoffice supervisors may override it, with actor, reason, source and timestamp audited.
+- OFFLINE is derived from authenticated session presence and must not be spoofed by a manual AVAILABLE setting; define effective availability consistently across concurrent sessions and avoid stale-presence assignment.
+- A change to BUSY, AWAY or OFFLINE does not automatically remove already assigned cases; supervisors can explicitly reassign them with audit history. Urgent deadlines, pending tasks and escalations continue even when the assignee is unavailable.
+- If no operator is eligible, cases remain in the unassigned queue with supervisor notification and independent statutory deadline monitoring.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
