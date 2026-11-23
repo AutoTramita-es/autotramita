@@ -483,6 +483,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Tenant non-response, reminder delivery, supervisor acknowledgement and contact attempts must not pause or extend statutory deadlines, bypass legal-review blocks, imply official filing, or automatically resolve/close the case.
 - Preserve immutable notification/contact history and Tenant isolation. Architecture only; no implementation or deployment authorized.
 
+## Tenant-visible reasons for document-related case delays (Step 97 — approved A)
+- For cases with WAITING_FOR_TENANT, show authorized Tenant users a clear localized status equivalent to "Waiting for your documentation", with an actionable list of outstanding requested documents, the original request date, and an upload action within the existing case.
+- Show a suitable statutory-deadline urgency warning when verified deadline risk exists, without claiming a deadline extension or revealing legally uncertain dates as confirmed.
+- On upload, show the submitted item's status as "Submitted — awaiting review" until the Backoffice completes its separate document approval process; do not auto-approve or imply the case is ready for Tramisur.
+- If multiple requested items remain outstanding, keep the waiting status and identify the remaining items. Preserve requests, upload versions, review decisions and communications in the audit trail.
+- Apply Tenant and branch-level authorization to all displayed case data and uploads. Never expose internal Backoffice notes, private supervisory escalation details, Tramisur coordination or cross-Tenant information in the Tenant portal.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
