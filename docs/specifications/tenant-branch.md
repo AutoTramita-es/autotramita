@@ -12,7 +12,7 @@ A Tenant represents one company or autónomo. Each Tenant has one or more branch
 | --- | --- | --- |
 | id | UUID | Immutable primary key |
 | tenant_id | UUID | Required; references Tenant |
-| code | varchar(20) | Required; unique within tenant; normalize for comparison |
+| code | varchar(20) | Required; unique within tenant; immutable after creation; normalize for comparison |
 | name | varchar(150) | Required; editable, not unique |
 | address_line1 | varchar(255) | Optional at creation |
 | address_line2 | varchar(255) | Optional |
@@ -27,7 +27,7 @@ A Tenant represents one company or autónomo. Each Tenant has one or more branch
 | created_at | timestamptz | Required |
 | updated_at | timestamptz | Required |
 
-A branch must have a tenant-safe composite key/constraint to support cross-entity composite foreign keys. A tenant's branch codes are unique within that tenant; separate tenants may reuse codes. UUIDs remain stable across renaming. Branch codes must not be silently reused after deactivation if doing so could confuse historical records (conservative specification rule; exact reuse policy may be decided separately).
+A branch must have a tenant-safe composite key/constraint to support cross-entity composite foreign keys. A tenant's branch codes are unique within that tenant; separate tenants may reuse codes. UUIDs remain stable across renaming. Branch codes are immutable after creation and may never be reused for another branch within the same Tenant, including after deactivation. Names, addresses, email and phone remain editable.
 
 ## Primary branch
 - Every ACTIVE Tenant must have exactly one ACTIVE primary branch.
@@ -89,9 +89,10 @@ Before deactivating MAR-02, move all unfinished cases to another active branch a
 12. Financial and credit identities remain Tenant-scoped, unaffected by branch changes.
 13. OWNER/ADMIN can reactivate a branch without changing its UUID, code or history.
 14. Reactivation does not restore previous staff assignments or reverse case transfers.
+15. Branch code cannot be changed after creation or reused within a Tenant, including after deactivation.
 
 ## Pending detail decisions
-- Branch code format and whether codes may ever be recycled after closure.
+- Branch code format and normalization rules (code is immutable and never recycled).
 - Required address/contact data before branch can accept cases.
 - Definition of finished vs unfinished Case statuses and bulk transfer UX.
 - Precise atomic transition mechanics and branch-assignment audit schema.
