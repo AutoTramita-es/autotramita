@@ -1263,6 +1263,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Enforce strict Tenant confidentiality, least-privilege staff access, separation of duties and auditability; no cross-Tenant visibility except what an authorized administrator explicitly assigns for the task. Any staff response to the Tenant must respect configured review and approval requirements and cannot promise a financial adjustment before administrator authorization.
 - Architecture only; no implementation or deployment authorized.
 
+## Staff-proposed invoice corrections with administrator approval (Step 189 — approved A)
+- An employee explicitly assigned to an invoice dispute under Step 188 may prepare and submit a formal proposed financial correction, including correction category, affected invoice and line items, proposed amount or payment allocation changes, reason, supporting evidence and proposed Tenant-facing explanation.
+- The proposal is non-executing and must remain PENDING_ADMIN_APPROVAL until an authorized AutoTramita platform administrator explicitly approves or rejects it, with recorded identity, timestamp and rationale. Employees cannot self-approve, issue corrected invoices, alter ledger entries, recognize payments, initiate refunds or promise an approved adjustment.
+- On rejection, retain the proposal and rationale, notify the assigned employee and permit a revised version; on approval, route any actual financial change through a separate compliant, audited correction or payment reconciliation process, respecting Spanish invoice requirements and Step 176. Approval itself must not silently mutate an already issued invoice PDF.
+- Preserve immutable proposal versions, supporting evidence, approval history and links to the originating dispute and invoice. Restrict all financial data to authorized staff and administrators; Tenant-visible outcomes must reflect only confirmed approved and executed changes.
+- Proposal submission and administrator review do not reset first-response or resolution targets under Steps 184–185, nor automatically close the dispute or change reminder behavior under Step 183.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
