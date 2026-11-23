@@ -499,6 +499,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If confidence or data sufficiency is inadequate, show an explicit 'Estimate currently unavailable' state instead of a fabricated date. Preserve estimation provenance, version and change history for authorized audit.
 - Apply existing Tenant/branch access controls. Architecture only; no implementation or deployment authorized.
 
+## Historical case data for completion-time estimates (Step 99 — approved A)
+- Estimate procedure completion time from actual, comparable, completed AutoTramita cases, grouped by procedure type and relevant workflow characteristics, with data sufficiency and reliability checks.
+- Capture real elapsed durations and distinct stages or delay reasons, including Tenant document waiting, Backoffice review, and manual Tramisur handoff/provider waiting, to avoid misleading blended averages.
+- During initial operation or for insufficient samples, use versioned, explicitly approved Backoffice baseline durations rather than inventing historical statistics; clearly mark estimate provenance and uncertainty.
+- Reassess estimates as the sample grows and relevant conditions change, without treating historical averages as legal deadlines, guarantees, provider SLAs or official completion promises.
+- Exclude or appropriately handle erroneous, reopened, exceptional and incomplete cases; retain auditability of the method, inputs and approval of baseline assumptions. Use only privacy-preserving aggregated information across Tenants, without disclosing other Tenants' cases.
+- If no trustworthy historical or approved baseline data exists, show 'Estimate currently unavailable' as decided in Step 98.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
