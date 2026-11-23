@@ -962,6 +962,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Financial alerts are internal only and do not automatically alter customer prices, invoices, case handling, Tramisur processing or statutory deadlines.
 - Architecture only; no implementation or deployment authorized.
 
+## Procedure-specific minimum margin thresholds (Step 154 — approved A)
+- Allow authorized AutoTramita administrators to define an optional minimum acceptable contribution-margin percentage per centrally defined procedure type, in addition to the global default threshold from Step 153.
+- For each case, apply the active procedure-specific threshold when one exists; otherwise fall back to the active global threshold. The applicable threshold and procedure type must be traceable for each evaluation.
+- Illustrative values only, not adopted defaults: vehicle ownership transfer 20%, vehicle registration 15%, other procedures 10%. Actual thresholds require explicit administrator configuration.
+- Apply LOW_MARGIN and NEGATIVE_MARGIN classification consistently with Steps 152–153; a procedure-specific threshold changes only LOW_MARGIN assessment and never suppresses negative-margin alerts. Handle zero margin, missing revenue and provisional financial inputs transparently.
+- Version each threshold by procedure, effective date/time, author and change reason. Preserve historical evaluations and notifications; use current effective settings for current evaluations without rewriting audit history.
+- Restrict threshold configuration and internal financial analytics to authorized AutoTramita management; no automatic changes to prices, invoices, provider actions, case status or statutory deadlines.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
