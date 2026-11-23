@@ -828,6 +828,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Apply server-side operator/supervisor permissions, avoid double counting, and do not use corrections to reset internal service targets, statutory deadlines, task/case statuses or critical escalations.
 - Architecture only; no implementation or deployment authorized.
 
+## Central supervisor queue for work-time correction requests (Step 138 — approved A)
+- Provide authorized Backoffice supervisors with a dedicated “Time Correction Requests” queue covering pending, approved and rejected requests submitted under Step 137.
+- For each request show the operator, authorized task/case reference, original timer and flagged unconfirmed interval, proposed corrected duration, mandatory justification, submission time, status and decision history.
+- Permit authorized supervisors to approve or reject pending requests with an explicit recorded decision and reason; prevent self-approval, enforce server-side role/ownership checks and idempotent handling of concurrent decisions.
+- Support filtering by operator, date or date range, and request status, with access to the immutable historical original values, proposal, reviewer, decision timestamp and audit trail.
+- Pending or rejected unconfirmed intervals remain excluded from official active-work aggregates; only approved corrections may update derived analytics without altering the underlying raw records.
+- Restrict individual employee time records to legitimate supervisory access, maintain privacy safeguards, and do not modify case status, legal deadlines, internal SLA history or critical escalations through an approval.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
