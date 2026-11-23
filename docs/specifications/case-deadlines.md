@@ -714,6 +714,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Deduplicate notification attempts, preserve audit records of the source response, verification, decision to notify, recipients and delivery, and enforce Tenant/branch/case authorization.
 - Statutory deadlines, CRITICAL escalations and mandatory legal alerts remain independent and may not be delayed by routine provider-message review. Architecture only; no implementation or deployment authorized.
 
+## Voluntary Tenant service rating after case completion (Step 124 — approved A)
+- After a case is confirmed COMPLETED, permit an authorized Tenant user with case access to submit an optional private AutoTramita service rating of 1–5 stars and an optional free-text comment linked to that specific case.
+- Ratings and comments are not public testimonials, must not be exposed across Tenants, and are visible only to appropriately authorized Backoffice quality/supervisor personnel and the submitting Tenant according to case access rules.
+- Participation is voluntary and must not affect case processing, statutory deadlines, post-completion error reports, correction rights, or access to documents.
+- Preserve submission timestamp, actor, case/tenant linkage and audit history; handle comments as potentially sensitive user-supplied content with authorization and safe rendering.
+- The feedback measures the AutoTramita service experience, not an official authority decision or independently verified Tramisur performance. Any subsequent public publication would require a separate policy and appropriate permission.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
