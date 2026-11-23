@@ -229,6 +229,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - A previous VERIFICATION_FAILED result remains in historical records even if a later verification succeeds; the current verification state may transition to PENDING_REVIEW during recheck and to VERIFIED only upon qualifying verification.
 - A corrected CSV does not automatically dismiss deadline alerts, change statutory deadlines, unblock legally dependent actions, or close an overrun review without the established authorization and audit requirements.
 
+## Alternative verification for official receipts without CSV (Step 67 — approved A)
+- Accept filing receipts issued without a Código Seguro de Verificación (CSV); absence of CSV alone does not make an official receipt invalid.
+- Attempt another supported official validation mechanism, if one exists for the issuing authority and document type.
+- When no official electronic validation is available, allow an authorized case employee to provide the original receipt and supporting evidence for documented manual review by a properly scoped Tenant OWNER/ADMIN or MANAGER.
+- Distinguish the evidence verification method/outcome OFFICIALLY_VERIFIED from MANUALLY_ACCEPTED; manual acceptance is not represented as an official authenticity confirmation. These evidence classifications are separate from the existing receipt workflow statuses VERIFIED, PENDING_REVIEW and VERIFICATION_FAILED.
+- Where authenticity, applicability or legal validity remains ambiguous, escalate to LEGAL_REVIEW_REQUIRED; do not silently clear statutory deadline warnings or override legally dependent action blocks.
+- Retain the original document, source, supporting evidence, method, reviewer, decision, rationale, timestamps and full audit history with Tenant/branch isolation.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -323,3 +331,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 84. Authorized employees may correct incorrectly extracted CSV values against the original receipt, with old/new values and actor recorded.
 85. CSV correction triggers a fresh official verification while the document remains unverified pending success or authorized alternative evidence review.
 86. Prior verification failures remain auditable and CSV correction alone never clears statutory deadline alerts or legal blocks.
+87. Official filing receipts without CSV are accepted for evidence review and checked using other official mechanisms where available.
+88. When electronic official validation is unavailable, authorized supervisors may manually accept documented evidence, clearly distinguished from official verification.
+89. Legal ambiguity escalates to central legal review; evidence and decisions remain auditable without automatic removal of deadline alerts or legal restrictions.
