@@ -65,6 +65,14 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - A role downgrade revokes elevated permissions immediately. Any active branch context that is no longer authorized must be invalidated and reselected under the branch selection rules.
 - Role changes must be audited with actor, Tenant, affected User, old/new roles and timestamp.
 
+## Immediate branch assignment changes
+- OWNER or ADMIN can add or remove explicit branch assignments for MANAGER, EMPLOYEE and VIEWER memberships in their Tenant.
+- Changes take effect immediately in all active sessions without requiring a new login. Every protected request checks current branch authorization server-side.
+- When an assignment is removed, any session using that branch loses operational access immediately and must select another eligible ACTIVE branch according to the branch selection rules. If none is available, no branch operations are permitted.
+- New branch assignments become eligible immediately, subject to ACTIVE membership, ACTIVE Tenant and ACTIVE branch status.
+- OWNER and ADMIN retain implicit access to all ACTIVE Tenant branches regardless of explicit MembershipBranch assignments.
+- Assignment changes are audited with actor, affected User, Tenant, branch, operation and timestamp.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -93,5 +101,8 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 25. Authorized role changes take effect immediately across all active sessions without new invitations.
 26. Downgrades revoke former permissions and inaccessible active branches immediately.
 27. OWNER/ADMIN grant restrictions and the at-least-one-ACTIVE-OWNER invariant remain enforced; role changes are audited.
+28. OWNER/ADMIN branch assignment additions and removals are enforced immediately across all sessions.
+29. A removed active branch assignment prevents further operations in that branch and triggers eligible branch reselection.
+30. Branch assignment changes are audited; OWNER/ADMIN retain implicit access to all ACTIVE branches.
 
 ## Open design questions
