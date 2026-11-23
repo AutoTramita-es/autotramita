@@ -15,8 +15,16 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Enforce Tenant and branch permissions on deadline visibility, notifications and updates.
 - Deadline alerts must not bypass membership suspension/revocation or case reassignment controls.
 
+## Deadline notification schedule (Step 40 — approved A)
+- Notify authorized case assignees and supervisors through both in-app notifications and email at 7 days, 3 days, and 1 day before the deadline, and on the due date.
+- For unresolved overdue cases, send a reminder every day after the deadline until the case is resolved or that deadline is no longer applicable.
+- When a deadline is created with less lead time, send only future applicable scheduled notifications; do not backfill missed milestones.
+- Stop future alerts once the case is completed or the deadline no longer applies.
+- Respect current Tenant, branch and membership permissions when selecting recipients. Deduplicate each scheduled alert for a given case/deadline and milestone; delivery failure must not block case processing.
+- The schedule is a notification policy, not a statement of Spanish statutory deadline calculation; calendar/timezone and procedure-specific legal rules require separate specification.
+
 ## Open design questions
-- Alert timing and escalation policy (next decision).
+- Escalation recipients and severity for overdue deadlines.
 - Rule provenance, versioning, calendar and holiday calculations.
 - Roles authorized to change statutory vs internal deadlines.
 - Priority levels, defaults, and due-date recalculation.
@@ -28,3 +36,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 3. Automated in-app and email warnings reach currently authorized case owners and supervisors.
 4. Overdue status is clearly visible and changes are auditable.
 5. No statutory deadline is inferred without an approved procedure-specific rule and source.
+6. Notifications are scheduled at 7, 3, and 1 day before the due date and on the due date, through in-app and email channels.
+7. Unresolved overdue cases trigger daily reminders, stopping when the deadline no longer applies or the case is completed.
+8. Short-lead cases do not trigger past milestones, and notifications respect current authorization and deduplication.
