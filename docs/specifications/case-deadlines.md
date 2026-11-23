@@ -780,6 +780,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Display the relevant verified due time, whether a deadline is statutory or an internal service target, and appropriate overdue state; never treat merely opening a task as an acknowledgment, substantive action or completion.
 - Maintain audit of meaningful task state/assignment changes. Architecture only; no implementation or deployment authorized.
 
+## Manually marking assigned Backoffice tasks in progress (Step 132 — approved A)
+- Permit an authorized Backoffice operator to manually transition a task assigned to them into IN_PROGRESS, subject to valid workflow transitions and server-side assignment/access checks.
+- Record actor, task/case linkage, transition timestamp and time zone, prior and new status, and elapsed time since assignment/creation; retain immutable audit history across subsequent pauses, reassignments and completions.
+- IN_PROGRESS expresses the operator's declared working state only. Changing to this status does not itself count as a substantive action, a CRITICAL acknowledgment, successful contact, statutory filing, or task completion under existing service-level controls.
+- Internal and statutory deadlines, urgent alerts and supervisor escalations continue independently; no clock is reset, suspended or satisfied merely by marking IN_PROGRESS.
+- Preserve distinctions between active work and genuine WAITING_FOR_TENANT, WAITING_FOR_INFORMATION or WAITING_FOR_PROVIDER conditions, and do not imply automated time tracking of actual effort solely from status duration.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
