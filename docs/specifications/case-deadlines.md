@@ -62,6 +62,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Audit review-related restrictions, attempted blocked actions as appropriate, resolution, and subsequent permission/state changes. Maintain Tenant and branch access controls.
 - This design does not authorize bypassing any independent mandatory legal or regulatory hold.
 
+## Legal review resolution updates and notifications (Step 46 — approved A)
+- Upon a recorded resolution by an authorized central legal reviewer, update the case's legal-review status and confirmed statutory deadline if the determination requires a change.
+- Notify the currently responsible employee and authorized OWNER, ADMIN and affected-branch MANAGER through both in-app notifications and email, subject to active membership and current Tenant/branch access.
+- Where a deadline changes, the notification and case audit history identify the prior and new deadlines, reason, and applicable legal source/rule version. Email may summarize these details while requiring authenticated access for sensitive case information.
+- Re-evaluate previously restricted actions against the confirmed rule and current case facts, but do not automatically execute them.
+- Audit the reviewer, determination, status transition, deadline changes, notification events and any subsequent permissions changes. Notification delivery failure does not block the recorded review resolution.
+- Do not describe a deadline as confirmed until the authorized review is complete.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Rule provenance, versioning, calendar and holiday calculations.
@@ -93,3 +101,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 21. LEGAL_REVIEW_REQUIRED cases permit authorized work independent of the unresolved legal question.
 22. Legally dependent actions are blocked server-side until authorized review resolves the issue.
 23. Review resolution re-evaluates blocked actions without automatically executing them; relevant restrictions and outcomes are audited.
+24. Authorized review resolution updates case review status and any applicable confirmed statutory deadline.
+25. Responsible staff and authorized supervisors receive in-app and email notifications of resolution, including prior/new deadline, legal basis and reason when changed.
+26. Previously blocked actions are re-evaluated but never automatically executed, and review resolution is audited.
