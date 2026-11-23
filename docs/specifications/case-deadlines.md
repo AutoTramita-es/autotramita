@@ -1119,6 +1119,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Price acceptance is not by itself payment capture, issuance of an invoice, confirmation of unknown government fees, authorization to perform regulated legal representation, or automatic transmission to Tramisur.
 - Architecture only; no implementation or deployment authorized.
 
+## Monthly consolidated Tenant billing statement (Step 172 — approved A)
+- Support monthly consolidated billing statements for each Tenant (dealership or other business customer), rather than requiring payment per individual case. Tenants may submit cases throughout the billing period without per-case payment as the default commercial workflow, subject to any separately agreed credit/risk controls.
+- At the close of each defined billing month, prepare one Tenant-scoped statement containing the eligible billable cases and procedure types, their immutable customer-accepted service prices (Step 171), applicable administrator-approved manual discounts, and service subtotals excluding IVA.
+- Show statutory administrative charges and other customer-funded pass-through disbursements separately from AutoTramita service revenue, with supporting evidence and clear treatment of amounts still unknown, estimated or awaiting confirmation.
+- Include a statement period, Tenant identifier, line-item case references, currency, applicable IVA treatment when separately specified, totals, status, generation timestamp and an auditable calculation/snapshot. Prevent duplicate inclusion of the same billable item across monthly statements.
+- Preserve the accepted case price and prior statement versions; corrections after closing require an explicitly authorized adjustment/credit mechanism rather than silent historical mutation.
+- Statement generation does not itself issue a legally compliant invoice, charge a payment method, mark an invoice paid, or authorize Tramisur filings. Those workflows require separate decisions and approvals.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
