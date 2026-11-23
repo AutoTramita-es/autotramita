@@ -1101,6 +1101,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - No automatic discount application, no silent retroactive changes to agreed case prices or issued invoices, and no automatic invoicing.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant-facing price preview before case submission (Step 170 — approved A)
+- When an authorized Tenant user selects a procedure type and prepares to submit a new case, show the applicable agreed AutoTramita service price in advance, using the effective Tenant-specific price (Step 165) or global catalog fallback (Step 164).
+- Display the service price excluding IVA, any administrator-entered and approved manual discount applicable to that Tenant or case (Steps 167–169), and the resulting service subtotal excluding IVA. Do not create or apply discounts automatically.
+- Present known official administrative charges and other customer-funded pass-through amounts separately, with a clear distinction between confirmed charges, estimates and amounts not yet known. Do not present unknown fees or unconfirmed totals as final.
+- Respect applicable IVA and billing requirements when separately approved; a price excluding IVA must be clearly labeled as such. Keep the price-preview snapshot, pricing version, approved discount and timestamp associated with the case for audit and later agreement verification.
+- Tenant users see only their own eligible prices; internal labor costs, provider contractual fees and contribution margins remain confidential.
+- Price display is informational until the separately defined customer acceptance/contractual commitment step; it must not itself automatically issue an invoice, change legal deadlines or initiate provider filing.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
