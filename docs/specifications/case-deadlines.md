@@ -1155,6 +1155,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Email notification and portal availability are triggered only after a legally valid invoice has been issued, not on mere draft creation or approval. No automatic payment collection or Tramisur filing is implied.
 - Architecture only; no implementation or deployment authorized.
 
+## Manual bank payment reconciliation (Step 176 — approved A)
+- Phase 1 uses manual payment confirmation only; there is no bank feed, open-banking connection, automated transaction matching or automatic payment capture.
+- After verifying the bank statement or equivalent reliable bank evidence, an appropriately authorized AutoTramita administrator manually records a received payment against the relevant issued Tenant invoice.
+- Persist payment amount, currency, bank value/receipt date, bank transaction reference, invoice reference, confirming administrator, confirmation timestamp and supporting evidence reference; maintain an immutable audit trail and prevent accidental duplicate posting of the same bank transaction.
+- Support multiple partial payments per invoice, cumulative paid amount and outstanding balance. An invoice is PAID only when confirmed allocated payments satisfy its payable amount; otherwise distinguish UNPAID and PARTIALLY_PAID, and flag overpayments or unmatched receipts for manual review rather than silently reallocating them.
+- Corrections or reversals require separately authorized, auditable compensating records; never silently delete historical payment entries. Tenant-visible payment status must reflect confirmed records only.
+- Manual payment confirmation does not automatically change legal case statuses, initiate Tramisur filings or create bank transactions. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
