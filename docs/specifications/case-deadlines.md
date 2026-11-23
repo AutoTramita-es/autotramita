@@ -423,6 +423,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Distinguish ordinary end-of-day logout from suspension, revocation, prolonged absence or account removal, which remain subject to existing case reassignment and access safeguards.
 - Architecture only; no implementation or deployment authorized.
 
+## Planned backoffice absence and controlled case reassignment (Step 90 — approved A)
+- Authorized backoffice operators or supervisors may record planned absence periods, including start and end date/time and appropriate absence category, without exposing unnecessary sensitive leave details to Tenants.
+- During an effective absence, set operator availability to AWAY and exclude them from new automatic case assignment, regardless of ordinary presence/session state.
+- Provide authorized backoffice supervisors a scoped overview of all unfinished cases assigned to an absent operator, with urgency, open tasks and statutory deadline risk highlighted.
+- Permit supervisors to reassign selected cases individually or in bulk to eligible operators, with permission checks, recipient availability, an auditable reason, actor, timestamp, old/new assignment and notifications.
+- Do not automatically reassign every case merely because absence begins; supervisors decide which cases can wait and which require coverage, while urgent deadline alerts continue independently.
+- On return, restore eligibility according to the operator's effective availability; do not silently reclaim cases already reassigned. Preserve case and assignment history.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
