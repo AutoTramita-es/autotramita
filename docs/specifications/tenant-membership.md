@@ -35,6 +35,14 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - Every session independently revalidates Tenant membership, branch assignment, and status for protected requests; revocation or suspension takes effect across sessions regardless of saved preferences.
 - Workspace context must be server-validated and session-bound, not trusted from a client-provided Tenant or branch identifier.
 
+## Employee invitations
+- An authorized OWNER or ADMIN may invite a User by email, subject to existing role-granting restrictions (only OWNER can grant ADMIN; OWNER elevation requires an existing OWNER's confirmation).
+- Each invitation is valid for exactly 168 hours (7 days) from issuance, with expiry enforced server-side.
+- Acceptance requires a valid, unexpired, single-use invitation token and the intended user's verified email identity; accepting creates or activates the appropriate TenantMembership.
+- Once accepted, the invitation token cannot be reused.
+- An authorized OWNER or ADMIN may resend an invitation, generating a new token with a fresh 168-hour lifetime; any earlier outstanding invitation link for that membership is immediately invalidated.
+- Expired, superseded, or revoked invitations cannot be accepted; invitation issuance, resending, and acceptance are audited.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -51,6 +59,8 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 13. Switching Tenant or branch in one session does not modify the active workspace of another session.
 14. Last-used Tenant and branch preferences initialize new sessions only, subject to current authorization.
 15. Revoked access is enforced in every session independently.
+16. Invitations expire 168 hours after issuance and cannot be accepted thereafter.
+17. Resending an invitation invalidates its predecessor and starts a new 168-hour window.
+18. Invitation tokens are single-use and cannot be accepted twice.
 
 ## Open design questions
-- How long should an invitation remain valid, and how are invitations resent?
