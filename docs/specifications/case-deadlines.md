@@ -796,6 +796,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - PAUSED must not automatically stop, extend, reset or satisfy statutory deadlines, internal service targets, CRITICAL acknowledgments, substantive-action targets, alerts or escalations. Any exception to an internal clock would require a separately approved auditable rule.
 - Architecture only; no implementation or deployment authorized.
 
+## Automatic oversight of paused Backoffice tasks (Step 134 — approved A)
+- For a task manually placed in PAUSED under Step 133, track continuous elapsed pause time using the approved Backoffice working calendar and time zone.
+- At two Backoffice working hours of unresolved pause, send a deduplicated reminder to the assigned operator; at four Backoffice working hours, escalate to the authorized Backoffice supervisor.
+- The supervisor may request that the operator resume the task or may reassign it using existing scoped reassignment controls, recording actor, reason and decision. Do not automatically end the pause or reassign solely because the reminder threshold has been reached.
+- Preserve pause start/end times, actual elapsed working time, reminder/escalation delivery and subsequent action in the audit history; changes in assignee must not silently erase overdue or pause history.
+- CRITICAL tasks remain subject to any stricter acknowledgment, first substantive action, statutory deadline and legal-risk escalation requirements. Pausing does not reset, suspend or extend statutory or internal service deadlines.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
