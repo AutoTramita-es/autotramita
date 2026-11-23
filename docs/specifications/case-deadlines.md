@@ -356,6 +356,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Only the approved two-stage completeness gate permits READY_FOR_TRAMISUR; maintain independent authenticity, legal-authority and deadline safeguards.
 - No OCR-based automated substantive approval or Tramisur integration is required for Phase 1; architecture only, no implementation/deployment authorized.
 
+## Per-document manual review statuses (Step 82 — approved A)
+- Each uploaded case document/version has an independently tracked backoffice review status: PENDING_REVIEW, APPROVED, REJECTED, or REPLACEMENT_REQUIRED. These review statuses are distinct from upload technical-validation outcomes, authenticity verification, and case workflow status.
+- Only appropriately authorized AutoTramita backoffice staff may approve, reject, or request replacement; record reviewer, timestamp, decision, reason and relevant evidence in an immutable audit history.
+- Tenant users see the status and actionable, Tenant-safe explanation for rejected documents or replacement requests, but not confidential internal notes or other Tenants' information.
+- A replacement is a new preserved document version with a fresh PENDING_REVIEW decision; prior files, decisions and timestamps remain accessible to authorized auditors and reviewers.
+- Backoffice may retain approval of unchanged documents, but a materially changed document or relevant case attribute must trigger the appropriate re-review.
+- READY_FOR_TRAMISUR requires every applicable mandatory checklist item to be satisfied by an approved current document, plus separate overall backoffice readiness approval and existing legal/deadline controls. Individual document approval alone never establishes official acceptance by Tramisur.
+- Architecture/specification only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
