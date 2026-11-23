@@ -585,6 +585,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Read receipts must not pause, satisfy or reset the Step 106 response target; REPLIED does not imply that the underlying case, requested documents, legal filing or procedure is resolved.
 - Enforce Tenant/branch permissions and separate internal Backoffice/Tramisur communications from Tenant-visible message states. Architecture only; no implementation or deployment authorized.
 
+## Tenant message attachments linked to case documentation (Step 109 — approved A)
+- Allow authorized Tenant users to attach PDF, JPG and PNG files to Tenant-visible case messages, subject to the existing upload size, integrity, malware/security and file-type validation controls.
+- Store each accepted attachment securely against its originating case and message with immutable file identity, uploader, timestamp, provenance and Tenant/branch access checks; preserve version and replacement history.
+- Backoffice may associate a message attachment with the appropriate required or conditional procedure-checklist item, or request proper classification where ambiguous, without duplicating or silently overwriting an existing approved version.
+- Message delivery or attachment upload must never automatically satisfy a mandatory checklist requirement, grant document approval, mark Backoffice readiness, or trigger manual Tramisur handoff. The normal PENDING_REVIEW / APPROVED / REJECTED / REPLACEMENT_REQUIRED review workflow remains authoritative.
+- Notify the responsible Backoffice operator of actionable uploads and make status and any required correction visible to the authorized Tenant; avoid leaking private internal correspondence or attachments.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
