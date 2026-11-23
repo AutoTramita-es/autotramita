@@ -804,6 +804,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - CRITICAL tasks remain subject to any stricter acknowledgment, first substantive action, statutory deadline and legal-risk escalation requirements. Pausing does not reset, suspend or extend statutory or internal service deadlines.
 - Architecture only; no implementation or deployment authorized.
 
+## Manual active-work time tracking per Backoffice task (Step 135 — approved A)
+- Permit an authorized assigned Backoffice operator to explicitly start and stop an active-work timer for a permitted task; record actor, task/case linkage, start/end timestamps and time zones, and accumulated declared work duration.
+- Separately display declared active-work time, time in PAUSED under Steps 133–134, and verified WAITING_FOR_TENANT / WAITING_FOR_INFORMATION / WAITING_FOR_PROVIDER durations; these measures must not be conflated or double-counted.
+- A timer running is a user declaration, not independent proof of continuous work or of a substantive action required by CRITICAL acknowledgment/action SLAs, legal filings or task completion. Do not silently infer worked time solely from IN_PROGRESS status.
+- Allow authorized correction of erroneous entries only with a mandatory reason and preserved original values, correcting actor, timestamps, and complete auditable change history; apply server-side authorization and prevent overlapping entries being counted twice.
+- Use this information for capacity planning and cost analysis with appropriate employee privacy and transparency safeguards; do not automate disciplinary, compensation or performance judgments based on tracked time.
+- Statutory and internal deadlines, alerts and escalations remain independent of time-tracking operations. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
