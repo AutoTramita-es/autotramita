@@ -1222,6 +1222,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Do not silently suppress the internal 15-day administrator overdue alert under Step 178; distinguish internal financial oversight from customer-facing reminders. Any special handling of internal alerts must be separately authorized.
 - This is an architectural decision only; no implementation or deployment authorized.
 
+## First substantive response SLA for invoice disputes (Step 184 — approved A)
+- For every Tenant invoice dispute submitted under Step 182, require an authorized AutoTramita administrator to provide the Tenant with a first substantive response within three Backoffice working days of receipt.
+- Calculate the internal operational SLA using the configured Backoffice working calendar and timezone, retaining exact submission, due, first substantive response and breach timestamps. This is a service target, not an asserted Spanish statutory dispute-response deadline.
+- A substantive response must address the reported issue, communicate a reasoned initial assessment, request specifically identified missing evidence, or provide a concrete next action. Merely opening, reading, assigning or sending a generic acknowledgement does not satisfy the SLA.
+- If no qualifying response has been sent when the three-working-day deadline expires, create an auditable internal overdue alert to the responsible administrator or designated platform escalation queue. Preserve visibility until a substantive response is recorded; do not automatically close the dispute.
+- The dispute remains open until resolved through the separately authorized review process. Customer-facing payment reminders remain paused while the dispute is open under Step 183, without changing the invoice balance, effective due date or internal overdue oversight.
+- Retain Tenant-visible response history and restricted internal SLA/audit records, enforcing strict Tenant isolation. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
