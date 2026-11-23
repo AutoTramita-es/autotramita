@@ -78,9 +78,18 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If a required authoritative calendar or applicable jurisdiction cannot be established reliably, mark the deadline provisional and route for review rather than presenting it as legally confirmed.
 - Calendar updates must be versioned and assessed under controlled rule applicability; no silent bulk changes to existing confirmed case deadlines.
 
+## Official calendar acquisition and approval (Step 48 — approved A)
+- Periodically fetch available official Spanish calendar publications from verified authoritative sources, including BOE and competent autonomous-community and local authorities as applicable.
+- Store fetched or changed calendar datasets as PENDING_REVIEW, including source URL/reference, jurisdiction, year, retrieval time, publication date when known, and detected differences.
+- Only explicitly authorized AutoTramita platform administrators may verify and approve datasets. Approved versions become ACTIVE and eligible for statutory deadline calculation; unapproved data must never silently affect legal deadlines.
+- Preserve previously approved calendar versions and a complete approval/change audit trail so historical calculations remain reproducible.
+- On acquisition or verification failure, retain existing approved data but flag possible staleness and prevent unverified or inapplicable calendar data from being treated as authoritative for a new calculation.
+- Calendar approval is distinct from rule applicability: activation does not indiscriminately recalculate existing case deadlines. Any required updates follow controlled applicability and audit procedures.
+- The design does not assume that every authority exposes a machine-readable feed; source-specific acquisition methods require separate validation.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
-- Authoritative calendar ingestion, source verification, update cadence and jurisdiction mapping.
+- Specific source connectors, calendar polling cadence, and mapping between procedure/competent authority and applicable jurisdiction.
 - Operational workflow and service-level targets for central legal review.
 - Priority levels, defaults, and due-date recalculation.
 - Alert deduplication, delivery failure, and audit details.
@@ -115,3 +124,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 27. Deadline calculations distinguish días naturales from días hábiles and apply the relevant verified official national, regional and local calendars.
 28. Calculation honors procedure-specific counting and final-day extension rules, with rule and calendar provenance retained.
 29. Missing or unverified applicable calendar data prevents a deadline from being presented as legally confirmed.
+30. Official calendars are periodically retrieved from verified BOE, regional or local sources where available, with new/changed datasets held as PENDING_REVIEW.
+31. Only authorized platform administrators may approve calendar versions for ACTIVE legal deadline calculations; provenance and prior versions remain auditable.
+32. Failed calendar retrieval preserves existing approved data while signaling staleness; unapproved data cannot affect statutory deadlines.
