@@ -14,12 +14,12 @@ A Tenant represents one company or autónomo. Each Tenant has one or more branch
 | tenant_id | UUID | Required; references Tenant |
 | code | varchar(20) | Required; unique within tenant; immutable after creation; normalize for comparison |
 | name | varchar(150) | Required; editable, not unique |
-| address_line1 | varchar(255) | Optional at creation |
+| address_line1 | varchar(255) | Optional at creation; required before ACTIVE |
 | address_line2 | varchar(255) | Optional |
-| postal_code | varchar(10) | Optional at creation |
-| city | varchar(100) | Optional at creation |
-| province | varchar(100) | Optional at creation |
-| country_code | char(2) | ISO 3166-1 alpha-2; default ES |
+| postal_code | varchar(10) | Optional at creation; required before ACTIVE |
+| city | varchar(100) | Optional at creation; required before ACTIVE |
+| province | varchar(100) | Optional at creation; required before ACTIVE |
+| country_code | char(2) | ISO 3166-1 alpha-2; default ES; required before ACTIVE |
 | email | varchar(254) | Optional |
 | phone | varchar(30) | Optional |
 | is_primary | boolean | Exactly one active primary branch per active tenant |
@@ -28,6 +28,13 @@ A Tenant represents one company or autónomo. Each Tenant has one or more branch
 | updated_at | timestamptz | Required |
 
 A branch must have a tenant-safe composite key/constraint to support cross-entity composite foreign keys. A tenant's branch codes are unique within that tenant; separate tenants may reuse codes. UUIDs remain stable across renaming. Branch codes are immutable after creation and may never be reused for another branch within the same Tenant, including after deactivation. Names, addresses, email and phone remain editable.
+
+## Activation prerequisites
+- A branch can be drafted/created with only tenant, immutable code and name, in addition to its generated identifiers and timestamps.
+- Before first activation or reactivation, require complete physical address: street and house number (`address_line1`), postal code, city, province and country.
+- Contact email and phone remain optional, since the Tenant may provide shared contact channels.
+- No new case intake is permitted until the branch is ACTIVE and its activation prerequisites are satisfied.
+- Draft creation is distinct from operational activation. The exact lifecycle representation of a not-yet-active branch (INACTIVE vs separate DRAFT status) remains to be decided.
 
 ## Primary branch
 - Every ACTIVE Tenant must have exactly one ACTIVE primary branch.
@@ -90,10 +97,11 @@ Before deactivating MAR-02, move all unfinished cases to another active branch a
 13. OWNER/ADMIN can reactivate a branch without changing its UUID, code or history.
 14. Reactivation does not restore previous staff assignments or reverse case transfers.
 15. Branch code cannot be changed after creation or reused within a Tenant, including after deactivation.
+16. Activation and reactivation require street/number, postal code, city, province and country; email/phone are optional.
+17. A branch with incomplete physical address cannot receive new cases.
 
 ## Pending detail decisions
 - Branch code format and normalization rules (code is immutable and never recycled).
-- Required address/contact data before branch can accept cases.
 - Definition of finished vs unfinished Case statuses and bulk transfer UX.
 - Precise atomic transition mechanics and branch-assignment audit schema.
 
