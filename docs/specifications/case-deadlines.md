@@ -543,6 +543,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Statutory deadline alerts, CRITICAL risk escalation and mandatory legal notifications remain independent and must not be suppressed by milestone-notification preferences.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant–Backoffice case-linked messaging (Step 104 — approved A)
+- Provide two-way messaging between authorized Tenant users and authorized AutoTramita Backoffice participants directly within each case, for questions, clarifications, replies and supplementary-document requests.
+- Persist messages chronologically with case reference, sender identity and role, creation timestamp, visibility classification and an auditable record; enforce Tenant and branch scope on every read, send and attachment operation.
+- Notify relevant authorized recipients of new actionable messages through the established in-app/email notification framework, with deduplication and secure case links; preserve independent statutory deadline alerts.
+- Maintain strictly separate channels or visibility boundaries for Tenant-visible messages, internal Backoffice notes, supervisory discussion and private Tramisur correspondence. Internal messages must never be exposed through Tenant APIs, notifications, exports or timeline events.
+- Route requests for required documents through the established versioned checklist, upload and Backoffice approval workflow; a chat message or attachment alone must not mark documentation approved or a case submitted to Tramisur.
+- Messaging does not imply legal representation, official filing, completion, or any pause/extension of statutory deadlines. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
