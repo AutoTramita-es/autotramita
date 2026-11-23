@@ -645,6 +645,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - New issuance does not automatically invalidate an older report's integrity verification or alter official receipts, legal deadlines or case workflow states. Reverify any presented PDF against the hash of its own issuance, not the latest report.
 - Enforce Tenant/branch access controls on history, downloads and verification, and audit report generation and verification events. Architecture only; no implementation or deployment authorized.
 
+## Automatic final informational PDF report upon confirmed case completion (Step 116 — approved A)
+- After an authorized Backoffice operator has confirmed case completion based on actual documented evidence and the case has durably entered the appropriate completed state, automatically generate a final informational PDF case report from the confirmed Tenant-visible case snapshot.
+- Assign a new immutable report identifier, issuance timestamp, QR verification reference and SHA-256 digest according to Steps 113–115; preserve the finalized PDF bytes and issuance record.
+- Make the completed report available in the authorized Tenant-facing case Documents archive and send a deduplicated in-app/email notification with a secure case link after successful issuance.
+- Ensure idempotent generation for a given completion event, safe retries and a monitored failure queue; report-generation or notification failure must not falsely reverse a legitimately confirmed completion or generate duplicate reports. Surface failures to Backoffice for resolution.
+- Any later case correction or post-closure review must preserve the original report unchanged; subsequent report issuance uses a new identifier and remains separately traceable under the historical-report policy.
+- Report generation must never independently decide that a procedure is complete, prove official filing, certify a government action or suppress legal alerts; preserve Tramisur phase-one manual evidence and authorization controls.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
