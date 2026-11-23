@@ -508,6 +508,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If no trustworthy historical or approved baseline data exists, show 'Estimate currently unavailable' as decided in Step 98.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant-facing estimated completion range and confidence (Step 100 — approved A)
+- Present an estimated completion interval (e.g., a range of working days and corresponding indicative calendar dates), rather than relying only on one precise completion date, whenever sufficient reliable information exists.
+- Derive the range and its confidence classification (HIGH, MEDIUM or LOW) from comparable completed cases, data quality, sample sufficiency, dispersion and relevant case conditions. Broaden the interval or withhold the estimate when uncertainty warrants it; never fabricate numerical confidence or precision.
+- When historical evidence is insufficient, show an explicitly approved, versioned baseline range clearly identified as an indicative assumption, or 'Estimate currently unavailable' if no trustworthy baseline exists.
+- Recompute or withdraw ranges and indicative dates when material workflow conditions change, including outstanding Tenant documentation, Backoffice processing and manual Tramisur handoff; provide a comprehensible Tenant-visible explanation.
+- Clearly distinguish estimates and confidence from statutory deadlines, guarantees, contractual service levels and confirmed official actions. Do not imply provider real-time integration in phase one.
+- Audit estimate methodology/version, provenance and meaningful revisions while enforcing Tenant/branch data isolation.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
