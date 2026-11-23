@@ -348,6 +348,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Unclear legal applicability is escalated for review rather than arbitrarily resolved by a Tenant user; preserve statutory deadlines and independent filing authorization controls.
 - Architecture only: no implementation or deployment authorized.
 
+## Upload technical validation and manual backoffice document review (Step 81 — approved A)
+- On Tenant document upload, automatically validate allowed file types (initially PDF, JPEG/JPG and PNG), configurable size limits, file integrity and basic security checks; reject unsafe, unsupported or corrupt files with actionable user feedback and an auditable rejection reason.
+- Do not treat a technically valid upload as authentic, legible, complete, legally sufficient or accepted by Tramisur.
+- Authorized AutoTramita backoffice reviewers manually inspect readability, completeness, correct document type, case identity/attribute consistency and whether a clearer replacement or supplement is required.
+- Record technical validation outcome separately from manual review status, reviewer, timestamps, findings and any resubmission request; preserve original and replacement versions under Tenant isolation and retention controls.
+- Only the approved two-stage completeness gate permits READY_FOR_TRAMISUR; maintain independent authenticity, legal-authority and deadline safeguards.
+- No OCR-based automated substantive approval or Tramisur integration is required for Phase 1; architecture only, no implementation/deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
