@@ -58,6 +58,13 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - Acceptance and activation are atomic, idempotency-safe, and recorded in the audit log with the inviter, accepting User, Tenant, role, assigned branches and timestamp.
 - Membership activation does not override Tenant suspension, closed Tenant status, branch inactivity or other access controls.
 
+## Immediate role changes
+- Authorized OWNER or ADMIN may change an ACTIVE member's role within their permitted grant/revoke scope without issuing another invitation or requiring the member's acceptance.
+- Only OWNER can grant or remove ADMIN. Adding an OWNER requires confirmation by an existing OWNER. Maintain at least one ACTIVE OWNER per Tenant.
+- Role changes take effect immediately for all of the affected User's active sessions; each protected request must authorize against current server-side membership and role state, never a stale session role claim.
+- A role downgrade revokes elevated permissions immediately. Any active branch context that is no longer authorized must be invalidated and reselected under the branch selection rules.
+- Role changes must be audited with actor, Tenant, affected User, old/new roles and timestamp.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -83,5 +90,8 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 22. Accepting a valid invitation automatically transitions the invited membership to ACTIVE with the authorized invited role and branch assignments.
 23. No second approval is required for ordinary grants; OWNER/ADMIN elevated-role safeguards still apply.
 24. Invitation acceptance and activation are atomic and audited; inactive Tenants or branches do not become accessible.
+25. Authorized role changes take effect immediately across all active sessions without new invitations.
+26. Downgrades revoke former permissions and inaccessible active branches immediately.
+27. OWNER/ADMIN grant restrictions and the at-least-one-ACTIVE-OWNER invariant remain enforced; role changes are audited.
 
 ## Open design questions
