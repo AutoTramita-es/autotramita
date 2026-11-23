@@ -1322,6 +1322,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Treat five working days as an internal operational target only; identify and comply with any applicable shorter mandatory statutory refund deadlines or contractual obligations. No banking API, automated transfer or deployment is authorized.
 - Architecture only; no implementation or deployment authorized.
 
+## Central administrator dashboard for Tenant refund requests and execution (Step 196 — approved A)
+- Provide a central, access-controlled AutoTramita platform administrator dashboard covering all Tenant refund requests and approved refunds across Tenants, without requiring navigation into each Tenant profile.
+- Show per request: Tenant, linked invoice/dispute, requested and approved amounts, confirmed executed and outstanding refund amounts, responsible administrator, current status, submission/approval/execution dates, and relevant first-response, decision and execution targets under Steps 193–195.
+- Include actionable views and aggregate counts for pending decision, approved awaiting bank execution, partially executed, fully executed, rejected, and overdue response/decision/execution. Distinguish approved amounts from actually transferred amounts and avoid double-counting partial transfers.
+- Allow filtering and sorting by Tenant, status, amount or amount range, date or period, assigned administrator and overdue state, with direct authorized navigation to the request, supporting evidence, bank-execution records and audit trail.
+- Enforce administrator-only cross-Tenant financial visibility, role-based access, least privilege and access audit. Tenant portal users continue to see only their own authorized refund records; do not reveal unrelated bank data, other Tenants or confidential internal finances.
+- The dashboard is an oversight interface only: it does not itself approve refunds, change invoices, initiate bank transfers or replace the separate authorization and evidence requirements in Steps 190–195.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
