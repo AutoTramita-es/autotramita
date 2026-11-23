@@ -979,6 +979,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Strictly restrict confidential profitability analytics and cross-Branch comparisons to authorized AutoTramita management; Tenant users cannot view internal labor rates, external supplier terms, margins or another Tenant's data.
 - This is management reporting only and does not automatically change prices, invoices, case processing, provider coordination or statutory deadlines. Architecture only; no implementation or deployment authorized.
 
+## Financial branch attribution on case transfer (Step 156 — approved A)
+- Attribute all AutoTramita-attributable case revenue, approved internal labor cost, company-borne direct external costs and case contribution margin to the Tenant Branch where the case was originally opened, irrespective of later operational transfers to another Branch.
+- Persist an immutable originating financial Branch reference on case creation, alongside the current operational Branch and auditable transfer history; ordinary transfers must never rewrite the originating Branch.
+- Branch profitability reporting under Step 155 groups cases by their originating financial Branch, while operational queues and access control continue to follow the case's current Branch and authorized memberships. Financial attribution must not grant access to case contents to staff of the originating Branch after transfer.
+- Preserve historical Branch attribution even if the originating Branch becomes inactive; provide appropriately labeled historical reporting without reassigning its results to the destination Branch.
+- Ensure Tenant-level financial totals reconcile with the sum of its Branch-level totals without duplication. Do not alter revenue recognition, approved costs, customer invoices or statutory deadlines as a consequence of Branch transfer.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
