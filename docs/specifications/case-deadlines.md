@@ -432,6 +432,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - On return, restore eligibility according to the operator's effective availability; do not silently reclaim cases already reassigned. Preserve case and assignment history.
 - Architecture only; no implementation or deployment authorized.
 
+## Automatic case priority based on deadlines (Step 91 — approved A)
+- Assign each active case an effective backoffice priority: CRITICAL (imminent statutory deadline risk), HIGH (short deadline or material blocker), NORMAL (ordinary processing), or LOW (no special urgency).
+- Derive the minimum legally required priority from centrally governed statutory deadline rules, verified deadline-risk signals and relevant case blockers; recompute on material deadline, status or risk changes.
+- Present backoffice work queues ordered by effective priority, with deterministic secondary ordering and visible reason/source for elevated priority.
+- Authorized backoffice supervisors may manually raise priority with a recorded reason, actor and timestamp, but cannot lower effective priority beneath the automatically required statutory-risk floor or suppress independent legal alerts.
+- Distinguish internal work prioritization from statutory due dates; priority adjustments do not extend deadlines, imply a filing was made, or override legal review blocks.
+- Maintain full audit history of priority changes, computed inputs and manual overrides under Tenant access controls. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
