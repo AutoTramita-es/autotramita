@@ -1180,6 +1180,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If the invoice becomes fully paid before the threshold, do not generate the alert; after full payment, mark any outstanding alert resolved with history retained. Handle partial payments by alerting only on the remaining balance.
 - This is a management notification, not a formal legal demand or debt enforcement step. Architecture only; no implementation or deployment authorized.
 
+## Administrator-approved manual invoice due-date extensions (Step 179 — approved A)
+- Permit only an appropriately authorized AutoTramita platform administrator to approve and enter a revised payment due date for a specific issued Tenant invoice, with mandatory reason and approval timestamp.
+- Preserve the original contractual due date, each prior effective due date, new effective due date, approving actor, explanation and immutable audit history. Do not overwrite the original invoice or silently change its amount, issued document or payment records.
+- Reschedule only future automated unpaid-invoice reminders (Step 177) and the 15-day overdue administrator escalation (Step 178) relative to the newly approved effective due date, with idempotent scheduling and no deletion of prior reminder or alert history.
+- Notify the Tenant's designated billing contact(s) by email and reflect the current approved payment due date and extension history as appropriate in the authenticated portal. Avoid representing an extension as payment, a canceled invoice or a statutory change.
+- Preserve original invoice terms and any legally required documentation; where a due-date extension requires a formal agreement or compliant document, obtain it separately before treating the change as binding. Do not alter the issued invoice PDF without an approved lawful correction process.
+- The administrator may grant extensions even if the invoice is already overdue; existing escalation history remains auditable. Payment status continues to derive solely from confirmed manual bank allocations under Step 176.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
