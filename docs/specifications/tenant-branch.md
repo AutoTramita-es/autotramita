@@ -53,6 +53,14 @@ A branch must have a tenant-safe composite key/constraint to support cross-entit
 - No unfinished case may remain assigned to a branch that is being deactivated.
 - Deactivation is permitted only after all unfinished cases have been transferred to one or more ACTIVE branches, with authorization checks and complete auditability. Handle concurrent new cases/transfers atomically to avoid orphaned cases.
 
+## Branch reactivation
+- OWNER or ADMIN may reactivate an INACTIVE branch of their own Tenant.
+- Reactivation preserves the branch UUID, code, name and complete historical records.
+- Previous MembershipBranch assignments are **not** automatically restored; authorized OWNER/ADMIN users must explicitly assign staff again.
+- Cases previously transferred away from this branch are **not** automatically moved back.
+- Reactivation is audited with actor and timestamp.
+- Reactivation must not violate the invariant that an ACTIVE Tenant has exactly one ACTIVE primary branch. A reactivated branch is not automatically made primary; changing the primary branch is a separate authorized operation.
+
 ## Branch deactivation and membership assignments
 - Deactivation prevents new case intake and operational assignment to that branch.
 - Remove or deactivate the branch's **active** MembershipBranch assignments without deleting their historical records.
@@ -79,11 +87,12 @@ Before deactivating MAR-02, move all unfinished cases to another active branch a
 10. A non-admin member with no active branch assignment cannot process cases.
 11. Historic completed cases and audit events remain accessible subject to authorization and retention rules.
 12. Financial and credit identities remain Tenant-scoped, unaffected by branch changes.
+13. OWNER/ADMIN can reactivate a branch without changing its UUID, code or history.
+14. Reactivation does not restore previous staff assignments or reverse case transfers.
 
 ## Pending detail decisions
 - Branch code format and whether codes may ever be recycled after closure.
 - Required address/contact data before branch can accept cases.
-- Branch reactivation permissions and preconditions.
 - Definition of finished vs unfinished Case statuses and bulk transfer UX.
 - Precise atomic transition mechanics and branch-assignment audit schema.
 
