@@ -260,6 +260,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If legal effects are uncertain, flag LEGAL_REVIEW_REQUIRED and block only legally dependent actions; never automatically declare a missed deadline or perform remediation.
 - Preserve the original receipt, previous verification decisions, official revocation evidence, timestamps, affected-case assessments, notices and full audit history. Any subsequent restoration or correction requires a new documented official result or authorized review.
 
+## Propagate revoked receipt review to all linked cases (Step 71 — approved A)
+- On an officially confirmed receipt revocation, identify every case known to rely on the revoked receipt, including linked cases across separate Tenants when a privacy-safe document association exists.
+- Flag each affected case REVOKED_RECEIPT_REVIEW_REQUIRED and separately assess procedure-specific consequences, statutory deadlines, evidentiary relevance and whether legally dependent actions require blocking or central legal review.
+- Immediately notify only the responsible authorized employees and appropriately scoped supervisors for each affected Tenant and branch, via existing in-app and email channels.
+- Cross-Tenant association and matching must be processed under platform-level access controls without disclosing other Tenants' identities, clients, cases, receipt content or other confidential information. Each Tenant sees only its own affected cases and permitted evidence.
+- Do not automatically conclude that every related filing is legally invalid or that every deadline was missed. Retain the official revocation source, affected-case associations, assessments, notifications, decisions and audit trail.
+- Maintain the existing LEGAL_REVIEW_REQUIRED and deadline escalation safeguards; no automatic execution of blocked actions or silent clearance of existing alerts.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -366,3 +374,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 96. Previously verified receipts are periodically rechecked for official revocation where the issuing authority supports it.
 97. Confirmed official cancellation marks RECEIPT_REVOKED, immediately alerts authorized case users and prompts deadline/legal reassessment.
 98. Service unavailability is not revocation; preserve all verification history and route uncertain legal effects to central review without automatically declaring a missed deadline.
+99. Official receipt revocation identifies all linked cases, including privacy-safe cross-Tenant associations, and flags REVOKED_RECEIPT_REVIEW_REQUIRED per affected case.
+100. Each affected case receives an independent legal/deadline assessment and targeted notifications without exposing another Tenant's data.
+101. Revocation alone does not establish invalidity of all linked proceedings; preserve evidence, review decisions and audit history.
