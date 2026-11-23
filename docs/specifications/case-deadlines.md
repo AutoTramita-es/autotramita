@@ -1331,6 +1331,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - The dashboard is an oversight interface only: it does not itself approve refunds, change invoices, initiate bank transfers or replace the separate authorization and evidence requirements in Steps 190–195.
 - Architecture only; no implementation or deployment authorized.
 
+## Administrator assignment of refund requests to staff (Step 197 — approved A)
+- Allow an authorized AutoTramita platform administrator to assign or reassign a Tenant refund request under Step 192 to an eligible finance or Backoffice employee for investigation, payment/document review, and preparation of a reasoned proposed decision.
+- Assigned employees may access only explicitly authorized Tenant/request records and supporting evidence, record investigative notes, request missing information through approved workflows, and prepare a recommendation. Assignment never grants authority to approve or reject a refund, change invoices or payment allocations, or initiate or execute a bank transfer.
+- Only an authorized AutoTramita platform administrator may formally approve or reject the refund and record the final reasoned decision. Actual bank transfer remains outside the platform and execution requires evidence under Step 191.
+- Record assignee, assigning administrator, assignment and reassignment timestamps, reason, activity, recommendations and decision history. Reflect responsible staff and status on the central refund dashboard under Step 196.
+- The three-working-day first substantive response SLA (Step 193), ten-working-day decision target (Step 194), and any five-working-day post-approval execution target (Step 195) remain tied to their original triggering events; assignment or reassignment does not restart or erase those clocks.
+- Enforce least privilege, Tenant isolation, administrator-only approval and immutable auditability. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
