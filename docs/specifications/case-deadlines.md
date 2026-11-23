@@ -197,6 +197,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Inconsistent, incomplete, unauthenticated or legally ambiguous evidence requires review and, when necessary, escalation to LEGAL_REVIEW_REQUIRED rather than automatic clearance.
 - Keep the original receipt, evidence metadata, verification outcome, approver, decision rationale, and complete audit trail; do not silently change statutory rules or execute blocked actions.
 
+## Automated extraction and authenticity checks for filing receipts (Step 63 — approved A)
+- For attached official filing receipts (justificante de presentación) in supported PDF or image formats, attempt automated extraction of submission date/time (including timezone when stated), registration number, issuing/competent authority, and available document verification identifiers.
+- When a Código Seguro de Verificación (CSV) or another supported official validation mechanism is available, attempt authenticity verification against the relevant official source; do not assume every authority offers an automated validation endpoint.
+- Track document verification status as VERIFIED, PENDING_REVIEW or VERIFICATION_FAILED, with provenance, validation method, timestamp, errors and extracted-field confidence or uncertainty as appropriate.
+- Distinguish successful text extraction from official authenticity verification and from legal determination of timely filing. OCR or parsing alone never certifies authenticity or timeliness.
+- Route unreadable, incomplete, contradictory, unverifiable or failed documents for authorized manual review; do not automatically dismiss statutory deadline alerts based on unverified extracted data.
+- Preserve the original uploaded document, extracted values, verification evidence, manual corrections, reviewers, and full audit history, with Tenant/branch access control and appropriate handling of sensitive case information.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -279,3 +287,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 72. Cases can retain official filing receipts with original document, competent authority, registration identifier and submission timestamp.
 73. Verified official submission time is compared with the applicable statutory deadline; an authorized supervisor may resolve an overrun alert on proof of timely filing.
 74. Conflicting or unverifiable evidence requires review; the original alert, evidence, decision and correction history remain auditable without mislabeling a disproven breach.
+75. Supported filing-receipt PDFs/images undergo attempted automatic extraction of filing timestamp, registration number and authority, with uncertainty recorded.
+76. When an official CSV or other supported validation mechanism exists, authenticity is checked separately from text extraction; statuses are VERIFIED, PENDING_REVIEW and VERIFICATION_FAILED.
+77. Failed or uncertain extraction/authenticity requires manual review, and no deadline alert is automatically cleared solely from OCR output.
