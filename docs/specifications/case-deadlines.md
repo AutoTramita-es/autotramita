@@ -30,10 +30,18 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Every internal deadline change records previous value, new value, actor, timestamp and case identity in an immutable audit trail.
 - Any correction to a statutory deadline must follow a separately governed rule/fact correction process, not direct manual deadline editing; its authorization and workflow remain to be specified.
 
+## Central governance of statutory deadline rules (Step 42 — approved A)
+- Only explicitly authorized AutoTramita platform administrators may create, revise, approve and publish statutory deadline calculation rules. Tenant OWNER, ADMIN, MANAGER and EMPLOYEE roles cannot manage those rules.
+- Rules are shared across all Tenants for the applicable Spanish administrative procedure and must be grounded in verified official legal sources.
+- Each approved rule version records its legal source/reference, approval and change history, effective-from date and, when applicable, effective-to date.
+- Preserve historical versions and the rule version used for each case's deadline calculation so results remain traceable and auditable.
+- Publishing a new rule version must not silently or indiscriminately recalculate existing cases. Applicability and any required controlled recalculation of open cases must be specified separately.
+- The rule governance model does not itself assert that any particular Spanish legal deadline has been verified.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Rule provenance, versioning, calendar and holiday calculations.
-- Governance and approval workflow for statutory rule/fact corrections.
+- Publication approval workflow and controlled recalculation of existing cases after rule updates.
 - Priority levels, defaults, and due-date recalculation.
 - Alert deduplication, delivery failure, and audit details.
 
@@ -49,3 +57,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 9. Legal deadlines cannot be directly overridden by Tenant staff; they are calculated using approved procedure-specific rules.
 10. OWNER/ADMIN, authorized MANAGER, and responsible EMPLOYEE can edit internal deadlines within their permitted scope, with a complete audit trail.
 11. Changing an internal deadline does not alter the legal deadline.
+12. Only authorized platform administrators can manage centrally shared statutory deadline rules; Tenant staff cannot edit them.
+13. Each approved rule version preserves its official legal source, effective date and change history.
+14. Existing case deadlines are not silently or indiscriminately changed by publishing a new rule version.
