@@ -1206,6 +1206,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Secure exports with authenticated authorization, audit export actor/time/filters, and apply access controls and retention to generated files. Ensure PDF and Excel exports reconcile to the same snapshot and display partial payments and adjustments consistently.
 - No bank integration, automatic payment collection, issuance of new invoices or change to existing financial records is implied. Architecture only; no implementation or deployment authorized.
 
+## Tenant invoice disputes through the portal (Step 182 — approved A)
+- Allow an appropriately authorized Tenant billing user to submit a dispute directly against an issued invoice in the authenticated Tenant portal, choosing a reason such as incorrect amount, missing or unrecognized payment, incorrect charge or other issue, and providing an explanation and optional supporting documents.
+- Each dispute must link to the immutable issued invoice, submitting Tenant and User, submission timestamp, reason, attachments and auditable correspondence thread. Enforce Tenant isolation and protect confidential internal financial data.
+- Notify an authorized AutoTramita platform administrator when a dispute is submitted. Provide an administrator review workflow with visible Tenant-facing status, requests for additional evidence, and a reasoned final response through the portal.
+- Preserve the original invoice, its payable balance, due date, payment allocations and collection-reminder schedule unless an administrator separately authorizes a legally compliant correction, payment reconciliation or due-date extension under the relevant existing rules. Merely filing a dispute must not silently mark an invoice paid, void the invoice or amend accounting records.
+- Keep all dispute communications, evidence, decisions and timestamps in an immutable audit history; ensure any approved invoice correction or credit follows a separately authorized workflow and is linked back to the dispute.
+- Portal disputes are a communication and review channel, not automatic debt forgiveness, automatic refunds, automated legal adjudication or authority to suspend the Tenant. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
