@@ -456,6 +456,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Statutory deadline alerts and critical-case escalation remain active independently of business-hour acknowledgement timing; the 15-minute acknowledgement window must never imply a legal extension or suspend urgent legal-risk monitoring.
 - Architecture only; no implementation or deployment authorized.
 
+## Critical case first substantive action monitoring (Step 94 — approved A)
+- After the current backoffice assignee explicitly acknowledges a CRITICAL case, require a qualifying, auditable substantive action within 30 minutes of applicable backoffice working time.
+- Qualifying actions include an actual document-review decision, a supplementary-document request, or a recorded substantive preparation step for manual handoff to Tramisur. Merely opening/viewing a case, signing in, refreshing a page, or acknowledging assignment does not qualify.
+- Use server-recorded action events tied to the case, acting operator and current assignment version; do not permit arbitrary client-side activity signals or backdated entries to satisfy the requirement.
+- If no qualifying action is recorded before the 30-working-minute deadline, immediately alert an authorized backoffice supervisor for intervention or explicit reassignment, retaining an audit of the alert and response.
+- On reassignment, the new operator must acknowledge the new assignment and then meet the applicable first-action requirement; stale actions from previous assignments cannot satisfy the new obligation.
+- Preserve statutory deadline monitoring, CRITICAL queue visibility and legal-review blocks independently of this operational timer. The internal 30-minute window never extends a statutory deadline.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
