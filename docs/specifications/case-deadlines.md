@@ -142,6 +142,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - If applicability is unclear, flag affected cases LEGAL_REVIEW_REQUIRED and use existing controlled legal-review safeguards; urgency does not waive verification.
 - Preserve prior approved registry versions and support an auditable distinction between detection, approval and legal effective date.
 
+## Targeted Tenant notification of authority changes (Step 56 — approved A)
+- Following approval of a competent-authority change, identify existing cases potentially affected by the change's legal and territorial applicability; do not treat possible impact as a confirmed change of each case's jurisdiction.
+- Notify only affected Tenants, via in-app notifications and email, targeting responsible case employees and authorized supervisors within their permitted Tenant/branch scope.
+- Include a concise change description, verified effective date, authoritative reference, and secure in-app links to potentially affected cases requiring review.
+- Enforce Tenant isolation and branch-level access on notification recipients and linked case lists; avoid disclosing another Tenant's case information through emails or notifications.
+- Record notification creation, recipients, delivery attempts/status where available and acknowledgment/read status where supported; do not equate a successful send with confirmed human receipt.
+- Notification alone never modifies case authority or statutory deadlines and never automatically performs legally dependent actions.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -203,3 +211,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 51. Imminent authority-jurisdiction changes are flagged URGENT_REVIEW and promptly escalated to platform administrators.
 52. Activation requires verified legal basis, effective date, territorial/procedural scope and transitional applicability, with approval audit.
 53. Potentially affected existing cases are flagged for review; no automatic authority reassignment or silent deadline changes occur.
+54. Approved authority changes trigger targeted in-app and email notices only to Tenants with potentially affected cases, scoped to responsible employees and authorized supervisors.
+55. Notices describe the change, effective date and securely link to affected cases; Tenant and branch isolation is enforced.
+56. Notification delivery attempts and outcomes are audited, and notices never silently modify case authority or statutory deadlines.
