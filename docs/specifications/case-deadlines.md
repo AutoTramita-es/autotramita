@@ -475,6 +475,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - When the Tenant submits requested material, clear or update the waiting condition as appropriate and return the case to the responsible Backoffice operator for substantive review, with notification and audit. Partial submission leaves unresolved items pending.
 - Architecture only; no implementation or deployment authorized.
 
+## Escalation for overdue Tenant document requests (Step 96 — approved A)
+- When requested Tenant documentation remains outstanding, continue the existing automated, deduplicated in-app/email reminders to authorized Tenant contacts, with heightened urgency driven by verified statutory deadline risk.
+- Notify authorized Backoffice supervisors when non-response threatens a statutory deadline; provide the missing-item list, request history, current priority, applicable deadline and responsible case operator.
+- Permit supervisors to contact the Tenant through other approved channels (such as phone or email) and record each attempt, channel, timestamp, actor, outcome and any agreed follow-up, without exposing internal Backoffice notes to unauthorized Tenant users.
+- Keep the WAITING_FOR_TENANT operational condition until required documentation is supplied and processed under the existing document-review workflow. Retain CRITICAL priority and dedicated queue visibility whenever the underlying legal risk persists.
+- Tenant non-response, reminder delivery, supervisor acknowledgement and contact attempts must not pause or extend statutory deadlines, bypass legal-review blocks, imply official filing, or automatically resolve/close the case.
+- Preserve immutable notification/contact history and Tenant isolation. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
