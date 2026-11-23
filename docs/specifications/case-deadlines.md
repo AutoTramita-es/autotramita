@@ -38,10 +38,18 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Publishing a new rule version must not silently or indiscriminately recalculate existing cases. Applicability and any required controlled recalculation of open cases must be specified separately.
 - The rule governance model does not itself assert that any particular Spanish legal deadline has been verified.
 
+## Controlled applicability of statutory rule changes (Step 43 — approved A)
+- Publish each change as a new, traceable approved rule version with its official legal source, effective date, and applicable transitional provisions.
+- Determine whether the new version applies to new cases, already-open cases, or both, based on the verified legal text and relevant case facts; do not assume all existing cases are grandfathered or all must be recalculated.
+- Recalculate an existing case deadline automatically only when applicability is unambiguous under an approved rule. Audit old and new deadlines, the applied rule version, legal basis, timestamp and reason.
+- When transitional provisions or case applicability are ambiguous, preserve the existing recorded deadline pending review and flag the case LEGAL_REVIEW_REQUIRED for authorized review rather than silently recalculating it.
+- Maintain historical rule versions and case-level calculation provenance. Ensure recalculation and notifications remain Tenant/branch access-controlled and avoid duplicate alerts.
+- This design does not itself validate any specific statutory deadline or transitional provision.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Rule provenance, versioning, calendar and holiday calculations.
-- Publication approval workflow and controlled recalculation of existing cases after rule updates.
+- Who reviews and resolves LEGAL_REVIEW_REQUIRED cases and how corrections are approved.
 - Priority levels, defaults, and due-date recalculation.
 - Alert deduplication, delivery failure, and audit details.
 
@@ -60,3 +68,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 12. Only authorized platform administrators can manage centrally shared statutory deadline rules; Tenant staff cannot edit them.
 13. Each approved rule version preserves its official legal source, effective date and change history.
 14. Existing case deadlines are not silently or indiscriminately changed by publishing a new rule version.
+15. A new statutory rule version applies to existing cases only when verified transitional provisions and case facts establish applicability.
+16. Any controlled deadline recalculation records previous/new values, rule version, legal source and reason.
+17. Ambiguous transitional applicability preserves the recorded deadline and flags LEGAL_REVIEW_REQUIRED pending authorized review.
