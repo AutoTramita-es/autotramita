@@ -772,6 +772,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Keep existing in-app/email notification and escalation mechanisms active; dashboard visibility alone does not count as acknowledgment, substantive action or completion. Audit material status and priority changes.
 - Architecture only; no implementation or deployment authorized.
 
+## Personal Backoffice task list with filters (Step 131 — approved A)
+- Provide each authorized Backoffice operator a “My Tasks” view containing their assigned, permitted case-linked operational tasks, with filters for priority, task status and deadline and sorting by earliest due time or receipt/creation time.
+- Distinguish tasks actively actionable by the operator from those waiting on Tenant documents (WAITING_FOR_TENANT / WAITING_FOR_INFORMATION) or an actual Tramisur response (WAITING_FOR_PROVIDER), using verified workflow state rather than inference.
+- Each task must link directly to its authorized case and task detail; enforce server-side Backoffice assignment and case access controls for both list results and navigation.
+- Always prominently surface CRITICAL statutory-risk work independently of optional filters or sorting; filters may organize routine work but must not conceal mandatory critical warnings or suppress existing supervisor escalation and statutory notifications.
+- Display the relevant verified due time, whether a deadline is statutory or an internal service target, and appropriate overdue state; never treat merely opening a task as an acknowledgment, substantive action or completion.
+- Maintain audit of meaningful task state/assignment changes. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
