@@ -593,6 +593,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Notify the responsible Backoffice operator of actionable uploads and make status and any required correction visible to the authorized Tenant; avoid leaking private internal correspondence or attachments.
 - Architecture only; no implementation or deployment authorized.
 
+## Backoffice-to-Tenant document sharing in case messages (Step 110 — approved A)
+- Authorized Backoffice users may attach and send PDF, JPG and PNG files to authorized Tenant participants through the Tenant-visible case conversation, including approved forms, receipts and confirmed final procedural documents.
+- Before release, the sending Backoffice operator must explicitly confirm that the particular file/version is intended and permitted for Tenant disclosure; apply server-side authorization, case linkage and explicit Tenant-visible classification, with a default-deny boundary for internal-only material.
+- Preserve document identity, source, version, sender, intended case/Tenant scope, timestamp, delivery event and audit history. Use secure access-controlled retrieval; do not disclose cross-Tenant or other-branch information.
+- Internal Backoffice documents, supervisory notes, private Tramisur correspondence and provider-only evidence remain inaccessible to Tenant users unless a specific releasable document is deliberately reviewed and shared. A message attachment must never inherit public visibility merely from association with a case.
+- Sharing a document through chat does not by itself certify authenticity, mark checklist items approved, prove official filing or completion, or alter statutory deadlines and case state.
+- Apply existing attachment validation, notification deduplication and secure message delivery controls. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
