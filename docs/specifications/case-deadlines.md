@@ -820,6 +820,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Keep unconfirmed time distinguishable from confirmed operator-declared time in reports until reviewed; corrections require the Step 135 mandatory reason and immutable prior history. Timer prompts and auto-stop must not change task/case workflow status, acknowledge CRITICAL tasks, satisfy substantive-action targets, or alter statutory/internal deadlines and escalations.
 - Architecture only; no implementation or deployment authorized.
 
+## Supervisor approval of unconfirmed work time corrections (Step 137 — approved A)
+- When a work timer is automatically stopped after an unanswered inactivity confirmation under Step 136, expose the flagged unconfirmed interval to the authorized operator and permit a proposed correction of actual declared working time with a mandatory meaningful justification.
+- Submit proposed corrections to an appropriately authorized Backoffice supervisor for explicit approval or rejection. Operators cannot self-approve these flagged corrections; the decision records reviewer, timestamp, outcome and reason.
+- Preserve the original timer events, unconfirmed interval, proposed corrected values, explanation, decision and full immutable audit history. Never silently overwrite raw records or convert inactivity into proof of non-work.
+- Exclude unconfirmed time from official internal active-work aggregates until a supervisor approves a corrected amount. If rejected, retain the original unconfirmed flag and disposition; distinguish reported, confirmed and unconfirmed intervals in analytics.
+- Apply server-side operator/supervisor permissions, avoid double counting, and do not use corrections to reset internal service targets, statutory deadlines, task/case statuses or critical escalations.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
