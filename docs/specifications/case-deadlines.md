@@ -671,6 +671,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Preserve the original COMPLETED case state, historical reports, receipts, documents and audit trail unless an independently authorized controlled post-closure process changes the applicable state. A report is not proof of an actual error, and opening review does not automatically invalidate any document or extend statutory deadlines.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant-visible post-completion error review tracking (Step 119 — approved A)
+- In a completed case, expose an authorized Tenant-facing Error Report section for each submitted post-completion error allegation, linked to its review task and original case without automatically reopening the case.
+- Show an auditable progression using REPORTED (received), UNDER_REVIEW (Backoffice investigation), WAITING_FOR_INFORMATION (specific Tenant evidence or clarification requested), CORRECTION_IN_PROGRESS (a properly authorized correction is underway), and RESOLVED (review concluded with recorded outcome).
+- Only enter CORRECTION_IN_PROGRESS after the required scoped supervisor approval and any applicable legal-authority checks; do not imply a correction has been officially filed merely because work has begun.
+- RESOLVED must display a clear outcome, distinguishing no error found, explanation provided, correction completed with evidence, or other documented disposition; resolution does not necessarily mean the alleged error was substantiated.
+- Allow authorized Tenant users to provide supplementary information and documents through existing secure case messaging/upload controls; notify them of material status changes and actionable requests without exposing internal Backoffice notes or private Tramisur communications.
+- Retain status transition timestamps, responsible actors, reasons, evidence and audit history. Preserve original COMPLETED case status and immutable issued reports unless a separately approved post-closure process changes them; do not suspend statutory deadlines through status changes.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
