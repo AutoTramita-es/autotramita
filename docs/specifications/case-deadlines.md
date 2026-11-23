@@ -662,6 +662,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Retain an auditable history of messages, follow-up tasks, decisions, responsible actors and timestamps, while strictly separating Tenant-visible correspondence from internal Backoffice and private Tramisur communications.
 - Architecture only; no implementation or deployment authorized.
 
+## Controlled post-completion error-report review (Step 118 — approved A)
+- When an authorized Tenant user reports a possible error in a completed case, create a distinct auditable post-completion error-review task linked to the original case and the originating Tenant message; acknowledge receipt without treating the allegation as verified.
+- Assign the task to the responsible Backoffice operator when eligible, with supervisor oversight and existing message-response targets; capture the alleged error, affected documents or case fields, evidence, reviewer findings and disposition.
+- If the alleged error relates to work actually performed by Tramisur, Backoffice contacts Tramisur through the agreed secure manual phase-one channel, records the communication and evidence, and does not imply automated provider integration or unverified outcomes.
+- Any official corrective filing or action requires prior approval by the appropriately scoped OWNER/ADMIN/MANAGER and, where legally required, execution by an appropriately authorized professional representative under Steps 72–73; ambiguous legal effects require central legal review.
+- Notify the authorized Tenant of material review milestones and any additional information needed, without exposing internal notes or private Tramisur correspondence.
+- Preserve the original COMPLETED case state, historical reports, receipts, documents and audit trail unless an independently authorized controlled post-closure process changes the applicable state. A report is not proof of an actual error, and opening review does not automatically invalidate any document or extend statutory deadlines.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
