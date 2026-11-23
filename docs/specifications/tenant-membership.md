@@ -73,6 +73,14 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - OWNER and ADMIN retain implicit access to all ACTIVE Tenant branches regardless of explicit MembershipBranch assignments.
 - Assignment changes are audited with actor, affected User, Tenant, branch, operation and timestamp.
 
+## Membership suspension and reactivation
+- An authorized OWNER or ADMIN may suspend a TenantMembership within their existing role-management scope: ACTIVE -> SUSPENDED. Only OWNER may suspend or reactivate an ADMIN membership; OWNER changes require existing OWNER safeguards.
+- Suspension immediately denies access to that Tenant across all active sessions; it does not disable the global User account or memberships in other Tenants.
+- Preserve the suspended membership's role, branch assignments, and audit history.
+- An authorized administrator may reactivate SUSPENDED -> ACTIVE without a new invitation after validating current authority, Tenant status, role constraints, and the validity of saved branch assignments. Invalid or inactive branch assignments must not grant access.
+- Suspending or changing an OWNER must never leave the Tenant without at least one ACTIVE OWNER.
+- Record actor, subject, Tenant, transition, reason if provided, and timestamp in the audit log.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -104,5 +112,8 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 28. OWNER/ADMIN branch assignment additions and removals are enforced immediately across all sessions.
 29. A removed active branch assignment prevents further operations in that branch and triggers eligible branch reselection.
 30. Branch assignment changes are audited; OWNER/ADMIN retain implicit access to all ACTIVE branches.
+31. Suspension immediately blocks the affected Tenant across every session without affecting other Tenant memberships or the global User.
+32. Reactivation restores the membership without an invitation only after current role and branch permissions are validated.
+33. Suspension cannot remove the last ACTIVE OWNER and both transitions are audited.
 
 ## Open design questions
