@@ -747,6 +747,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Preserve traceability to authorized underlying tasks, audit dashboard access where appropriate, and do not alter completed cases, statutory deadlines, or provider workflows.
 - Architecture only; no implementation or deployment authorized.
 
+## Internal Backoffice operator quality analytics (Step 128 — approved A)
+- Provide authorized Backoffice supervisors with internal, access-controlled operator-level quality analytics: active/processed/completed case counts, comparable case processing durations, adherence to defined internal service targets, counts of associated complaints and low service ratings, and trends over time.
+- Attribute metrics carefully across primary operator assignments, reassignment, periods of responsibility and shared work; distinguish correlation with a case rating from proof of individual fault.
+- Segment or contextualize by procedure type, case complexity, verified statutory urgency, missing Tenant documents, Tramisur/provider waiting periods, operator availability and other externally controlled delays; avoid misleading unadjusted rankings.
+- Include appropriate sample sizes and definitions, distinguish attempts from successful contacts, and avoid automatically translating voluntary ratings or complaints into disciplinary conclusions.
+- Restrict individual-level access to appropriately authorized supervisors and personnel with a legitimate operational need, audit sensitive access, and comply with applicable Spanish/EU employee privacy, transparency and data-protection requirements; no public publication or cross-Tenant leakage.
+- Analytics support human oversight and service improvement only: no automated employment, compensation, sanction or performance decisions. No changes to statutory deadlines or case legal outcomes.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
