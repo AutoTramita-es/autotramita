@@ -928,6 +928,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Restrict revenue, cost and margin details to appropriately authorized internal management; never disclose confidential labor rates, provider terms or profitability in Tenant-facing case views or exports.
 - Profitability reporting must not automatically modify client prices, invoices, statutory deadlines, case status or provider filings. Architecture only; no implementation or deployment authorized.
 
+## Profitability analytics by procedure type (Step 150 — approved A)
+- Provide authorized Backoffice management with aggregated internal profitability analytics grouped by centrally defined case procedure type, including vehicle ownership transfers (transferencia de vehículo), vehicle registrations (matriculación) and other supported procedures.
+- For a selected reporting period, show case count, average AutoTramita-attributable net revenue excluding IVA, average attributable case cost (approved labor plus company-borne direct external costs), average case contribution margin and total contribution margin, using the definitions established in Step 149.
+- Exclude official fees and other customer-funded pass-through disbursements from company revenue and company-borne costs; report such amounts separately where useful and authorized.
+- Apply consistent period and case-inclusion criteria (e.g., completed vs in-progress), disclose provisional/incomplete financial inputs, avoid double counting and handle zero or missing revenue without misleading margin percentages.
+- Support comparison of procedure types and trends over time, with privacy-safe aggregation and appropriate access controls; no Tenant or unrelated operator access to confidential cost, revenue or margin figures.
+- These management estimates do not automatically change client prices, invoices, statutory deadlines, case states or Tramisur processing. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
