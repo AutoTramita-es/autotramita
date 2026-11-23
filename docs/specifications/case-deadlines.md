@@ -389,6 +389,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Supervisors retain oversight within their authorized scope, while the single assignee remains the default operational recipient. Statutory deadlines and urgent alerts remain independent of reassignment.
 - Architecture only; no implementation or deployment authorized.
 
+## Primary AutoTramita backoffice operator per case (Step 86 — approved A)
+- Each active case has one primary responsible AutoTramita backoffice operator, distinct from the Tenant/dealership's primary responsible employee.
+- The assigned operator coordinates document completeness review, Tenant communication, manual Tramisur handoff, provider follow-up, outcome evidence and case completion within applicable permissions.
+- Authorized backoffice supervisors may reassign the operator for absence, workload or other operational reasons, recording previous and new assignee, actor, reason and timestamp in the immutable audit trail.
+- Transfer pending backoffice tasks and future operational notifications to the newly assigned operator while preserving past actions, messages, document reviews and evidence.
+- If an operator becomes unavailable, flag cases for reassignment and notify an authorized backoffice supervisor; no case should become invisible or lose statutory deadline monitoring.
+- Assignment does not itself confer licensed professional representation rights or permission to perform Tramisur's legally restricted filings.
+- Keep Tenant and platform backoffice role boundaries and Tenant isolation enforced. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
