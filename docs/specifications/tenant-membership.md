@@ -96,6 +96,14 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - Do not automatically assign these cases to an ADMIN or change their TenantBranch as a side effect of membership suspension or revocation.
 - Reassignment records the former and new assignee, actor, time and affected case; completed cases retain historical authorship.
 
+## Reassignment notifications and dashboard
+- When a membership is suspended or revoked, identify unfinished cases assigned to that member and flag them for reassignment without changing the case's TenantBranch.
+- Automatically notify the Tenant's active OWNER and ADMIN members, and active MANAGER members authorized for the affected case branches.
+- Show a dashboard count and a filterable list of cases requiring reassignment, scoped by the viewer's Tenant and accessible branches.
+- Authorized OWNER/ADMIN may bulk reassign eligible cases; MANAGER may bulk reassign only cases in assigned branches to eligible active assignees.
+- Validate each case and target assignee server-side, preserve case history and documents, and audit each reassignment; do not disclose cases from other Tenants or unauthorized branches in notifications.
+- Avoid duplicate notifications for the same membership status transition; delivery failures must not prevent immediate access revocation or case flagging.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -137,5 +145,9 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 38. Suspension or revocation flags unfinished cases assigned to the member for reassignment without moving them from their branch.
 39. OWNER/ADMIN or authorized branch MANAGER can reassign such cases; reassignment is audited.
 40. Case documents, status and history remain intact, and no automatic assignment to ADMIN occurs.
+41. Suspension or revocation automatically notifies authorized OWNER/ADMIN and affected-branch MANAGER users of cases requiring reassignment.
+42. A tenant- and branch-scoped dashboard displays the count and list of cases awaiting reassignment.
+43. Authorized bulk reassignment checks each case and new assignee, preserves history, and audits each change.
+44. Notification failure does not delay revocation or reassignment flagging.
 
 ## Open design questions
