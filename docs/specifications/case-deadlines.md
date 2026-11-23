@@ -1138,6 +1138,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Completion-based statement eligibility does not itself issue a tax invoice, collect payment or determine statutory tax recognition; those require separately approved invoicing and accounting rules.
 - Architecture only; no implementation or deployment authorized.
 
+## Automatically prepared monthly invoice drafts with manual approval (Step 174 — approved A)
+- At the start of each month, automatically prepare a draft consolidated invoice for each Tenant with eligible, not-yet-billed cases confirmed completed in the preceding month, following Steps 172–173.
+- Draft line items must link to the original case, confirmed completion date, customer-accepted service price, any administrator-approved manual discount, and separately itemized confirmed official fees/pass-through amounts where billable. Preserve the source data versions and an auditable calculation snapshot.
+- An appropriately authorized AutoTramita platform administrator must manually review and explicitly approve each draft before an invoice can be formally issued or delivered to the Tenant. Neither draft generation nor a scheduled job may issue or send invoices automatically.
+- Permit authorized corrections to the draft before approval, recording the actor, reason, original value, revised value and time; protect against duplicate billing of a case or fee. Maintain clear DRAFT, APPROVED and ISSUED distinctions, with approval not silently bypassed.
+- Invoice issuance must ultimately comply with separately specified Spanish tax and invoicing rules (including IVA, required invoice fields, numbering, timing and any applicable electronic-invoicing obligations). This architectural decision does not assert that a draft or statement is a compliant tax invoice.
+- Record preparation, review, approval, issue and delivery events with immutable audit history. No automatic payment collection, no automatic Tramisur handoff and no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
