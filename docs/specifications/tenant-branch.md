@@ -44,6 +44,13 @@ A branch must have a tenant-safe composite key/constraint to support cross-entit
 - No transition back to `DRAFT` is permitted. Branch lifecycle changes are audited.
 - The tenant-level activation and suspension rules continue to apply independently.
 
+## Branch administration permissions
+- Only an ACTIVE OWNER or ADMIN membership in the same Tenant may create a branch, edit its organizational fields (name, physical address and contact details), activate, deactivate or reactivate it, or change the primary branch.
+- Branch code and UUID are immutable regardless of role.
+- MANAGER can operate within assigned branches and transfer cases between assigned branches, but cannot create or administer branch records.
+- EMPLOYEE and VIEWER have no branch administration permissions.
+- Every administrative operation requires server-side role and tenant authorization and is audited.
+
 ## Primary branch
 - Every ACTIVE Tenant must have exactly one ACTIVE primary branch.
 - The first branch is designated primary during onboarding; a Tenant cannot transition to ACTIVE without satisfying this invariant.
@@ -108,6 +115,7 @@ Before deactivating MAR-02, move all unfinished cases to another active branch a
 16. Activation and reactivation require street/number, postal code, city, province and country; email/phone are optional.
 17. A branch with incomplete physical address cannot receive new cases.
 18. DRAFT branches have never been active; only DRAFT -> ACTIVE, ACTIVE -> INACTIVE and INACTIVE -> ACTIVE transitions are valid.
+19. Only OWNER/ADMIN can create, edit, activate, deactivate or reactivate branches; MANAGER/EMPLOYEE/VIEWER cannot.
 
 ## Pending detail decisions
 - Branch code format and normalization rules (code is immutable and never recycled).
