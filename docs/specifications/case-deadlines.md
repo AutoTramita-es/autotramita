@@ -1255,6 +1255,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Enforce administrator-only cross-Tenant access, role-based authorization, audit access to sensitive financial data, and preserve Tenant isolation for customer-facing interfaces. Dashboard does not authorize invoice modification, payment adjustments, suspension or dispute closure by itself.
 - Architecture only; no implementation or deployment authorized.
 
+## Administrator assignment of invoice disputes to staff (Step 188 — approved A)
+- Allow authorized AutoTramita platform administrators to assign and reassign an invoice dispute to an eligible Backoffice or finance staff member for investigation and preparation of a proposed Tenant-facing response.
+- Assigned staff may view the dispute and relevant invoice/payment evidence within their explicitly granted scope, request information through approved communication workflows, record investigative notes and prepare a proposed resolution; they cannot independently authorize or execute financial corrections.
+- Only an authorized AutoTramita platform administrator may approve invoice or charge adjustments, credits, refunds, payment allocation corrections, or other financial changes, subject to separate Spanish invoicing/accounting compliance and documented approvals. Staff assignment does not transfer these approval powers.
+- Record the assigned employee, assignment and reassignment timestamps, assigning administrator, reason for reassignment, work activity and decision history. Show responsibility and SLA status on the central dashboard under Step 187; Steps 184 and 185 SLA clocks continue through reassignment and cannot be reset by it.
+- Enforce strict Tenant confidentiality, least-privilege staff access, separation of duties and auditability; no cross-Tenant visibility except what an authorized administrator explicitly assigns for the task. Any staff response to the Tenant must respect configured review and approval requirements and cannot promise a financial adjustment before administrator authorization.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
