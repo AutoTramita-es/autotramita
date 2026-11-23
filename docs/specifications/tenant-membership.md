@@ -104,6 +104,13 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 - Validate each case and target assignee server-side, preserve case history and documents, and audit each reassignment; do not disclose cases from other Tenants or unauthorized branches in notifications.
 - Avoid duplicate notifications for the same membership status transition; delivery failures must not prevent immediate access revocation or case flagging.
 
+## Reassignment notification channels
+- Deliver reassignment alerts through both in-app notifications and email to eligible active OWNER, ADMIN, and affected-branch MANAGER recipients.
+- In-app notifications remain unread until opened or explicitly marked read by the recipient. They link to the authorized reassignment queue, not an unscoped case listing.
+- Email alerts should contain minimal case-sensitive information; viewing case details requires authenticated, current Tenant and branch authorization.
+- Email delivery failures are retried or logged independently and must not block membership suspension/revocation, case flagging, or in-app notification creation.
+- Respect current role, Tenant and branch authorization when displaying notification contents and linked case lists.
+
 ## Acceptance criteria
 1. One User can accept invitations and hold different roles in multiple Tenants.
 2. Switching Tenants cannot expose records from another Tenant.
@@ -149,5 +156,8 @@ Status: DRAFT specification (confirmed decisions; no implementation authorized)
 42. A tenant- and branch-scoped dashboard displays the count and list of cases awaiting reassignment.
 43. Authorized bulk reassignment checks each case and new assignee, preserves history, and audits each change.
 44. Notification failure does not delay revocation or reassignment flagging.
+45. Reassignment alerts are delivered in-app and by email to eligible authorized recipients.
+46. In-app alerts remain unread until opened or marked read and link to an access-controlled reassignment queue.
+47. Email delivery failure cannot block core membership or case operations, and notification detail access is reauthorized.
 
 ## Open design questions
