@@ -54,6 +54,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Review outcomes affecting shared rules follow central rule version governance. Case-specific factual corrections do not silently alter the global rule.
 - Access to case evidence and reviewer actions must respect Tenant isolation and confidentiality.
 
+## Case operations during legal review (Step 45 — approved A)
+- A case marked LEGAL_REVIEW_REQUIRED remains accessible to currently authorized Tenant/branch users for work that does not depend on the unresolved legal question, including document collection, factual data entry, and unrelated administrative actions.
+- Block only actions whose legal validity or timing directly depends on the unresolved question; enforce the restriction server-side, not merely in the user interface.
+- Clearly display the pending legal review and provisional/unverified deadline status; do not imply that a disputed deadline is confirmed.
+- Once an authorized central reviewer resolves the issue, reassess the blocked actions under the approved rule and current case facts. Do not automatically execute previously blocked actions.
+- Audit review-related restrictions, attempted blocked actions as appropriate, resolution, and subsequent permission/state changes. Maintain Tenant and branch access controls.
+- This design does not authorize bypassing any independent mandatory legal or regulatory hold.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Rule provenance, versioning, calendar and holiday calculations.
@@ -82,3 +90,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 18. Only an authorized platform reviewer can resolve legal-rule ambiguity, recording legal basis, evidence and audit history.
 19. Tenant staff can submit case-fact corrections and evidence but cannot independently change statutory rules.
 20. Pending review, disputed deadlines remain clearly provisional rather than presented as legally verified.
+21. LEGAL_REVIEW_REQUIRED cases permit authorized work independent of the unresolved legal question.
+22. Legally dependent actions are blocked server-side until authorized review resolves the issue.
+23. Review resolution re-evaluates blocked actions without automatically executing them; relevant restrictions and outcomes are audited.
