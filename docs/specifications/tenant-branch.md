@@ -23,7 +23,7 @@ A Tenant represents one company or autónomo. Each Tenant has one or more branch
 | email | varchar(254) | Optional |
 | phone | varchar(30) | Optional |
 | is_primary | boolean | Exactly one active primary branch per active tenant |
-| status | enum | ACTIVE or INACTIVE |
+| status | enum | DRAFT, ACTIVE or INACTIVE |
 | created_at | timestamptz | Required |
 | updated_at | timestamptz | Required |
 
@@ -34,7 +34,15 @@ A branch must have a tenant-safe composite key/constraint to support cross-entit
 - Before first activation or reactivation, require complete physical address: street and house number (`address_line1`), postal code, city, province and country.
 - Contact email and phone remain optional, since the Tenant may provide shared contact channels.
 - No new case intake is permitted until the branch is ACTIVE and its activation prerequisites are satisfied.
-- Draft creation is distinct from operational activation. The exact lifecycle representation of a not-yet-active branch (INACTIVE vs separate DRAFT status) remains to be decided.
+- Draft creation is distinct from operational activation. A new branch starts in DRAFT, and DRAFT means never previously activated.
+
+## Branch lifecycle and permitted transitions
+- `DRAFT`: newly created branch not yet operational; cannot receive or process cases.
+- `ACTIVE`: operational branch that may receive and process cases, subject to authorization and tenant status.
+- `INACTIVE`: previously activated branch that has been deactivated; cannot receive or process new cases.
+- Permitted transitions: `DRAFT -> ACTIVE` (after required address validation); `ACTIVE -> INACTIVE` (after unfinished case transfers, staff-assignment retirement, and primary-branch reassignment when needed); `INACTIVE -> ACTIVE` (OWNER/ADMIN approval, address revalidation, no automatic restoration of staff assignments or cases).
+- No transition back to `DRAFT` is permitted. Branch lifecycle changes are audited.
+- The tenant-level activation and suspension rules continue to apply independently.
 
 ## Primary branch
 - Every ACTIVE Tenant must have exactly one ACTIVE primary branch.
@@ -99,6 +107,7 @@ Before deactivating MAR-02, move all unfinished cases to another active branch a
 15. Branch code cannot be changed after creation or reused within a Tenant, including after deactivation.
 16. Activation and reactivation require street/number, postal code, city, province and country; email/phone are optional.
 17. A branch with incomplete physical address cannot receive new cases.
+18. DRAFT branches have never been active; only DRAFT -> ACTIVE, ACTIVE -> INACTIVE and INACTIVE -> ACTIVE transitions are valid.
 
 ## Pending detail decisions
 - Branch code format and normalization rules (code is immutable and never recycled).
