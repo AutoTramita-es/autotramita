@@ -911,6 +911,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Restrict access to the confidential rate and derived individual cost figures to appropriately authorized management. Do not expose them to Tenants, customers or unrelated operators.
 - Architecture only; no implementation or deployment authorized.
 
+## Direct external cost ledger per case (Step 148 — approved A)
+- Maintain a case-linked ledger of direct external costs in addition to internal Backoffice labor costs under Steps 145–147, including Tramisur service fees, official administrative charges and other attributable third-party expenses.
+- For each external cost entry record amount and currency (EUR as default), category, transaction or incurred date, responsible actor, case reference, payee where relevant, and linked supporting document if available; preserve audit history for corrections.
+- Distinguish AutoTramita's own business expenses from disbursements paid on behalf of the Tenant/customer, without assuming all third-party amounts are company expenses or revenue. Clearly distinguish cost bearer and payment responsibility, and avoid double counting.
+- Provide separate subtotals for internal labor, company-borne external costs, client-funded/pass-through amounts and a clearly defined overall recorded-case-cost view, with transparent classification rather than an ambiguous single expense figure.
+- Restrict confidential cost analytics to authorized Backoffice management; client-facing amounts must be governed separately by agreed commercial terms, billing permissions and applicable tax/accounting rules.
+- Recording or updating costs does not automatically change customer prices, invoices, statutory deadlines, case status or Tramisur filing actions. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
