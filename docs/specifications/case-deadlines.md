@@ -117,6 +117,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Authority registry updates must not silently change existing case jurisdiction, legal deadline, or confirmed competent authority; assess effects through controlled applicability and review.
 - Registry entries and mappings must not be treated as legally verified without authoritative source review.
 
+## Monitoring official authority registry sources (Step 53 — approved A)
+- Periodically monitor verified official sources, including DGT, BOE and other relevant competent authorities, using source-specific supported access methods.
+- Detect candidate changes to authority name, official identifier, territorial jurisdiction, supported procedure types and other centrally governed registry metadata.
+- Store candidate changes as PENDING_REVIEW with authoritative source reference, retrieval/publication timestamps where available, and a comparison of old versus proposed values.
+- Notify authorized AutoTramita platform administrators; only their explicit approval may activate registry updates.
+- Preserve historical versions, approvals, source provenance and an immutable audit trail.
+- Never silently reassign competent authority or recalculate confirmed statutory deadlines for existing cases as a consequence of registry updates; assess applicability and route ambiguous impacts for legal review.
+- Do not assume all official sources offer structured APIs or automated access; any connector must respect source terms and be validated separately.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
@@ -169,3 +178,6 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 42. A centrally governed registry stores administrative authority names, available official identifiers, jurisdictions and supported procedures for all Tenants.
 43. Only authorized platform administrators may approve registry changes, with official source provenance, version history and audit records.
 44. Registry changes do not silently change existing cases or confirmed statutory deadlines.
+45. Official authority sources are monitored periodically, with candidate changes retained as PENDING_REVIEW and old/new differences shown to platform administrators.
+46. Only authorized platform administrators approve publication of registry changes; source provenance, prior versions and approvals remain auditable.
+47. Registry monitoring never silently changes existing case authority assignments or confirmed legal deadlines.
