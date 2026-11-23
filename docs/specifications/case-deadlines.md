@@ -764,6 +764,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Keep the dashboard internal, privacy-conscious, auditable and informational only; do not trigger automated employment decisions or change case outcomes, statutory deadlines or quality-review workflows.
 - Architecture only; no implementation or deployment authorized.
 
+## Personal operator deadline and task alerts (Step 130 — approved A)
+- On each authorized Backoffice operator's personal dashboard, provide a consolidated, actionable view of their assigned cases and tasks with approaching or breached deadlines, linking each alert to the corresponding authorized case/task.
+- Display risk-aligned priority: CRITICAL for confirmed or reasonably suspected imminent statutory risk under existing legal-risk controls; HIGH for urgent work and breached internal service targets; NORMAL for routine approaching internal targets. Respect the centrally defined priority floor and avoid downgrading statutory risks.
+- Show verified due time, relevant task/case, concise reason and overdue/approaching state, calculated using the applicable legal or Backoffice working calendar as appropriate; do not conflate statutory deadlines with internal service targets.
+- Scope operator views to assigned authorized work. Supervisors retain oversight of critical/unassigned queues, and operator logout, absence or reassignment must not silence independent statutory alerts or required supervisor escalations.
+- Keep existing in-app/email notification and escalation mechanisms active; dashboard visibility alone does not count as acknowledgment, substantive action or completion. Audit material status and priority changes.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
