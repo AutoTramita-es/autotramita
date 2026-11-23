@@ -680,6 +680,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Retain status transition timestamps, responsible actors, reasons, evidence and audit history. Preserve original COMPLETED case status and immutable issued reports unless a separately approved post-closure process changes them; do not suspend statutory deadlines through status changes.
 - Architecture only; no implementation or deployment authorized.
 
+## Post-completion error review response targets and escalation (Step 120 — approved A)
+- For each post-completion error report, require Backoffice to begin a substantive investigation within one Backoffice working day of receipt, and target a documented review disposition within three Backoffice working days.
+- Compute targets using the approved Backoffice working calendar, schedule and time zone; retain original receipt time, calculated start/review due times, first substantive review action, disposition time and complete audit history.
+- Starting review requires an actual investigative action, not merely opening a notification or marking the report as read. A review disposition records findings and whether further authorized corrective work is required; completing an official correction is not presumed to occur within three days.
+- Automatically alert the authorized Backoffice supervisor if the three-working-day review target is missed; surface missed start targets and unresolved tasks in the monitored queue, with recorded reasons and follow-up ownership. Operator absence or reassignment must not erase elapsed time or breaches.
+- Reports indicating possible statutory deadline impact, invalid official evidence, or document validity risks must be promptly triaged through the existing CRITICAL/legal-review and statutory-alert mechanisms rather than waiting for the ordinary one-/three-day targets; allegations alone do not establish a verified legal violation.
+- If Tenant information is missing, record WAITING_FOR_INFORMATION and the outstanding request, but do not silently erase the original target or imply a statutory suspension. Any justified internal clock treatment requires an explicit auditable rule.
+- These are internal Backoffice service targets, not legal deadlines, guarantees of Tramisur response or government correction completion. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
