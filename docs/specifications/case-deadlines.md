@@ -987,6 +987,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Ensure Tenant-level financial totals reconcile with the sum of its Branch-level totals without duplication. Do not alter revenue recognition, approved costs, customer invoices or statutory deadlines as a consequence of Branch transfer.
 - Architecture only; no implementation or deployment authorized.
 
+## PDF and Excel financial reporting exports (Step 157 — approved A)
+- Permit appropriately authorized AutoTramita Backoffice management to export internal financial analytics as PDF and Excel (.xlsx), consistent with case, procedure, Tenant and originating-Branch profitability requirements in Steps 145–156.
+- Support filtering exports by reporting period, Tenant, originating financial Branch, procedure type and margin/profitability classification, with clear labels for applied filters and reporting cut-off.
+- Include AutoTramita-attributable revenue excluding IVA, approved internal labor costs, company-borne direct external costs and estimated contribution margin, while separately identifying customer-funded pass-through official fees; do not label contribution margin as net accounting profit.
+- Apply server-side authorization and data-scope checks when generating and retrieving each export; never expose confidential internal hourly rates, provider pricing, case margins or cross-Tenant information to unauthorized Tenant users or unrelated operators.
+- Audit every export request and successful download with actor, timestamp, report type, scope and filters; safeguard generated files against unauthorized reuse, and mark incomplete/provisional financial data and historical attribution consistently.
+- Exports are informational internal management reports and do not automatically alter prices, invoices, case states, legal deadlines or Tramisur handling.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
