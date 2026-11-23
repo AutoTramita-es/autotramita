@@ -971,6 +971,14 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Restrict threshold configuration and internal financial analytics to authorized AutoTramita management; no automatic changes to prices, invoices, provider actions, case status or statutory deadlines.
 - Architecture only; no implementation or deployment authorized.
 
+## Internal profitability analytics by Tenant branch (Step 155 — approved A)
+- Provide authorized AutoTramita Backoffice management with internal profitability reporting by Tenant Branch, consistent with the Tenant/Branch model and the case-level contribution margin defined in Steps 145–154.
+- For each Branch within a selected Tenant and reporting period, show case count, AutoTramita-attributable net revenue excluding IVA, approved Backoffice labor cost, company-borne direct external costs and estimated contribution margin, including comparative trends where data supports them.
+- Permit roll-up from Branch to its owning Tenant and comparison of Branches within that Tenant, without double counting cases, revenue or costs. Define stable case attribution for historical reporting when cases transfer between Branches; preserve provenance and historical assignment.
+- Keep customer-funded pass-through official fees separate from AutoTramita revenue and expenses, and clearly identify provisional or missing financial inputs.
+- Strictly restrict confidential profitability analytics and cross-Branch comparisons to authorized AutoTramita management; Tenant users cannot view internal labor rates, external supplier terms, margins or another Tenant's data.
+- This is management reporting only and does not automatically change prices, invoices, case processing, provider coordination or statutory deadlines. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
