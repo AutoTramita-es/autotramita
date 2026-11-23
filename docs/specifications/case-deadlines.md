@@ -619,6 +619,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - ZIP export does not constitute document approval, official filing evidence, legal certification or a change in statutory deadlines.
 - Architecture only; no implementation or deployment authorized.
 
+## Tenant-downloadable informational case PDF report (Step 113 — approved A)
+- Provide an authorized Tenant user with a downloadable PDF case report in addition to the ZIP document archive.
+- Include case reference, procedure type, permitted vehicle details, current case status, verified Tenant-visible chronological milestones, and a categorized document inventory with actual review statuses.
+- Include the actual Backoffice-recorded Tramisur handoff and procedure completion dates only when those events have been confirmed; do not invent or imply official submission or provider processing.
+- List relevant official filing receipts and their available verified metadata, clearly distinguishing OFFICIALLY_VERIFIED, MANUALLY_ACCEPTED, pending review and verification failure; never present OCR-derived or unverified information as officially authenticated.
+- Show the report generation date/time, applicable time zone and a clear disclaimer that this is an informational AutoTramita case summary, not a government-issued certificate or independent proof of official filing.
+- Apply server-side Tenant, branch, case and field-level authorization at generation and download; exclude internal Backoffice notes, private Tramisur correspondence, other-Tenant data and unreleased documents. Audit report generation and download.
+- Report generation must not change the underlying case, document, legal-deadline or official-receipt states. Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
