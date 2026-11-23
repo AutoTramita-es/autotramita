@@ -1271,6 +1271,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - Proposal submission and administrator review do not reset first-response or resolution targets under Steps 184–185, nor automatically close the dispute or change reminder behavior under Step 183.
 - Architecture only; no implementation or deployment authorized.
 
+## Compliant corrective invoices rather than editing issued invoices (Step 190 — approved A)
+- Once an authorized AutoTramita platform administrator approves a correction under Step 189, preserve the original issued invoice and its original PDF as immutable historical records. Never silently overwrite, renumber or replace the issued invoice.
+- Where Spanish invoicing and tax rules require a corrective invoice (factura rectificativa), create and issue a separate compliant corrective document with its own legally appropriate number/series, issuance date, reason, required tax details and explicit reference to the original invoice, subject to administrator review and authorization before issuance.
+- Link the original and corrective documents in the Tenant's secure billing portal and maintain an auditable trail of authorization, generation, issuance, communication, applicable amounts and resulting receivable adjustments. Calculate balances without double counting the original and correction.
+- If the dispute concerns only a missing, misallocated or incorrectly recorded bank payment and the original invoice itself is correct, use the separately authorized manual payment reconciliation correction under Step 176; do not issue an unnecessary factura rectificativa.
+- Distinguish credit notes, invoice rectification, refunds and payment allocation corrections according to applicable Spanish legal and tax requirements. A staff proposal or administrator approval alone does not constitute lawful issuance, automatic refund or confirmed payment.
+- The detailed invoice schema, applicable Spanish VAT rules, mandatory corrective invoice content, numbering/series and any electronic invoicing or anti-fraud requirements must be verified and specified separately before implementation; this step is a workflow decision, not a legal-compliance certification.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
