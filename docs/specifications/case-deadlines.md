@@ -1313,6 +1313,15 @@ Centralized deadline tracking across all AutoTramita administrative case types a
 - The decision SLA is distinct from actual bank-transfer execution and completion. An approved request remains pending execution until bank evidence is recorded under Step 191, and the Tenant portal must distinguish approval from funds actually returned.
 - Preserve administrator-only authorization, Tenant isolation, auditability and existing invoice correction controls. Architecture only; no implementation or deployment authorized.
 
+## Five-working-day target for executing approved refunds (Step 195 — approved A)
+- After an authorized AutoTramita administrator approves a Tenant refund under Steps 191–194, set an internal target to execute the external bank transfer within five Backoffice working days of approval, calculated using the configured working calendar and timezone.
+- The execution target applies only to approved refunds, not pending requests or rejected refunds, and is separate from the three-working-day first response target (Step 193) and ten-working-day decision target (Step 194).
+- If the five-working-day target passes without verified execution evidence, automatically alert the responsible authorized administrator and retain the overdue flag until actual execution or a documented authorized resolution. Keep the original approval date, target, breach and follow-up history immutable; do not silently reset the clock.
+- A refund is EXECUTED only after the authorized administrator records actual bank transfer details and supporting execution evidence under Step 191. Approval, preparation or a bank transfer instruction alone does not establish execution. Support partial execution with remaining amount and outstanding target clearly visible.
+- Show Tenant-facing approved/pending versus actually executed status and amounts in the authenticated portal, without exposing internal banking details or representing a bank transfer as instant settlement.
+- Treat five working days as an internal operational target only; identify and comply with any applicable shorter mandatory statutory refund deadlines or contractual obligations. No banking API, automated transfer or deployment is authorized.
+- Architecture only; no implementation or deployment authorized.
+
 ## Open design questions
 - Escalation recipients and severity for overdue deadlines.
 - Specific source connectors and authoritative mappings of procedures, competent authorities and applicable jurisdictions.
