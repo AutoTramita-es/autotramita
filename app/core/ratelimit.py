@@ -36,7 +36,7 @@ from dataclasses import dataclass, field
 
 import redis
 from app.core.config import RateLimitSettings
-from app.core.errors import ServiceUnavailable, TooManyRequests
+from app.core.errors import ServiceUnavailable, TooManyRequests, Unauthenticated
 from fastapi import Request, Response
 from redis.backoff import NoBackoff
 from redis.retry import Retry
@@ -276,8 +276,10 @@ def rate_limits(
 ) -> Callable[[Request, Response], None]:
     """Dependency factory: every rule must allow the request (checked together).
 
-    If an identity cannot be resolved (for example before authentication exists), the client
-    address is used under the same policy."""
+    Fail closed (R07): if any rule's identity cannot be resolved (no authenticated user or no
+    tenant where one is required), the request is rejected with 401 before anything is counted;
+    there is no fallback to the client address. Anonymous routes use ``by_ip``, which always
+    resolves."""
 
     def dependency(request: Request, response: Response) -> None:
         limiter: RateLimiter | None = request.app.state.rate_limiter
@@ -287,10 +289,12 @@ def rate_limits(
                 code="RATE_LIMIT_UNAVAILABLE",
                 headers={"Retry-After": str(UNAVAILABLE_RETRY_AFTER_SECONDS)},
             )
-        checks = [
-            (rule.policy, rule.identity(request) or client_ip(request, trusted_proxies))
-            for rule in rules
-        ]
+        checks: list[tuple[Policy, str]] = []
+        for rule in rules:
+            identity = rule.identity(request)
+            if not identity:
+                raise Unauthenticated("Authentication required.")
+            checks.append((rule.policy, identity))
         decision = limiter.check_all(checks)
         if not decision.allowed:
             raise TooManyRequests(
@@ -317,12 +321,11 @@ def by_ip(trusted_proxies: Sequence[IPNetwork] = ()) -> Callable[[Request], str 
 
 
 def by_principal(request: Request) -> str | None:
-    """Actor identity, scoped by tenant when known so tenants never share actor counters."""
+    """Global per-user identity (R07, owner decision): the user id alone, across tenants, so a
+    user cannot multiply a quota by switching tenants. User ids are unique, so different
+    tenants' users never share a counter; tenant-wide limits use ``by_tenant`` separately."""
     value = getattr(request.state, "principal_id", None)
-    if not value:
-        return None
-    tenant = getattr(request.state, "tenant_id", None)
-    return f"tenant:{tenant}|user:{value}" if tenant else f"user:{value}"
+    return f"user:{value}" if value else None
 
 
 def by_tenant(request: Request) -> str | None:

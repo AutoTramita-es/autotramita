@@ -266,14 +266,16 @@ def test_legacy_hop_setting_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     assert RateLimitSettings().trusted_proxy_networks == ()
 
 
-def test_identities_are_scoped_by_tenant() -> None:
+def test_principal_is_global_per_user_and_tenant_identity_is_separate() -> None:
     anonymous = make_request("1.1.1.1")
     assert by_principal(anonymous) is None
     assert by_tenant(anonymous) is None
     request = make_request("1.1.1.1", principal_id="u1", tenant_id="t1")
-    assert by_principal(request) == "tenant:t1|user:u1"
+    assert by_principal(request) == "user:u1"  # R07: no tenant in the user identity
     assert by_tenant(request) == "tenant:t1"
     assert by_principal(make_request("1.1.1.1", principal_id="u1")) == "user:u1"
+    assert by_principal(make_request("1.1.1.1", principal_id="u1", tenant_id="t2")) == "user:u1"
+    assert by_principal(make_request("1.1.1.1", tenant_id="t1")) is None
 
 
 # --- failures: 503, no retry, no fallback (no Redis needed) --------------------------------
@@ -612,7 +614,47 @@ def test_tenant_limit_is_shared_by_users_and_isolated_between_tenants(
     codes += [client.get("/t/auth", headers=who("u2", "t1")).status_code for _ in range(4)]
     assert codes == [200] * 7 + [429]  # tenant t1 allows 7 in total, below 5 per user
     assert client.get("/t/auth", headers=who("u3", "t2")).status_code == 200  # another tenant
-    assert client.get("/t/auth", headers=who("u1", "t3")).status_code == 200  # same user id
+    # Same user id in another tenant: the per-user quota is global (R07), 5th request passes.
+    assert client.get("/t/auth", headers=who("u1", "t3")).status_code == 200
+
+
+def test_user_quota_is_global_across_tenants(
+    limiter: RateLimiter, client_redis: redis.Redis, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ensure_room(client_redis, 60, 5)
+    client = app_for(limiter, monkeypatch)
+    codes = [
+        client.get("/t/auth", headers=who("u1", f"t{n}")).status_code for n in range(7)
+    ]  # a different tenant each time: the user limit (5) still applies
+    assert codes == [200] * 5 + [429] * 2
+    assert client.get("/t/auth", headers=who("u2", "t0")).status_code == 200  # another user
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [{}, {"x-test-user": "u1"}, {"x-test-tenant": "t1"}],
+    ids=["none", "no-tenant", "no-user"],
+)
+def test_missing_identity_fails_closed_without_counting_or_ip_fallback(
+    limiter: RateLimiter,
+    client_redis: redis.Redis,
+    monkeypatch: pytest.MonkeyPatch,
+    headers: dict[str, str],
+) -> None:
+    ensure_room(client_redis, 60, 5)
+    client = app_for(limiter, monkeypatch)
+    for path in ("/t/auth", "/t/upload", "/t/export"):
+        for _ in range(12):  # far beyond any limit: always 401, never 429 or 200 via an IP key
+            r = client.request("POST" if path != "/t/auth" else "GET", path, headers=headers)
+            assert r.status_code == 401
+            assert r.json()["code"] == "UNAUTHENTICATED"
+            assert r.headers["content-type"].startswith("application/problem+json")
+            assert "ratelimit-limit" not in r.headers
+    # Nothing was counted: a valid caller still has the whole quota.
+    assert [client.get("/t/auth", headers=who("u1", "t1")).status_code for _ in range(5)] == [
+        200
+    ] * 5
+    assert client.get("/t/public").status_code == 200  # anonymous public route unaffected
 
 
 def test_spoofed_forwarded_headers_cannot_evade_the_public_limit(
