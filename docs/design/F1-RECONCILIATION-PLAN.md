@@ -1,5 +1,5 @@
 # F1 reconciliation plan — 2026-11-24
-REC-01 AND REC-02 APPROVED AND COMPLETE (documentation); REC-03 REVISED AND APPROVED FOR PREPARATION; REC-04–07 NOT AUTHORIZED.
+REC-01 AND REC-02 APPROVED AND COMPLETE (documentation); REC-03 GIT INTEGRATION COMPLETE; CI VALIDATION PENDING; REC-04–07 NOT AUTHORIZED.
 [Audit findings](F1-RECONCILIATION-AUDIT.md) | [AT-01](../specifications/AT-01-foundation-infrastructure.md) | [Execution brief](../specifications/AT-01-F1-CLAUDE-CODE-EXECUTION-BRIEF.md) | [G6](../G6-EXECUTION-ORDER.md)
 
 | Gate | Scope | Exit evidence |
@@ -22,3 +22,6 @@ REC-02 (2026-11-24): F1 implementation exists on f1/foundation at e22ae3b0c9b2be
 ## REC-03 — Approved DEV/PROD Git policy (2026-11-24)
 Owner approved two active branches: dev for all development and integration, main for stable production releases. This supersedes the proposed feature/maintenance branches and the earlier main-only plan. dev maps to Docker project autotramita-dev; main maps to autotramita-prod. Mapping is a policy, not an active deployment connection. No automatic deployment or CI/CD deployment configuration is authorized. Future DEV automation is a separate decision; PROD release and deployment require explicit approval. No production data or secrets in DEV.
 REC-03 preparation: create dev from updated main, then integrate f1/foundation into dev with a history-preserving merge after checking conflicts and automation. Preserve newer approved documentation, existing code, maintenance assets and historical records; retain original and archive branches. Review .gitleaksignore and disputed migration 0002 in later authorized work. Do not merge unfinished F1 into main. No new features, live changes or F1 acceptance. REC-04–07 remain unauthorized. Stop if external deployment triggers or loss of content cannot be ruled out. Prior REC-02 status is historical; this section supersedes its branch/merge restrictions only for the approved DEV consolidation preparation. Actual merge remains pending verification.
+
+## REC-03 closure evidence
+GitHub comparison verified f1/foundation is an ancestor of dev, main unchanged at 1e8be38, archive identical to e22ae3b, default branch dev. Operator reports local tests and security audits completed; detailed outputs not supplied. CI-only workflow updated on dev in cbcbe518a5ae5a543a4727d7ba53d2d5a8598bfa to target dev/main pushes and pull requests. No deployment jobs added. No dev workflow run visible at verification; CI acceptance pending actual run evidence. Main workflow will arrive with a separately approved release. No REC-04 authorization, no F1 acceptance or deployment.
