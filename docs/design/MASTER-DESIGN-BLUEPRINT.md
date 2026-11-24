@@ -129,3 +129,6 @@ Inventory covers indexed files, not proof of no other unindexed files. SVG sourc
 
 ## 12. G2 follow-up — 2026-11-24
 [RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md) created with 80 acceptance criteria. R13 design proposal addressed; runtime/security evidence and R19 remain pending. Historical audit baseline unchanged; 22 design specifications excluding master/index, two originally missing documents remain. G0–G2 owner approval pending. Next G3 IMAGE-ASSETS.md. No ADR changes or implementation.
+
+## 13. G3 follow-up — 2026-11-24
+[IMAGE-ASSETS.md](IMAGE-ASSETS.md) created: 85 indexed SVGs, 18 source rechecks, 28 raster briefs, 40 acceptance criteria. Raster originals, exports, rights and rendered QA pending; R18/R19 remain open. 23 design specifications excluding master/index; DESIGN-ROADMAP.md remains missing from original five. Next G4; G3 asset release gate remains open. No ADR changes or implementation.
