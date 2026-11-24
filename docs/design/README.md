@@ -2,6 +2,9 @@
 Date: 2026-11-24
 Status: visual direction approved by product owner; detailed specifications and assets pending review. No implementation or deployment authorized.
 
+## Consolidated review
+[MASTER-DESIGN-BLUEPRINT.md](MASTER-DESIGN-BLUEPRINT.md) — 19 existing design specs, 85 verified indexed SVGs, gaps and approval gates.
+
 ## Scope
 Cross-cutting design workstream under [AT-18](../MASTER-BLUEPRINT.md), not a new numbered module. Covers public website, customer portal, dealership workspace, central administration and mobile design consistency. Next.js/TypeScript web and Flutter mobile remain authoritative under [ADR-001](../adr/ADR-001-technology-stack.md).
 
@@ -64,7 +67,7 @@ First asset: homepage hero, target 2560×1440, text-free and logo-free, light ba
 Proposed public/images/{brand,hero,services,business,process,product,patterns,social}/ relative to the eventual Next.js app root; actual app path must follow repository architecture. Keep originals separate from optimized derivatives; use descriptive filenames, alt text, explicit dimensions and responsive sizes. Never embed headings or buttons in raster artwork.
 
 ## Public web status
-Design specification coverage complete for review; legal approval, raster upload, identity details and final visual approval pending. Next workstream: SaaS portal design.
+Design specification coverage complete for review; legal approval, raster upload, identity details and final visual approval pending. All 11 SaaS UX phases now documented for review.
 
 ## Next gate
-Review brand identity and primary hero first, then create individual production assets and detailed specifications. Link design index from master blueprint when updating it. No application code, dependencies, migrations or deployment in this step.
+Follow the consolidated master design review: shared design system, components, responsive/Flutter, asset manifest and roadmap; resolve relevant domain gates before implementation. Link design index from master blueprint when updating it. No application code, dependencies, migrations or deployment in this step.
