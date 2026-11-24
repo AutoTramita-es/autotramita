@@ -25,6 +25,7 @@ _STATUS = {
     422: ("validation_error", "Validation failed"),
     428: ("precondition_required", "Precondition required"),
     429: ("rate_limited", "Too many requests"),
+    503: ("service_unavailable", "Service temporarily unavailable"),
 }
 
 

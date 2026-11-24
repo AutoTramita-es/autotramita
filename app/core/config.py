@@ -68,6 +68,39 @@ def _optional_role(name: str, user: str | None, password: SecretStr | None) -> D
     return DatabaseCredentials(user=user, password=password)
 
 
+class RateLimitSettings(BaseSettings):
+    """Rate limits (requests per minute unless stated). Configurable; business modules add
+    their own policies in their phases. Health checks are never limited.
+
+    The Keycloak brute-force and password-recovery values are reserved here as the agreed
+    source of truth; they are enforced by Keycloak configuration in phase F2, not by this
+    application layer.
+    """
+
+    model_config = SettingsConfigDict(extra="ignore", case_sensitive=True, env_file=None)
+
+    public_per_min: int = Field(default=60, ge=1, validation_alias="RATE_LIMIT_PUBLIC_PER_MIN")
+    authenticated_per_min: int = Field(
+        default=300, ge=1, validation_alias="RATE_LIMIT_AUTHENTICATED_PER_MIN"
+    )
+    tenant_per_min: int = Field(default=3000, ge=1, validation_alias="RATE_LIMIT_TENANT_PER_MIN")
+    upload_per_min: int = Field(default=30, ge=1, validation_alias="RATE_LIMIT_UPLOAD_PER_MIN")
+    export_per_min: int = Field(default=5, ge=1, validation_alias="RATE_LIMIT_EXPORT_PER_MIN")
+    keycloak_max_failed_logins: int = Field(
+        default=5, ge=1, validation_alias="RATE_LIMIT_KEYCLOAK_MAX_FAILED_LOGINS"
+    )
+    keycloak_failure_window_minutes: int = Field(
+        default=15, ge=1, validation_alias="RATE_LIMIT_KEYCLOAK_FAILURE_WINDOW_MINUTES"
+    )
+    password_recovery_per_hour: int = Field(
+        default=3, ge=1, validation_alias="RATE_LIMIT_PASSWORD_RECOVERY_PER_HOUR"
+    )
+    # If Redis is unreachable: allow requests (availability, logged) or answer 503.
+    fail_open: bool = Field(default=True, validation_alias="RATE_LIMIT_FAIL_OPEN")
+    # Number of trusted reverse proxies in front of the API; 0 ignores X-Forwarded-For.
+    trusted_proxy_hops: int = Field(default=0, ge=0, le=5, validation_alias="TRUSTED_PROXY_HOPS")
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]  # required fields come from the environment

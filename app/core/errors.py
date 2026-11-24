@@ -78,3 +78,7 @@ class PreconditionRequired(AppError):
 
 class TooManyRequests(AppError):
     status, code, title = 429, "rate_limited", "Too many requests"
+
+
+class ServiceUnavailable(AppError):
+    status, code, title = 503, "service_unavailable", "Service temporarily unavailable"
