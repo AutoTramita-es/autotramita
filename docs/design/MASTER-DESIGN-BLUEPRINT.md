@@ -126,3 +126,6 @@ Inventory covers indexed files, not proof of no other unindexed files. SVG sourc
 
 ## 11. G1 follow-up — 2026-11-24
 [UI-COMPONENTS.md](UI-COMPONENTS.md) created: 82 component contracts, 40 acceptance criteria, portal composition, Next.js/Flutter mapping. Historical audit baseline unchanged; now 21 design specifications excluding master/index, three originally missing documents remain. G0/G1 approval pending; R19 runtime evidence pending. Next G2 RESPONSIVE-DESIGN.md. No ADR or implementation changes.
+
+## 12. G2 follow-up — 2026-11-24
+[RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md) created with 80 acceptance criteria. R13 design proposal addressed; runtime/security evidence and R19 remain pending. Historical audit baseline unchanged; 22 design specifications excluding master/index, two originally missing documents remain. G0–G2 owner approval pending. Next G3 IMAGE-ASSETS.md. No ADR changes or implementation.
