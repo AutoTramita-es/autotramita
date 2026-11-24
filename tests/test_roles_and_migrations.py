@@ -4,7 +4,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from app.core.dbroles import RoleNames, create_roles
-from sqlalchemy import Engine, text
+from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.exc import ProgrammingError
 from tests.conftest import RoleEnv
 
@@ -120,3 +120,180 @@ def test_baseline_up_and_down(role_env: RoleEnv) -> None:
     with role_env.admin_engine().connect() as c:
         left = c.execute(text("SELECT count(*) FROM pg_proc WHERE proname LIKE 'app\\_%'")).scalar()
     assert left == 0
+
+
+# --- R02 / R03: migration owner identity and caller-transaction protection -----------------
+
+
+def try_upgrade(engine: Engine, expected_owner: str | None = None) -> None:
+    cfg, conn = alembic_config(engine)
+    if expected_owner is not None:
+        cfg.attributes["expected_owner"] = expected_owner
+    try:
+        command.upgrade(cfg, "head")
+    finally:
+        conn.close()  # type: ignore[attr-defined]
+
+
+def assert_nothing_migrated(env: RoleEnv) -> None:
+    with env.admin_engine().connect() as c:
+        assert (
+            c.execute(text("SELECT to_regclass('schema_migrations.alembic_version')")).scalar()
+            is None
+        )
+        assert (
+            c.execute(text("SELECT count(*) FROM pg_proc WHERE proname LIKE 'app\\_%'")).scalar()
+            == 0
+        )
+
+
+REJECTED = "least-privileged owner"
+
+
+def test_migration_accepts_the_expected_owner(role_env: RoleEnv) -> None:
+    owner = role_env.engine("owner")
+    try_upgrade(owner, expected_owner=role_env.names.owner)
+    owner.dispose()
+
+
+def test_migration_rejects_a_different_expected_owner(role_env: RoleEnv) -> None:
+    owner = role_env.engine("owner")
+    with pytest.raises(RuntimeError, match=REJECTED):
+        try_upgrade(owner, expected_owner=role_env.names.app)
+    owner.dispose()
+    assert_nothing_migrated(role_env)
+
+
+@pytest.mark.parametrize("kind", ["app", "worker", "platform"])
+def test_migration_rejects_runtime_roles_even_when_they_own_schema_migrations(
+    role_env: RoleEnv, kind: str
+) -> None:
+    role = getattr(role_env.names, kind)
+    engine = role_env.engine(kind)
+    with pytest.raises(RuntimeError, match=REJECTED):
+        try_upgrade(engine)
+    with role_env.admin_engine().connect() as c:  # make the runtime role the schema owner
+        c.execute(text(f'ALTER SCHEMA schema_migrations OWNER TO "{role}"'))
+    with pytest.raises(RuntimeError, match=REJECTED):
+        try_upgrade(engine)  # still not the owner of public
+    with pytest.raises(RuntimeError, match=REJECTED):
+        try_upgrade(engine, expected_owner=role)  # and it is not the owner role by attributes
+    engine.dispose()
+    with role_env.admin_engine().connect() as c:
+        c.execute(text(f'ALTER SCHEMA schema_migrations OWNER TO "{role_env.names.owner}"'))
+    assert_nothing_migrated(role_env)
+
+
+@pytest.mark.parametrize(
+    "attributes",
+    ["BYPASSRLS", "CREATEROLE", "CREATEDB", "REPLICATION", "SUPERUSER"],
+)
+def test_migration_rejects_privileged_impostor_owning_both_schemas(
+    role_env: RoleEnv, attributes: str
+) -> None:
+    imp = f"{role_env.names.owner}_imp"
+    password = "pw-" + imp
+    admin = role_env.admin_engine()
+    with admin.connect() as c:
+        c.execute(text(f"CREATE ROLE \"{imp}\" LOGIN PASSWORD '{password}' {attributes}"))
+        c.execute(text(f'GRANT CONNECT ON DATABASE "{role_env.database}" TO "{imp}"'))
+        c.execute(text(f'ALTER SCHEMA schema_migrations OWNER TO "{imp}"'))
+        c.execute(text(f'ALTER SCHEMA public OWNER TO "{imp}"'))
+    engine = create_engine(role_env.url("owner").set(username=imp, password=password))
+    try:
+        with pytest.raises(RuntimeError, match=REJECTED):
+            try_upgrade(engine, expected_owner=imp)
+        with pytest.raises(RuntimeError, match=REJECTED):
+            try_upgrade(engine)
+    finally:
+        engine.dispose()
+        with admin.connect() as c:
+            c.execute(text(f'ALTER SCHEMA schema_migrations OWNER TO "{role_env.names.owner}"'))
+            c.execute(text(f'ALTER SCHEMA public OWNER TO "{role_env.names.owner}"'))
+            c.execute(text(f'DROP OWNED BY "{imp}"'))
+            c.execute(text(f'DROP ROLE "{imp}"'))
+    assert_nothing_migrated(role_env)
+
+
+def test_migration_rejects_owner_that_is_member_of_a_privileged_role(role_env: RoleEnv) -> None:
+    helper = f"{role_env.names.owner}_priv"
+    admin = role_env.admin_engine()
+    with admin.connect() as c:
+        c.execute(text(f'CREATE ROLE "{helper}" NOLOGIN BYPASSRLS'))
+        c.execute(text(f'GRANT "{helper}" TO "{role_env.names.owner}"'))
+    engine = role_env.engine("owner")
+    try:
+        with pytest.raises(RuntimeError, match=REJECTED):
+            try_upgrade(engine, expected_owner=role_env.names.owner)
+    finally:
+        engine.dispose()
+        with admin.connect() as c:
+            c.execute(text(f'REVOKE "{helper}" FROM "{role_env.names.owner}"'))
+            c.execute(text(f'DROP ROLE "{helper}"'))
+    assert_nothing_migrated(role_env)
+
+
+def test_migration_rejects_superuser_connection_after_ownership_transfer(
+    role_env: RoleEnv,
+) -> None:
+    admin = role_env.admin_engine()
+    with admin.connect() as c:
+        who = c.execute(text("SELECT current_user")).scalar_one()
+        c.execute(text(f'ALTER SCHEMA schema_migrations OWNER TO "{who}"'))
+        c.execute(text(f'ALTER SCHEMA public OWNER TO "{who}"'))
+    try:
+        with pytest.raises(RuntimeError, match=REJECTED):
+            try_upgrade(admin)
+    finally:
+        with admin.connect() as c:
+            c.execute(text(f'ALTER SCHEMA schema_migrations OWNER TO "{role_env.names.owner}"'))
+            c.execute(text(f'ALTER SCHEMA public OWNER TO "{role_env.names.owner}"'))
+    assert_nothing_migrated(role_env)
+
+
+def test_migration_rejects_set_role_session(role_env: RoleEnv) -> None:
+    # A superuser that switched to the owner role is not the owner: session_user differs.
+    engine = create_engine(
+        role_env.admin_engine().url, isolation_level="AUTOCOMMIT"
+    )  # superuser login
+    cfg, conn = alembic_config(engine)
+    try:
+        conn.exec_driver_sql(f'SET ROLE "{role_env.names.owner}"')  # type: ignore[attr-defined]
+        assert not conn.in_transaction()  # type: ignore[attr-defined]
+        with pytest.raises(RuntimeError, match=REJECTED):
+            command.upgrade(cfg, "head")
+    finally:
+        conn.close()  # type: ignore[attr-defined]
+        engine.dispose()
+    assert_nothing_migrated(role_env)
+
+
+def test_migration_rejects_caller_transaction_without_touching_it(role_env: RoleEnv) -> None:
+    owner = role_env.engine("owner")
+    cfg, conn = alembic_config(owner)
+    cfg.attributes["expected_owner"] = role_env.names.owner
+    conn.execute(text("CREATE TABLE caller_sentinel (id int)"))  # type: ignore[attr-defined]
+    conn.execute(text("INSERT INTO caller_sentinel VALUES (42)"))  # type: ignore[attr-defined]
+    try:
+        with pytest.raises(RuntimeError, match="fresh connection"):
+            command.upgrade(cfg, "head")
+        # The caller's transaction is still open and untouched: nothing was committed or lost.
+        assert conn.in_transaction()  # type: ignore[attr-defined]
+        assert conn.execute(text("SELECT id FROM caller_sentinel")).scalar() == 42  # type: ignore[attr-defined]
+        with role_env.admin_engine().connect() as other:
+            assert other.execute(text("SELECT to_regclass('caller_sentinel')")).scalar() is None
+        conn.rollback()  # type: ignore[attr-defined]
+        with role_env.admin_engine().connect() as other:
+            assert other.execute(text("SELECT to_regclass('caller_sentinel')")).scalar() is None
+    finally:
+        conn.close()  # type: ignore[attr-defined]
+    assert_nothing_migrated(role_env)
+    try_upgrade(owner, expected_owner=role_env.names.owner)  # fresh connection works
+    owner.dispose()
+
+
+def test_migration_lifecycle_on_fresh_owner_connection_up_down_up(role_env: RoleEnv) -> None:
+    owner = role_env.engine("owner")
+    for action, revision in (("upgrade", "head"), ("downgrade", "base"), ("upgrade", "head")):
+        migrate(owner, action, revision)
+    owner.dispose()

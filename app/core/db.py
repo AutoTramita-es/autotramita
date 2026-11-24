@@ -6,8 +6,11 @@ can leak to the next user of a pooled connection. Row-level security policies re
 settings; this module never trusts caller-supplied tenant data beyond typed UUIDs.
 
 Always use ``session_scope``: it applies the context as the first statement and commits at
-exit. A commit inside the block ends the transaction and drops the context, after which
-tenant-scoped queries see no rows (fail closed).
+exit. Transactions are explicit (R01): sessions never autobegin, so a session used outside
+``session_scope`` cannot run any statement. A commit, rollback or close inside the block ends
+the scope's transaction and drops the context; the session then rejects every further
+statement (``InvalidRequestError``) instead of silently starting a new, context-free
+transaction. Do not commit inside the block; ``session_scope`` commits at exit.
 """
 
 from __future__ import annotations
@@ -78,9 +81,9 @@ def create_db_engine(settings: Settings, role: Role = "app") -> Engine:
 
 
 def create_session_factory(engine: Engine) -> sessionmaker[Session]:
-    """Session factory bound to one role's engine. Sessions never autobegin outside scopes
-    created by ``session_scope``; ``expire_on_commit`` is off so results stay readable."""
-    return sessionmaker(engine, expire_on_commit=False)
+    """Session factory bound to one role's engine. ``autobegin`` is off: a transaction only
+    exists inside ``session_scope``; ``expire_on_commit`` is off so results stay readable."""
+    return sessionmaker(engine, expire_on_commit=False, autobegin=False)
 
 
 def apply_context(session: Session, context: RequestContext) -> None:
@@ -101,8 +104,14 @@ def session_scope(
     engine: Engine | sessionmaker[Session], context: RequestContext | None = None
 ) -> Iterator[Session]:
     """One transaction with the request context applied first; commits on success, rolls
-    back on any exception, and always closes the session (returning the connection)."""
+    back on any exception, and always closes the session (returning the connection).
+
+    A caller-supplied factory must disable autobegin (use ``create_session_factory``);
+    otherwise ``ValueError`` is raised before any connection is used.
+    """
     factory = engine if isinstance(engine, sessionmaker) else create_session_factory(engine)
+    if factory.kw.get("autobegin", True):
+        raise ValueError("session_scope requires a session factory with autobegin=False")
     with factory() as session, session.begin():
         apply_context(session, context or RequestContext())
         yield session

@@ -8,26 +8,57 @@ from sqlalchemy import Connection
 target_metadata = None  # Schema is managed with explicit SQL migrations.
 
 
-def _require_owner(connection: Connection) -> None:
-    """Refuse to migrate unless the connected role owns the hardened migration schema.
+_OWNER_CHECK = """
+SELECT r.rolsuper, r.rolbypassrls, r.rolcreaterole, r.rolcreatedb, r.rolreplication,
+       r.rolcanlogin, session_user = current_user,
+       coalesce((SELECT pg_get_userbyid(nspowner) = current_user FROM pg_namespace
+                 WHERE nspname = 'schema_migrations'), false),
+       coalesce((SELECT pg_get_userbyid(nspowner) = current_user FROM pg_namespace
+                 WHERE nspname = 'public'), false),
+       EXISTS (SELECT 1 FROM pg_roles g WHERE g.oid <> r.oid AND pg_has_role(r.oid, g.oid, 'MEMBER')
+               AND (g.rolsuper OR g.rolbypassrls OR g.rolcreaterole OR g.rolcreatedb
+                    OR g.rolreplication)),
+       current_user
+FROM pg_roles r WHERE r.rolname = current_user
+"""
 
-    The runtime roles (app, worker, platform) and superusers do not own it, so migrations
-    can only run as the owner role on a database prepared with scripts/db/harden.sql.
+
+def _require_owner(connection: Connection, expected: str | None) -> None:
+    """Refuse to migrate unless the connection is the least-privileged owner role (R02, R03).
+
+    The connection must be fresh: a caller-owned transaction is rejected without being
+    committed or rolled back. The connected role must be the expected owner (when known),
+    log in as itself (no SET ROLE / SET SESSION AUTHORIZATION), own both ``schema_migrations``
+    and ``public`` as prepared by scripts/db/harden.sql, have no superuser, BYPASSRLS,
+    CREATEROLE, CREATEDB or REPLICATION attribute, and not be a member of a role that does.
+    Runtime roles (app, worker, platform) fail the ownership checks. Nothing is executed on
+    rejection beyond this read-only catalog query.
     """
-    row = connection.exec_driver_sql(
-        "SELECT pg_get_userbyid(nspowner) = current_user FROM pg_namespace "
-        "WHERE nspname = 'schema_migrations'"
-    ).one_or_none()
-    if row is None or not row[0]:
+    if connection.in_transaction():
         raise RuntimeError(
-            "Migrations must run as the owner role on a hardened database "
-            "(schema_migrations owned by the connected role)."
+            "Migrations need a fresh connection without an active transaction; "
+            "the caller's transaction was left untouched."
         )
-    connection.commit()  # end the read-only check; Alembic starts its own transaction
+    row = connection.exec_driver_sql(_OWNER_CHECK).one_or_none()
+    # Only our own read-only check transaction exists here (none was active on entry).
+    connection.rollback()
+    if row is None:
+        raise RuntimeError("Migration role could not be verified.")
+    (*attributes, can_login, same_session, owns_migrations, owns_public, member, current) = row
+    if (
+        any(attributes)
+        or member
+        or not (can_login and same_session and owns_migrations and owns_public)
+        or (expected is not None and current != expected)
+    ):
+        raise RuntimeError(
+            "Migrations must run as the expected least-privileged owner role on a hardened "
+            "database (owner of schema_migrations and public, no elevated attributes)."
+        )
 
 
-def _run(connection: Connection) -> None:
-    _require_owner(connection)
+def _run(connection: Connection, expected_owner: str | None) -> None:
+    _require_owner(connection, expected_owner)
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
@@ -40,12 +71,14 @@ def _run(connection: Connection) -> None:
 def run_migrations_online() -> None:
     supplied = context.config.attributes.get("connection")
     if supplied is not None:
-        _run(supplied)
+        # Optional: tests and tooling may pass the expected owner role name.
+        _run(supplied, context.config.attributes.get("expected_owner"))
         return
-    engine = create_db_engine(get_settings(), role="owner")
+    settings = get_settings()
+    engine = create_db_engine(settings, role="owner")
     try:
         with engine.connect() as connection:
-            _run(connection)
+            _run(connection, settings.role_credentials("owner").user)
             connection.commit()
     finally:
         engine.dispose()

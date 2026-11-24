@@ -17,8 +17,8 @@ from app.core.db import (
 )
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
-from sqlalchemy.exc import DBAPIError
-from sqlalchemy.orm import Session
+from sqlalchemy.exc import DBAPIError, InvalidRequestError
+from sqlalchemy.orm import Session, sessionmaker
 from tests.conftest import RoleEnv
 
 ROLE_USERS = {
@@ -250,3 +250,88 @@ def test_runtime_engine_is_not_owner_and_cannot_use_owner(
     with pytest.raises(DBAPIError), session_scope(engine) as s:
         s.execute(text(f'SET ROLE "{role_env.names.owner}"'))
     engine.dispose()
+
+
+# --- R01: explicit transactions (autobegin disabled) -------------------------------------
+
+
+def test_factory_disables_autobegin_and_scope_rejects_autobegin_factories(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = create_db_engine(synthetic(monkeypatch, all_roles=True))
+    assert create_session_factory(engine).kw["autobegin"] is False
+    with pytest.raises(ValueError, match="autobegin"), session_scope(sessionmaker(engine)):
+        pytest.fail("scope must not be entered")
+    engine.dispose()
+
+
+def test_session_outside_scope_cannot_run_any_statement(
+    role_env: RoleEnv, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    engine = create_db_engine(settings_for(role_env, monkeypatch))
+    with create_session_factory(engine)() as session:
+        with pytest.raises(InvalidRequestError, match="Autobegin is disabled"):
+            session.execute(text("SELECT 1"))
+        assert not session.in_transaction()
+    assert engine.pool.checkedout() == 0  # type: ignore[attr-defined]
+    engine.dispose()
+
+
+@pytest.mark.parametrize("early", ["commit", "rollback", "close"])
+def test_early_transaction_end_rejects_further_statements_and_drops_context(
+    role_env: RoleEnv, monkeypatch: pytest.MonkeyPatch, early: str
+) -> None:
+    # One physical connection: the next scope must reuse it and must see no context.
+    base = create_db_engine(settings_for(role_env, monkeypatch))
+    engine = create_engine(base.url, pool_size=1, max_overflow=0)
+    base.dispose()
+    ctx = RequestContext(tenant_id=uuid.uuid4(), user_id=uuid.uuid4(), branch_ids=(uuid.uuid4(),))
+    with session_scope(engine, ctx) as s:
+        pid = scalar(s, "SELECT pg_backend_pid()")
+    with session_scope(engine, ctx) as s:
+        getattr(s, early)()
+        assert not s.in_transaction()
+        with pytest.raises(InvalidRequestError):
+            s.execute(text("SELECT current_setting('app.tenant_id', true)"))
+        assert not s.in_transaction()  # no new, context-free transaction was started
+    assert engine.pool.checkedout() == 0  # type: ignore[attr-defined]
+    with session_scope(engine) as s:
+        assert scalar(s, "SELECT pg_backend_pid()") == pid
+        for name in ("app.tenant_id", "app.user_id", "app.branch_ids"):
+            assert scalar(s, "SELECT current_setting(:n, true)", n=name) in ("", None)
+    engine.dispose()
+
+
+def test_early_commit_persists_and_early_rollback_discards_prior_work(
+    role_env: RoleEnv, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    owner = create_db_engine(settings_for(role_env, monkeypatch), role="owner")
+    with session_scope(owner) as s:
+        s.execute(text("CREATE TABLE r01 (id int)"))
+    with session_scope(owner) as s:
+        s.execute(text("INSERT INTO r01 VALUES (1)"))
+        s.commit()
+        with pytest.raises(InvalidRequestError):
+            s.execute(text("INSERT INTO r01 VALUES (2)"))
+    with session_scope(owner) as s:
+        s.execute(text("INSERT INTO r01 VALUES (3)"))
+        s.rollback()
+        with pytest.raises(InvalidRequestError):
+            s.execute(text("INSERT INTO r01 VALUES (4)"))
+    with session_scope(owner) as s:
+        assert scalar(s, "SELECT array_agg(id ORDER BY id) FROM r01") == [1]
+    owner.dispose()
+
+
+def test_scope_commits_at_exit_on_one_connection_and_closes(
+    role_env: RoleEnv, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    owner = create_db_engine(settings_for(role_env, monkeypatch), role="owner")
+    with session_scope(owner) as s:
+        s.execute(text("CREATE TABLE r01_exit (id int)"))
+        s.execute(text("INSERT INTO r01_exit VALUES (7)"))
+        assert s.in_transaction()
+    assert not s.in_transaction()
+    with session_scope(owner) as other:
+        assert scalar(other, "SELECT id FROM r01_exit") == 7
+    owner.dispose()

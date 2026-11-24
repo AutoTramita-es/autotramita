@@ -9,9 +9,9 @@ from collections.abc import Iterator
 from typing import Any
 
 import pytest
-from app.core.db import RequestContext, apply_context, session_scope
+from app.core.db import RequestContext, apply_context, create_session_factory, session_scope
 from sqlalchemy import CursorResult, Engine, create_engine, text
-from sqlalchemy.exc import DBAPIError, IntegrityError, ProgrammingError
+from sqlalchemy.exc import DBAPIError, IntegrityError, InvalidRequestError, ProgrammingError
 from sqlalchemy.orm import Session
 from tests.conftest import RoleEnv
 from tests.rls_probe import Probe, build_probe
@@ -391,3 +391,69 @@ def test_platform_has_no_arbitrary_access(probe: Probe) -> None:
         )
         == 1
     )
+
+
+# --- R04: real session scope, early transaction end and physical connection reuse ----------
+
+
+@pytest.mark.parametrize("kind", RUNTIME)
+@pytest.mark.parametrize("early", ["commit", "rollback", "close"])
+def test_early_end_in_scope_never_exposes_rows_and_reuse_stays_isolated(
+    probe: Probe, kind: str, early: str
+) -> None:
+    engine = create_engine(probe.env.url(kind), pool_size=1, max_overflow=0)
+    with session_scope(engine, probe.ctx(probe.tenant_a)) as s:
+        pid = s.execute(text("SELECT pg_backend_pid()")).scalar_one()
+        assert s.execute(text("SELECT count(*) FROM rls_customers")).scalar_one() == 1  # control
+    with session_scope(engine, probe.ctx(probe.tenant_a, probe.user_a)) as s:
+        getattr(s, early)()
+        with pytest.raises(InvalidRequestError):
+            s.execute(text("SELECT * FROM rls_customers")).all()
+    assert engine.pool.checkedout() == 0  # type: ignore[attr-defined]
+    # Same physical connection, no context: nothing visible, nothing carried over.
+    with session_scope(engine) as s:
+        assert s.execute(text("SELECT pg_backend_pid()")).scalar_one() == pid
+        for table in TABLES:
+            assert s.execute(text(f"SELECT count(*) FROM {table}")).scalar_one() == 0
+        settings = s.execute(
+            text(
+                "SELECT current_setting('app.user_id', true), "
+                "current_setting('app.tenant_id', true), current_setting('app.branch_ids', true)"
+            )
+        ).one()
+        assert all(v in ("", None) for v in settings)
+    # Tenant B on that connection sees only B, with A as a negative control, then A again.
+    with session_scope(engine, probe.ctx(probe.tenant_b)) as s:
+        assert s.execute(text("SELECT pg_backend_pid()")).scalar_one() == pid
+        ids = s.execute(text("SELECT id FROM rls_customers")).scalars().all()
+        assert ids == [probe.customer_b]
+    with session_scope(engine, probe.ctx(probe.tenant_a)) as s:
+        assert s.execute(text("SELECT id FROM rls_customers")).scalars().all() == [probe.customer_a]
+    engine.dispose()
+
+
+@pytest.mark.parametrize("kind", RUNTIME)
+def test_session_outside_scope_cannot_query_protected_tables(probe: Probe, kind: str) -> None:
+    engine = probe.env.engine(kind)
+    with create_session_factory(engine)() as session:
+        with pytest.raises(InvalidRequestError):
+            session.execute(text("SELECT count(*) FROM rls_customers"))
+        assert not session.in_transaction()
+    assert engine.pool.checkedout() == 0  # type: ignore[attr-defined]
+    engine.dispose()
+
+
+@pytest.mark.parametrize("kind", RUNTIME)
+def test_failed_scope_with_error_does_not_leak_context_to_next_scope(
+    probe: Probe, kind: str
+) -> None:
+    engine = create_engine(probe.env.url(kind), pool_size=1, max_overflow=0)
+    with pytest.raises(DBAPIError), session_scope(engine, probe.ctx(probe.tenant_a)) as s:
+        s.execute(text("SELECT 1/0"))
+    with session_scope(engine) as s:
+        assert s.execute(text("SELECT count(*) FROM rls_customers")).scalar_one() == 0
+        assert s.execute(text("SELECT current_setting('app.tenant_id', true)")).scalar_one() in (
+            "",
+            None,
+        )
+    engine.dispose()
