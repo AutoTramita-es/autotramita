@@ -34,10 +34,11 @@ History note: three commits are authored by Copilot (8e1de01 T01 toolchain recon
 - Risks to record: image not pinned by digest; no security-header middleware defined here; the routing definition would live in `main` after a merge and any later change to it changes the public site; F2+ application routing for `autotramita.es` must replace or coexist with this router.
 
 ## 3. R13 — Gitleaks fingerprints (`.gitleaksignore`, 3 exact entries)
+**Open issue:** the first version of this review (commit 40933f6) quoted two of the synthetic strings literally; the CI secret scan over full history therefore fails (run 45441256794, 2 findings, both in this file at lines 39 and 40). The text is now reworded, but the scan covers history, so the run stays red until the owner decides: add two exact commit-and-line fingerprints for 40933f6 to `.gitleaksignore` (same mechanism as the three below), or another approach. No ignore entry was added without that decision.
 | Fingerprint | Commit (in dev history) | Content (reviewed, redacted here) | Assessment |
 |---|---|---|---|
-| `dcc2640…:tests/test_idempotency.py:generic-api-key:25` | F1 step 6b | `KEY = "key-1234567890"` synthetic test constant | false positive |
-| `dcc2640…:tests/test_idempotency.py:generic-api-key:93` | F1 step 6b | `key="other-key-12345"` synthetic test constant | false positive |
+| `dcc2640…:tests/test_idempotency.py:generic-api-key:25` | F1 step 6b | a short synthetic string constant used as a fake key in a test | false positive |
+| `dcc2640…:tests/test_idempotency.py:generic-api-key:93` | F1 step 6b | a second short synthetic string used as a fake key in a test | false positive |
 | `05c49be…:tests/test_idempotency.py:generic-api-key:34` | T06 | a random UUID used as a synthetic Idempotency-Key | false positive |
 All three are commit-and-line exact, rule-specific and refer to test data; there is no path, rule or regex wildcard. The current tree contains no literal of that kind (later renamed/built without a literal). Not tested here: whether each entry is still required by gitleaks v8.21.2 (that needs a scan without the file); CI secret scan on the full history is green with them (run 45439536780). No blanket exclusion exists or is proposed. Comment in the file calls the origin "f1/foundation branch"; accurate historically.
 
