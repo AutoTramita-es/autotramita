@@ -1,6 +1,11 @@
 # AT-01.05 — Claude Code Execution Brief: F1
-Version 1.0 | 2026-11-24 | APPROVED — F1-T01 ONLY AUTHORIZED
+Version 1.0 | 2026-11-24 | APPROVED — RECONCILIATION HOLD / NOT ACCEPTED
 Owner explicitly approved this brief v1.0 on 2026-11-24 and authorized F1-T01 only. T02–T10, merge and deployment remain unauthorized. Mandatory STOP at CP01.
+
+## Current execution status — REC-02 (documentation addendum; approved v1.0 requirements unchanged)
+REC-02 (2026-11-24): F1 implementation exists on f1/foundation at e22ae3b0c9b2bed861f29ed4d7dfd1c366a8ff7a, preserved identically in archive/f1-foundation-2026-11-24; not merged or accepted. Historical broad authorization quoted in c467005 ("Autoriziram F1 prema G6-EXECUTION-ORDER.md") is UNVERIFIED: repository record exists, original owner instruction not established; neither confirmed nor invalidated retroactively. Later explicit T01-only authorization b6462e4 / 0973e24 remains recorded; CP01 blocked in preflight, no new implementation authorized or executable during reconciliation. T02–T10 not currently authorized. Audit reports 93 passing CI tests at e22ae3b (run 45398235580), not independently rerun; T01–05/T08–10 PARTIAL, T06–07 NON-COMPLIANT; AC05–08 compliant per reported CI, 7 partial, 3 non-compliant, AC09 not verified. F1 acceptance pending REC-07. REC-01 and REC-02 documentation approved; REC-03–07 require separate approval. No merge, deployment, F2 or infrastructure changes authorized. O01/O02/O03/O18/O19 remain ACCEPTED; 15 deferred decisions remain PROPOSED. Maintenance page and routing reported on implementation branch; live state and separate authorization unverified. Preserve both histories; no duplicate implementation or automatic cherry-pick.
+
+[Audit](../design/F1-RECONCILIATION-AUDIT.md) | [Plan](../design/F1-RECONCILIATION-PLAN.md)
 
 ## 1. Normative sources
 - [AT-01 v1.1 APPROVED](AT-01-foundation-infrastructure.md), especially §§5–10a, AC01–AC15 and O01/O02/O03/O18/O19.
@@ -17,7 +22,7 @@ Allowed write paths only: pyproject.toml, uv.lock, .python-version, alembic.ini,
 Forbidden: app/auth, app/tenants, app/customers, app/cases, app/documents, app/billing, app/credit and all business modules; frontend/Flutter app; Keycloak, Nextcloud, Celery, external integrations, real webhooks, SMTP; Compose, secrets, Traefik, Cloudflare, server config; scripts/provision-postgres.py execution against shared DB; real data or credentials. Redis only rate limiting. Local disposable PostgreSQL/Redis or CI service containers only. No production or shared host connections. Verify disposable target before any DDL or destructive test; if uncertain STOP. Never print DSNs, passwords, tokens, raw PII or secret values. Use synthetic fixtures. Do not weaken tests or skip failing checks to obtain green CI.
 
 ## 3. Task sequence
-All tasks are NOT STARTED; T01 alone is AUTHORIZED. Task IDs and checkpoints are organizational labels, not new ADRs. Paths below are permitted subsets, not mandatory filenames. Commands are future examples, not executed here. Run relevant regression tests from previous tasks; record actual commands, exit codes and counts. Missing prerequisites or security failures block progression.
+All tasks have existing implementation on the preserved branch; none accepted against this brief. T01 historical authorization blocked at preflight; do not execute during reconciliation. See REC-02 status above. Task IDs and checkpoints are organizational labels, not new ADRs. Paths below are permitted subsets, not mandatory filenames. Commands are future examples, not executed here. Run relevant regression tests from previous tasks; record actual commands, exit codes and counts. Missing prerequisites or security failures block progression.
 
 ### F1-T01 — Toolchain (G6.1)
 Depends: authorization and preflight. Paths: pyproject.toml, uv.lock, .python-version, tests/**, docs/DEVELOPMENT.md.
@@ -105,9 +110,9 @@ O04–O17 and O20 remain PROPOSED, assigned to their AT-01 gates; no implementat
 - Next dependency; explicit statement STOPPED, awaiting owner instruction.
 No PASS if required tests not run or fail. Report partial evidence honestly. Do not claim deployed or implemented beyond tested task.
 
-## 7. Future handoff prompt (do not execute now)
+## 7. Historical handoff prompt (superseded operationally; do not execute during reconciliation)
 After separate owner authorization: "Read docs/specifications/AT-01-F1-CLAUDE-CODE-EXECUTION-BRIEF.md, approved AT-01 v1.1, G6, G5 and relevant accepted ADRs from the current repository. Verify authorization and preflight. Execute only F1-T01, within its allowed paths and local/CI scope. Run tests, create scoped commit on feature branch, report CP01 and STOP. No next task, merge, shared infrastructure, or deployment."
-Authorization granted for T01 only on 2026-11-24; all subsequent tasks require separate owner authorization.
+Authorization granted for T01 only on 2026-11-24; preflight blocked. This prompt is retained for history, not an executable instruction during reconciliation. Resume only after explicit reconciliation gate/task approval.
 
 ## 8. Document preparation limitations
 Task IDs, checkpoint labels, proposed branch name and example commands are organizational choices. No new architectural decisions approved. No code inspection beyond normative documentation in this preparation, no test execution, no live infrastructure verification. Exact package versions, generator choice and implementation details subject to G6 stop rules. This brief cannot override approved AT-01 or G6.
