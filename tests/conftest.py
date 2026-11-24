@@ -7,7 +7,7 @@ TEST_REDIS_URL. In CI (``CI`` set) a missing variable fails the run instead of s
 import os
 import uuid
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import psycopg
 import pytest
@@ -72,6 +72,9 @@ class RoleEnv:
     passwords: dict[str, str]
     database: str
     admin_url: str
+    # Every engine handed out is disposed at teardown, so no pooled connection is ever left
+    # to the garbage collector (that raised ResourceWarning, which CI now treats as an error).
+    _engines: list[Engine] = field(default_factory=list, compare=False, repr=False)
 
     def url(self, kind: str) -> URL:
         role = getattr(self.names, kind)
@@ -80,12 +83,20 @@ class RoleEnv:
         )
 
     def engine(self, kind: str) -> Engine:
-        return create_engine(self.url(kind))
+        engine = create_engine(self.url(kind))
+        self._engines.append(engine)
+        return engine
 
     def admin_engine(self) -> Engine:
-        return create_engine(
+        engine = create_engine(
             _sa_url(self.admin_url).set(database=self.database), isolation_level="AUTOCOMMIT"
         )
+        self._engines.append(engine)
+        return engine
+
+    def dispose_engines(self) -> None:
+        while self._engines:
+            self._engines.pop().dispose()
 
 
 @pytest.fixture
@@ -103,9 +114,11 @@ def role_env(pg_admin_url: str) -> Iterator[RoleEnv]:
     db_url = _sa_url(pg_admin_url).set(database=database).render_as_string(hide_password=False)
     with psycopg.connect(db_url.replace("+psycopg", ""), autocommit=True) as conn:
         harden(conn, database, names)
+    env = RoleEnv(names, passwords, database, pg_admin_url)
     try:
-        yield RoleEnv(names, passwords, database, pg_admin_url)
+        yield env
     finally:
+        env.dispose_engines()
         with psycopg.connect(pg_admin_url, autocommit=True) as admin:
             admin.execute(f'DROP DATABASE IF EXISTS "{database}" WITH (FORCE)')
             for role in names.all():
