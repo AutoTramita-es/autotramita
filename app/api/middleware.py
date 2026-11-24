@@ -35,13 +35,13 @@ class NoStoreAuthMiddleware:
     """``Cache-Control: no-store`` on every answer of the sign-in routes, errors included, so
     no session state, redirect or error body is kept by a browser or intermediary cache."""
 
-    PREFIX = "/api/v1/auth/"
+    PREFIXES = ("/api/v1/auth/", "/api/v1/me/security/")
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or not str(scope.get("path", "")).startswith(self.PREFIX):
+        if scope["type"] != "http" or not str(scope.get("path", "")).startswith(self.PREFIXES):
             await self.app(scope, receive, send)
             return
 

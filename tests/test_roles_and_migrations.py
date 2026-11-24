@@ -358,3 +358,25 @@ def test_f2_migration_requires_explicit_matching_runtime_roles(
             ).scalar_one()
             == "0007"
         )
+
+
+def test_f2_migration_rejects_orphaned_historical_grant(role_env: RoleEnv) -> None:
+    owner = role_env.engine("owner")
+    migrate(owner, "upgrade", "0007")
+    stranger = role_env.names.owner.removesuffix("_owner") + "_orphan"
+    with role_env.admin_engine().connect() as db:
+        db.exec_driver_sql(f'CREATE ROLE "{stranger}"')
+    try:
+        with owner.begin() as db:
+            db.exec_driver_sql(f'GRANT SELECT ON users TO "{stranger}"')
+        cfg, conn = alembic_config(owner)
+        try:
+            with pytest.raises(RuntimeError, match="unconfigured role"):
+                command.upgrade(cfg, "head")
+        finally:
+            conn.close()  # type: ignore[attr-defined]
+    finally:
+        with owner.begin() as db:
+            db.exec_driver_sql(f'REVOKE ALL ON users FROM "{stranger}"')
+        with role_env.admin_engine().connect() as db:
+            db.exec_driver_sql(f'DROP ROLE "{stranger}"')

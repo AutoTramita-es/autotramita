@@ -453,3 +453,23 @@ def test_s01_temporary_lockout_expires_with_short_test_window(env: Env, admin: A
             browser.close()
     finally:
         admin.update_realm(**old)
+
+
+def test_s03_max_age_zero_requires_fresh_login(env: Env, admin: Admin) -> None:
+    user = admin.create_user()
+    browser = Browser(env)
+    verifier, challenge = pkce_pair()
+    try:
+        first = browser.login(
+            user, client_id="at-web", redirect_uri=WEB_REDIRECT, challenge=challenge
+        )
+        browser.token("at-web", first.require_code(), WEB_REDIRECT, verifier=verifier)
+        time.sleep(2)
+        fresh = browser.authorize("at-web", WEB_REDIRECT, max_age="0")
+        assert fresh.code is None and 'name="password"' in fresh.text
+        fresh = browser.submit(
+            fresh, {"username": user.email, "password": user.password, "credentialId": ""}
+        )
+        fresh.require_code()
+    finally:
+        browser.close()

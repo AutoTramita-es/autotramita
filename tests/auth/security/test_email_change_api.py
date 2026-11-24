@@ -2,6 +2,7 @@
 
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 from tests.auth.fake_admin import RecordingNotifier
 from tests.auth.security.test_security_policies import API, Rig, secure
@@ -107,3 +108,26 @@ def test_verification_page_has_strict_csp_and_does_not_send_fragment(rig: Rig) -
     assert response.headers["referrer-policy"] == "no-referrer"
     assert "script-src 'sha256-" in response.headers["content-security-policy"]
     assert "location.hash" in response.text and "email-change-confirmations" in response.text
+
+
+def test_account_lookup_and_delivery_are_deferred_after_generic_response(
+    rig: Rig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.api.v1 import me
+
+    enable(rig)
+    user = rig.login()
+    deferred: list[str] = []
+    monkeypatch.setattr(
+        me,
+        "_process_email_change_request",
+        lambda request, principal, runtime, address, origin: deferred.append(address),
+    )
+    rig.admin.calls.clear()
+    response = user.post(
+        f"{API}/me/security/email-change-requests",
+        headers=secure(user),
+        json={"new_email": "new@example.test"},
+    )
+    assert response.status_code == 202
+    assert rig.admin.calls == [] and deferred == ["new@example.test"]

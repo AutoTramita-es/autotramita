@@ -108,16 +108,33 @@ class ActionStart(BaseModel):
     redirect_url: str = Field(description="Send the browser here; it returns to the callback")
 
 
-def _send_email_change_verification(
-    send: object, email: str, origin: str, operation_id: UUID, token: str
+def _process_email_change_request(
+    request: Request, principal: Principal, rt: AuthRuntime, address: str, origin: str
 ) -> None:
-    """Mail is best effort here; the owner can reissue after an interruption."""
+    """All account-dependent work happens after the generic response is sent."""
     try:
+        if rt.admin is None:
+            return
+        found = rt.admin.find_user_by_email(normalize_email(address))
+        if found is not None and found.subject != principal.user.auth_subject:
+            return
+        with request_scope(request, principal, lock=True) as scope:
+            try:
+                with scope.db.begin_nested():
+                    operation, token = email_change.create_request(
+                        scope.db,
+                        user_id=scope.user.id,
+                        session_id=scope.session.id,
+                        new_email=address,
+                    )
+            except (IntegrityError, ValueError):
+                return
+        send = getattr(rt.notifier, "send_email_change_verification", None)
         if callable(send):
-            send(to=email, origin=origin, operation_id=operation_id, token=token)
+            send(to=address.strip(), origin=origin, operation_id=operation, token=token)
     except Exception:
-        # No recipient, link, token or provider exception is written to logs.
-        logging.getLogger(__name__).warning("email change verification delivery failed")
+        # No address, link, token, provider response or exception is recorded.
+        logging.getLogger(__name__).warning("email change request processing failed")
 
 
 def _at(milliseconds: int | None) -> datetime | None:
@@ -373,7 +390,7 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
     ) -> Accepted:
         rt = _d37_runtime(request)
         try:
-            address = normalize_email(body.new_email)
+            normalize_email(body.new_email)
         except ValueError:
             raise UnprocessableEntity("Invalid email address.") from None
         allowed = recovery.account_allowed(
@@ -383,35 +400,10 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
             limits.verification_resend_per_hour,
             str(principal.user.id),
         )
-        try:
-            assert rt.admin is not None  # noqa: S101
-            found = rt.admin.find_user_by_email(address) if allowed else None
-        except IdpAdminError:
-            raise auth_errors.IdentityProviderUnavailable() from None
         origin, _ = rt.site_for(request)
-        pending: tuple[UUID, str] | None = None
-        if allowed and (found is None or found.subject == principal.user.auth_subject):
-            with request_scope(request, principal, lock=True) as scope:
-                try:
-                    with scope.db.begin_nested():
-                        pending = email_change.create_request(
-                            scope.db,
-                            user_id=scope.user.id,
-                            session_id=scope.session.id,
-                            new_email=body.new_email,
-                        )
-                except (IntegrityError, ValueError):
-                    pending = None
-        if pending is not None:
-            operation_id, token = pending
-            send = getattr(rt.notifier, "send_email_change_verification", None)
+        if allowed:
             background.add_task(
-                _send_email_change_verification,
-                send,
-                body.new_email.strip(),
-                origin,
-                operation_id,
-                token,
+                _process_email_change_request, request, principal, rt, body.new_email, origin
             )
         response.headers["Cache-Control"] = "no-store"
         return Accepted()

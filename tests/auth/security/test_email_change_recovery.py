@@ -261,3 +261,103 @@ def test_cleanup_expires_pending_tokens_and_purges_resolved_records(env: RoleEnv
             ).scalar_one()
             == 0
         )
+
+
+@pytest.mark.parametrize("environment", ["test", "prod"])
+def test_periodic_worker_starts_fail_closed_in_production(
+    env: RoleEnv, redis_url: str, monkeypatch: pytest.MonkeyPatch, environment: str
+) -> None:
+    import time
+
+    from app.api.app import create_app_from_settings
+    from app.core.config import Settings
+    from fastapi.testclient import TestClient
+
+    for key, value in {
+        "AUTH_OIDC_ISSUER": "https://identity.example.test/realms/test",
+        "AUTH_ADMIN_CLIENT_SECRET": "test-admin-secret",
+        "AUTH_WEB_CLIENT_SECRET": "test-web-secret",
+        "AUTH_SECURITY_HMAC_KEY": "x" * 32,
+        "AUTH_WEB_ORIGIN": "https://app.example.test",
+        "AUTH_NOTIFY_MODE": "smtp",
+        "AUTH_SMTP_HOST": "127.0.0.1",
+        "AUTH_SMTP_FROM": "security@example.test",
+    }.items():
+        monkeypatch.setenv(key, value)
+    url = env.url("app")
+    settings = Settings.model_validate(
+        {
+            "ENVIRONMENT": environment,
+            "POSTGRES_HOST": url.host,
+            "POSTGRES_PORT": url.port,
+            "POSTGRES_DB": env.database,
+            "POSTGRES_USER": env.names.app,
+            "POSTGRES_PASSWORD": env.passwords["app"],
+            "APP_DB_WORKER_USER": env.names.worker,
+            "APP_DB_WORKER_PASSWORD": env.passwords["worker"],
+            "REDIS_URL": redis_url,
+        }
+    )
+    app = create_app_from_settings(settings)
+    with TestClient(app):
+        deadline = time.monotonic() + 5
+        while (
+            environment == "test"
+            and not app.state.auth.email_change_ready
+            and time.monotonic() < deadline
+        ):
+            time.sleep(0.05)
+        assert app.state.auth.email_change_ready is (environment == "test")
+
+
+def test_real_smtp_sink_recovers_after_outage(env: RoleEnv) -> None:
+    import socket
+    import threading
+
+    from app.auth.security.email_change_worker import claim_notification, deliver_notification
+    from app.auth.security.notify import SmtpNotifier
+    from tests.auth.security.test_security_units import settings
+    from tests.identity.kc import SmtpSink, _SmtpHandler, _ThreadedTcp
+
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    admin = FakeAdmin()
+    _, operation = prepare(env, admin)
+    assert process_claim(factory(env, "worker"), admin, *operation)
+    notifier = SmtpNotifier(
+        settings(
+            AUTH_NOTIFY_MODE="smtp",
+            AUTH_SMTP_HOST="127.0.0.1",
+            AUTH_SMTP_PORT=port,
+            AUTH_SMTP_FROM="security@example.test",
+        )
+    )
+    with session_scope(factory(env, "worker"), RequestContext()) as session:
+        claim = claim_notification(session)
+    assert claim is not None and not deliver_notification(factory(env, "worker"), notifier, *claim)
+    with env.admin_engine().connect() as db:
+        recipient = db.execute(
+            text("SELECT recipient FROM email_change_notifications WHERE id=:id"), {"id": claim[0]}
+        ).scalar_one()
+        db.execute(
+            text(
+                "UPDATE email_change_notifications SET next_attempt_at=now()+interval '1 day' WHERE id<>:id"
+            ),
+            {"id": claim[0]},
+        )
+    sink = SmtpSink()
+    server = _ThreadedTcp(("127.0.0.1", port), _SmtpHandler)
+    server.sink = sink  # type: ignore[attr-defined]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with session_scope(factory(env, "worker"), RequestContext()) as session:
+            retry = claim_notification(session, now=datetime.now(UTC) + timedelta(hours=2))
+        assert retry is not None and retry[0] == claim[0]
+        assert deliver_notification(factory(env, "worker"), notifier, *retry)
+        assert sink.for_recipient(recipient, wait=2)
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)

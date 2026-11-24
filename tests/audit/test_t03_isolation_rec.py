@@ -64,6 +64,10 @@ def test_sql_policies_reject_mixed_bootstrap_and_user_context(env: RoleEnv) -> N
         assert db.execute(text("SELECT id FROM users")).scalars().all() == []
     with session_scope(factory, RequestContext(auth_subject=subject_b)) as db:
         assert db.execute(text("SELECT id FROM users")).scalars().all() == [user_b]
+        db.execute(
+            text("SELECT set_config('app.session_hash', :digest, true)"), {"digest": "ab" * 32}
+        )
+        assert db.execute(text("SELECT id FROM users")).scalars().all() == []
 
 
 def test_context_functions_are_not_executable_by_public(env: RoleEnv) -> None:
@@ -81,7 +85,9 @@ def test_context_functions_are_not_executable_by_public(env: RoleEnv) -> None:
     assert leaked == []
 
 
-@pytest.mark.parametrize("value", ["192.0.2.7", "2001:db8::1", "::1", "mail@example.test"])
+@pytest.mark.parametrize(
+    "value", ["192.0.2.7", "2001:db8::1", "::1", "mail@example.test", "A" * 43]
+)
 def test_audit_rejects_sensitive_data_in_unstructured_fields(env: RoleEnv, value: str) -> None:
     from app.audit.record import AuditValidationError, validate
 

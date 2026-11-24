@@ -70,6 +70,32 @@ def _verify_runtime_roles() -> None:
     }
     if actual != set(names) or any(not expected[role].endswith("_" + role) for role in expected):
         raise RuntimeError("configured runtime roles do not match database roles")
+    # Historical migrations granted roles by suffix. Reject any stale direct grant to an
+    # unconfigured role, even if that role currently lacks CONNECT on this database.
+    grants = (
+        op.get_bind()
+        .exec_driver_sql("""
+        SELECT DISTINCT r.rolname FROM pg_class c
+        JOIN pg_namespace n ON n.oid=c.relnamespace
+        CROSS JOIN LATERAL aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a
+        JOIN pg_roles r ON r.oid=a.grantee
+        WHERE n.nspname='public'
+          AND c.relowner=(SELECT oid FROM pg_roles WHERE rolname=current_user)
+          AND r.rolname <> current_user
+        UNION
+        SELECT DISTINCT r.rolname FROM pg_proc p
+        JOIN pg_namespace n ON n.oid=p.pronamespace
+        CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+        JOIN pg_roles r ON r.oid=a.grantee
+        WHERE n.nspname='public'
+          AND p.proowner=(SELECT oid FROM pg_roles WHERE rolname=current_user)
+          AND r.rolname <> current_user
+    """)
+        .scalars()
+        .all()
+    )
+    if set(grants) - set(names):
+        raise RuntimeError("unconfigured role has historical database privileges")
 
 
 def upgrade() -> None:
@@ -131,7 +157,7 @@ def upgrade() -> None:
               !~* '([0-9]{1,3}[.]){3}[0-9]{1,3}|([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}|'
                   'password|passwd|secret|authorization|cookie|code_verifier|id_token|'
                   'refresh_token|access_token|client_secret|bearer |'
-                  '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}'
+                  '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}|[A-Za-z0-9_-]{43,}'
         )
     """)
 

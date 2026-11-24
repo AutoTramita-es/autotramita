@@ -315,6 +315,7 @@ def test_d37_admin_reads_and_changes_only_the_target_subject(rig: Rig, admin: Ad
     user = admin.create_user()
     other = admin.create_user()
     client = settings_admin(rig)
+    original_profile = admin.master("GET", f"/users/{user.id}").json()
     original = client.get_email_state(user.id)
     assert original.subject == user.id and original.email == user.email and original.email_verified
     with pytest.raises(IdpConflict):
@@ -329,6 +330,10 @@ def test_d37_admin_reads_and_changes_only_the_target_subject(rig: Rig, admin: Ad
         True,
     )
     assert client.get_email_state(other.id).email == other.email
+    after_profile = admin.master("GET", f"/users/{user.id}").json()
+    assert after_profile.get("firstName") == original_profile.get("firstName")
+    assert after_profile.get("lastName") == original_profile.get("lastName")
+    assert after_profile.get("enabled") == original_profile.get("enabled")
 
 
 def test_d37_confirmation_and_recovery_against_keycloak_and_postgres(

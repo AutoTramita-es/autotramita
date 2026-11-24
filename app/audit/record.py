@@ -32,6 +32,9 @@ _FORBIDDEN = re.compile(
 _RAW_IP = re.compile(r"(?:[0-9]{1,3}\.){3}[0-9]{1,3}|(?:[0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}", re.I)
 
 
+_TOKEN_SHAPE = re.compile(r"(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{43,}(?![A-Za-z0-9_-])")
+
+
 _REASON = re.compile(r"^[A-Z][A-Z0-9_]{0,59}$")
 
 
@@ -102,10 +105,13 @@ def validate(event: AuditEvent) -> dict[str, Any]:
             or _FORBIDDEN.search(str(value))
             or _RAW_IP.search(key)
             or _RAW_IP.search(str(value))
+            or _TOKEN_SHAPE.search(str(value))
         ):
             raise AuditValidationError("a detail looks like a secret or personal data")
     for value in (event.target_type, event.ua_family, event.source_event_id):
-        if value is not None and (_FORBIDDEN.search(value) or _RAW_IP.search(value)):
+        if value is not None and (
+            _FORBIDDEN.search(value) or _RAW_IP.search(value) or _TOKEN_SHAPE.search(value)
+        ):
             raise AuditValidationError("audit metadata looks like personal data or a secret")
     if event.reason_code is not None and not _REASON.fullmatch(event.reason_code):
         raise AuditValidationError("reason_code must be UPPER_SNAKE_CASE")
