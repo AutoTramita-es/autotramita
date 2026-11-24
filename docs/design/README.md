@@ -56,7 +56,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - [UI-COMPONENTS.md](UI-COMPONENTS.md) — 90 shared component contracts and 44 acceptance criteria; G1 approved 2026-11-24 (specification only).
 - [UI-COMPONENTS-G1-REVIEW.md](UI-COMPONENTS-G1-REVIEW.md) — G1 review: 7 findings, 4 owner decisions.
 - [IMAGE-ASSETS.md](IMAGE-ASSETS.md) — 85 indexed SVGs, 28 raster briefs, export/rights/QA requirements; G3 documentation drafted, raster recovery pending.
-- [RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md) — responsive web and Flutter, capture, security, lifecycle and 80 acceptance criteria; G2 drafted.
+- [RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md) — responsive web and Flutter, capture, security, lifecycle and 80 acceptance criteria; G2 approved 2026-11-24 (specification only).
+- [RESPONSIVE-DESIGN-G2-REVIEW.md](RESPONSIVE-DESIGN-G2-REVIEW.md) — G2 review: 6 findings, 5 owner decisions.
 - [DESIGN-ROADMAP.md](DESIGN-ROADMAP.md) — 20 modules, 9 ADRs, 23 input designs, MVP, dependency packets and 40 acceptance criteria.
 
 - [ICON-SYSTEM.md](ICON-SYSTEM.md) — 50 core Lucide icons and accessibility rules.

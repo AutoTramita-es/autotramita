@@ -144,3 +144,6 @@ Owner approved the design-system token/theme specification ([DESIGN-SYSTEM.md](D
 
 ## 17. G1 approval — 2026-11-24
 Owner approved the component specification ([UI-COMPONENTS.md](UI-COMPONENTS.md), review in [UI-COMPONENTS-G1-REVIEW.md](UI-COMPONENTS-G1-REVIEW.md)): 90 contracts (8 added: skip link, status announcer, copy value, address, phone, OTP, popover, session timeout) and 44 acceptance criteria. Specification only; runtime accessibility evidence and AT-02 MFA/session decisions remain open. Next: G2 review (RESPONSIVE-DESIGN.md). No ADR changes or implementation.
+
+## 18. G2 approval — 2026-11-24
+Owner approved the responsive and mobile specification ([RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md), review in [RESPONSIVE-DESIGN-G2-REVIEW.md](RESPONSIVE-DESIGN-G2-REVIEW.md)). Fixes: bottom navigation label Trámites everywhere, content-width thresholds override shell rows, topbar 64/56. Specification only; browser/OS matrix, performance budgets, session and cleanup policies, and AT-01/02/09/14/16/20 gates remain open; no runtime evidence. G0–G3 documentation now reviewed; next G5 foundation technical review. No ADR changes or implementation.
