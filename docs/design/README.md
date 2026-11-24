@@ -53,7 +53,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - [CENTRAL-ADMIN-PORTAL.md](CENTRAL-ADMIN-PORTAL.md) — central administration and backoffice across all 20 modules.
 - Admin wireframes: [dashboard](assets/wireframes/admin-dashboard.svg), [tenants](assets/wireframes/admin-tenants.svg), [operations](assets/wireframes/admin-operations.svg), [staff](assets/wireframes/admin-staff.svg), [partners](assets/wireframes/admin-partners.svg), [catalog](assets/wireframes/admin-catalog.svg), [credit](assets/wireframes/admin-credit.svg), [finance](assets/wireframes/admin-finance.svg), [quality](assets/wireframes/admin-quality.svg), [reports](assets/wireframes/admin-reports.svg), [integrations](assets/wireframes/admin-integrations.svg), [audit](assets/wireframes/admin-audit.svg).
 - SaaS design phases 09.1–09.11: specification coverage complete for review; domain approvals and implementation remain pending.
-- [UI-COMPONENTS.md](UI-COMPONENTS.md) — 82 shared component contracts and 40 acceptance criteria; G1 drafted, approval pending.
+- [UI-COMPONENTS.md](UI-COMPONENTS.md) — 90 shared component contracts and 44 acceptance criteria; G1 approved 2026-11-24 (specification only).
+- [UI-COMPONENTS-G1-REVIEW.md](UI-COMPONENTS-G1-REVIEW.md) — G1 review: 7 findings, 4 owner decisions.
 - [IMAGE-ASSETS.md](IMAGE-ASSETS.md) — 85 indexed SVGs, 28 raster briefs, export/rights/QA requirements; G3 documentation drafted, raster recovery pending.
 - [RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md) — responsive web and Flutter, capture, security, lifecycle and 80 acceptance criteria; G2 drafted.
 - [DESIGN-ROADMAP.md](DESIGN-ROADMAP.md) — 20 modules, 9 ADRs, 23 input designs, MVP, dependency packets and 40 acceptance criteria.

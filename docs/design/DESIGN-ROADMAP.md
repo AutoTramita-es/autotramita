@@ -66,7 +66,7 @@ Dependencies below refer to minimum approved slices, not full completion of enti
 | [BACKGROUND-PATTERNS.md](BACKGROUND-PATTERNS.md) | decorative assets |
 | [HERO-BANNERS.md](HERO-BANNERS.md) | raster recovery |
 | [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) | semantic tokens |
-| [UI-COMPONENTS.md](UI-COMPONENTS.md) | 82 component contracts |
+| [UI-COMPONENTS.md](UI-COMPONENTS.md) | 90 component contracts (82 originally; 8 added in G1 review) |
 | [RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md) | web/native parity |
 | [IMAGE-ASSETS.md](IMAGE-ASSETS.md) | manifest/rights/QA |
 All detailed designs review drafts unless explicitly inherited approved decisions. DS supersedes schematic geometry only after owner approval; resolve B2B mobile spacing40 vs DS48–64, icon touch preference44 vs project48, customer header64 vs56, professional sidebar240 vs256/rail. No silent business changes.

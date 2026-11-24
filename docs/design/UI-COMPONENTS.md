@@ -1,11 +1,12 @@
 # AutoTramita.es — UI Component Library v1.0
 2026-11-24 | AT-18 G1 | Review draft; no implementation authorization.
-Sources: [Design System](DESIGN-SYSTEM.md), [Master Design Blueprint](MASTER-DESIGN-BLUEPRINT.md), [design index](README.md), all portal and public UX specifications linked therein. Accepted ADRs 001–009 and confirmed domain decisions prevail. G0 approval remains pending. 82 component contracts, not implemented widgets.
+Sources: [Design System](DESIGN-SYSTEM.md), [Master Design Blueprint](MASTER-DESIGN-BLUEPRINT.md), [design index](README.md), all portal and public UX specifications linked therein. Accepted ADRs 001–009 and confirmed domain decisions prevail. G0 approved 2026-11-24 (tokens/themes). 90 component contracts after G1 review, not implemented widgets.
 
 ## 1. Architecture
 Primitive -> composite -> business presentation. Shared semantic tokens and behavioral contracts; separate Next.js/Flutter implementations. Primitive components never fetch business data or infer permission; composite accepts explicit view state; business adapters consume generated API clients (ADR-004) and server-authorized capabilities. No new API schemas, canonical status enums, provider selection or domain approval implied. Proposed names are logical identifiers, not package paths. No portal forks unless documented accessibility/platform need. Composition slots label/icon/help/action; controlled value and change intent; stable IDs; async action lifecycle; locale/theme/density; no arbitrary CSS overrides bypassing tokens. Domain adapters own validation and authorization; backend authoritative.
 
 ## 2. Universal contract (applies to every applicable catalog row)
+Hit areas: a visually smaller control (Chip remove, Checkbox, Radio, Switch, Tab) keeps a hit area of at least 44 px desktop / 48 touch without overlapping neighbors. Time: deadlines and audit show explicit timezone, default Europe/Madrid; DatePicker is date-only unless a catalog rule requires time entry; legal deadline calculation stays server-side (AT-08).
 Geometry: DS radius8 controls,16 cards/dialogs,12 table, full chips; primary min48, compact desktop36 only pointer-dense, touch48, nav44 desktop/48 touch; 16/24 body,14/20 table,12/16 caption. Grow for text scaling. Use semantic surface/text/action/status/border tokens, 2px focus plus offset, no decorative border as sole control boundary. Light/Dark/System, reduced motion, es-ES, EUR, tabular amounts. All actionable components keyboard/touch operable, visible focus, accessible name/role/value, logical order, screen reader announcements, no color-only meaning; native semantics preferred. Disabled is not permission; hide unauthorized actions, explain permitted unavailable ones. Tooltips never sole label or error. Read-only values selectable when authorized; masked data never revealed by tooltip or export without separate grant.
 State matrix:
 | State | Presentation | Behavior |
@@ -24,7 +25,7 @@ State matrix:
 | Partial success | per-item outcome | retry only eligible failed items; no duplicate effects |
 Validation: client format hints only; server authoritative, localized safe error mapping, no raw stack traces or secrets. Required conditional fields derive from versioned catalog. Never silently trim identifiers beyond approved normalization. Preserve draft only in authorized scope; no private browser storage by default. Idempotency for consequential writes, version preconditions, reconcile timeout; no fabricated API error codes. Confirmation shows exact target, consequence and amount/version where relevant; cancel safe, no preselected destructive choice. Focus restoration and live status after updates. No personal data in demos.
 
-## 3. Component catalog (82 contracts)
+## 3. Component catalog (90 contracts)
 Each row inherits section 2, including loading/empty/error/accessibility where applicable. Noninteractive primitives do not invent interactive states. Domain-specific states are display examples, not canonical enums.
 ### 1. Actions and primitives
 | ID / component | Anatomy | Variants / geometry | Interaction, validation and domain guard |
@@ -36,7 +37,10 @@ Each row inherits section 2, including loading/empty/error/accessibility where a
 | C1.05 Chip | label, optional remove button | filter/selection | remove has own accessible name; keyboard reachable |
 | C1.06 Avatar | initials or authorized image | 24/32/40/48 | fallback initials; no sensitive image in public cache |
 | C1.07 Divider | line or section label | horizontal/vertical | decorative unless semantic separator |
-| C1.08 Tooltip | short supplemental text | hover/focus | dismiss Escape; persistent essential instructions elsewhere |
+| C1.08 Tooltip | short supplemental text | hover/focus | dismiss Escape without moving focus; pointer can enter it; stays until blur or dismiss (WCAG 1.4.13); persistent essential instructions elsewhere |
+| C1.09 SkipLink | visible-on-focus link | first focusable element | targets main landmark; visible focus; one per shell |
+| C1.10 StatusAnnouncer | polite/assertive live region | one per shell | announces authoritative outcomes only; no sensitive text; no duplicate announcements |
+| C1.11 CopyValue | value, copy button, confirmation | VIN/reference/code | accessible name states what is copied; confirmation announced; masked values not copyable without grant |
 
 ### 2. Forms and selection
 | ID / component | Anatomy | Variants / geometry | Interaction, validation and domain guard |
@@ -44,7 +48,7 @@ Each row inherits section 2, including loading/empty/error/accessibility where a
 | C2.01 Field | label, required marker, control, help, error | stacked; 48 control | persistent label; associate help/error; required not color only |
 | C2.02 TextInput | field, text, optional clear | text/email/tel/search/password | preserve input on error; appropriate autocomplete; password reveal accessible |
 | C2.03 TextArea | field, multiline, optional count | min 3 lines; grows | count only if real limit; no silent truncation |
-| C2.04 NumberMoneyInput | field, unit/currency, value | integer/decimal/EUR/percentage | es-ES parsing; exact decimal backend; reject ambiguous input; no float money |
+| C2.04 NumberMoneyInput | field, unit/currency, value | integer/decimal/EUR/percentage | es-ES parsing; exact decimal backend; reject ambiguous input; no float money; display always groups thousands for currency (es-ES omits grouping for 4 digits by default), never groups identifiers |
 | C2.05 IdentifierInput | field, identifier, format help | VIN/NIF/NIE/plate/reference | preserve original, normalize only approved rules; legacy exception review; format not identity proof |
 | C2.06 Select | label, trigger, options | single/multi | native when suitable; keyboard selection; no unauthorized options |
 | C2.07 Combobox | input, results, loading, empty | remote search/single/multi | debounce; cancel stale query; scoped results; no enumeration |
@@ -55,6 +59,9 @@ Each row inherits section 2, including loading/empty/error/accessibility where a
 | C2.12 FilePicker | label, constraints, select/drop | single/multiple | keyboard alternative; validate client hints and server; camera fallback |
 | C2.13 FormSummary | heading, error links | inline/top | focus on failed submit; preserve safe values; server errors mapped or general |
 | C2.14 Stepper | steps, current, completed, controls | horizontal/vertical | no fake completion; back preserves authorized draft; review before commit |
+| C2.15 AddressInput | calle, número, piso/puerta, código postal, municipio, provincia | Spanish structure; foreign address variant | postal code 5 digits with province consistency hint only; server validation authoritative; no silent normalization; autocomplete attributes |
+| C2.16 PhoneInput | country code, number | +34 default; international allowed | store E.164 and original; format hint only; not proof of ownership; verification is separate |
+| C2.17 OtpInput | code field(s), resend, recovery | MFA/email verification | single field semantics, paste and password manager supported; no auto-advance trap; rate-limit message generic; accessible alternative to code entry (AT-02 MFA decisions pending) |
 
 ### 3. Navigation and overlays
 | ID / component | Anatomy | Variants / geometry | Interaction, validation and domain guard |
@@ -68,15 +75,17 @@ Each row inherits section 2, including loading/empty/error/accessibility where a
 | C3.07 Dialog | title, description, body, actions | confirmation/form; 16 radius | modal focus containment, Escape when safe, restore; explicit destructive label |
 | C3.08 Drawer | title, content, close | side/bottom/fullscreen | modal semantics when blocking; safe area; no hidden focus |
 | C3.09 Accordion | heading button, panel | single/multiple | expanded state; keyboard; no required content hidden without cue |
-| C3.10 Toast | icon, message, optional action | info/success/error | polite announcement; critical errors persistent inline; no sensitive preview |
+| C3.10 Toast | icon, message, optional action | info/success/error | polite announcement; non-critical only, at least 8 s plus time by length, pause on hover and focus (WCAG 2.2.1); always reachable in NotificationList; errors never auto-dismiss; critical errors persistent inline; no sensitive preview |
 | C3.11 Banner | icon, heading, explanation, action | warning/error/info | persistent for blocking issues; dismiss only noncritical |
 | C3.12 NotificationList | count, items, read state, link | popover/page | scoped count; reauthorize deep link; read not task completion |
+| C3.13 Popover | trigger, anchored content | non-modal; mobile sheet | Escape restores focus; not for essential content; no hover-only open; scoped layer above owning modal |
+| C3.14 SessionTimeoutDialog | warning, remaining time, extend/sign out | idle/expiry/reauth | warns before expiry, extend by keyboard, preserve safe draft in authorized scope, clear private content on expiry; session policy pending AT-02 |
 
 ### 4. Data and feedback
 | ID / component | Anatomy | Variants / geometry | Interaction, validation and domain guard |
 |---|---|---|---|
 | C4.01 Card | heading, content, actions | standard/interactive; radius16 | only actionable regions focusable; avoid nested buttons |
-| C4.02 DataTable | caption, headers, rows, sort, filters, pagination | 48 rows/40 compact; radius12 | native table semantics; keyboard sort; scoped server query; mobile labeled scroll/cards |
+| C4.02 DataTable | caption, headers, rows, sort, filters, pagination | 48 rows/40 compact; radius12 | native table semantics; keyboard sort; scoped server query; mobile labeled scroll/cards; currency columns group thousands consistently |
 | C4.03 FilterBar | search, filters, chips, reset | inline/drawer | AND across groups OR within; applied vs draft; reset page; no sensitive persisted query |
 | C4.04 BulkSelection | count, selected scope, actions | page/explicit server set | clear on context/filter change; server recheck each record; partial outcome |
 | C4.05 KpiCard | label, value, period, trend, link | snapshot/period | unknown distinct zero; authorized drilldown parity |
@@ -211,7 +220,11 @@ Libraries and exact versions pending. No dependencies installed. Flutter respect
 - UI-38: Audit redaction and export permissions.
 - UI-39: Portal composition and platform parity.
 - UI-40: No implementation/deployment authorization.
+- UI-41: Spanish address and phone structure preserved, server-validated.
+- UI-42: OTP and session timeout accessible, no data retained after expiry.
+- UI-43: Tooltip, popover and toast timing and dismissal rules.
+- UI-44: Consistent currency grouping and hit-area minimums.
 Test every applicable component in both themes, keyboard/touch, default/focus/disabled/loading/empty/error/stale/denied states, Spanish long labels, 320/375/768/1024/1280/1440, screen readers, reduced motion, forced colors and native scaling. Automated axe plus manual testing; cross-tenant negative tests and API contract tests per module. Fixtures fictional, no production data. Runtime evidence pending. WCAG 2.2 AA target not certification.
 
 ## 8. Delivery governance
-Future component catalog/story fixtures per platform, visual regression snapshots and shared token version; no executable catalog committed in this phase. Proposed order primitives/forms -> navigation/feedback -> data -> cases/docs -> finance/professional/admin. Each implementation packet requires approved scope, API and permissions, tests and explicit authorization ADR-008. G1 drafted, owner approval pending; G0 remains pending. R01 component document gap addressed; R19 runtime evidence and domain gates remain open. Next G2 RESPONSIVE-DESIGN.md.
+Future component catalog/story fixtures per platform, visual regression snapshots and shared token version; no executable catalog committed in this phase. Proposed order primitives/forms -> navigation/feedback -> data -> cases/docs -> finance/professional/admin. Each implementation packet requires approved scope, API and permissions, tests and explicit authorization ADR-008. G1 approved by the product owner on 2026-11-24 after [G1 review](UI-COMPONENTS-G1-REVIEW.md) (E1–E4 applied: 8 added contracts, money grouping, tooltip/toast/hit-area rules, Europe/Madrid display); approval covers the component specification only, not implementation, runtime accessibility evidence or the open AT-02 MFA/session decisions. R01 component document gap addressed; R19 runtime evidence and domain gates remain open. Next G2 RESPONSIVE-DESIGN.md.

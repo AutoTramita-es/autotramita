@@ -141,3 +141,6 @@ Inventory covers indexed files, not proof of no other unindexed files. SVG sourc
 
 ## 16. G0 approval — 2026-11-24
 Owner approved the design-system token/theme specification ([DESIGN-SYSTEM.md](DESIGN-SYSTEM.md), review in [DESIGN-SYSTEM-G0-REVIEW.md](DESIGN-SYSTEM-G0-REVIEW.md)) with two contrast fixes. G0 approved for tokens/themes only; G1–G3 approvals, rendered accessibility evidence and release of assets remain open. Next: G1 review (UI-COMPONENTS.md). No ADR changes or implementation.
+
+## 17. G1 approval — 2026-11-24
+Owner approved the component specification ([UI-COMPONENTS.md](UI-COMPONENTS.md), review in [UI-COMPONENTS-G1-REVIEW.md](UI-COMPONENTS-G1-REVIEW.md)): 90 contracts (8 added: skip link, status announcer, copy value, address, phone, OTP, popover, session timeout) and 44 acceptance criteria. Specification only; runtime accessibility evidence and AT-02 MFA/session decisions remain open. Next: G2 review (RESPONSIVE-DESIGN.md). No ADR changes or implementation.
