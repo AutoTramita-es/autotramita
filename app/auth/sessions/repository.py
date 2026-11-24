@@ -39,7 +39,8 @@ def by_kc_session(
     return _one(
         db,
         f"SELECT {COLUMNS} FROM user_sessions "  # noqa: S608
-        f"WHERE user_id = :u AND kc_session_id = :k AND client_type = :c{suffix}",
+        "WHERE user_id = :u AND kc_session_id = :k AND client_type = :c "
+        f"ORDER BY created_at DESC, id LIMIT 1{suffix}",
         {"u": user_id, "k": kc_session_id, "c": client_type},
     )
 

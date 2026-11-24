@@ -87,6 +87,16 @@ def create_session(
     status = repository.lock_user_for_new_session(db, user_id)
     if status not in _MAY_SIGN_IN:
         raise AccountDisabled()
+    # A new sign-in inside a still-live Keycloak session supersedes the previous application
+    # session for that Keycloak session and client type.
+    repository.revoke_where(
+        db,
+        "user_id = :u AND kc_session_id = :k AND client_type = :c",
+        {"u": user_id, "k": kc_session_id, "c": client_type.value},
+        reason=RevokeReason.LOGOUT.value,
+        now=moment,
+        revoked_by=None,
+    )
     live = repository.count_live(db, user_id, moment)
     evicted = 0
     if live >= policy.max_sessions:

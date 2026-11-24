@@ -6,7 +6,13 @@ from __future__ import annotations
 from enum import StrEnum
 from uuid import UUID
 
-from app.core.errors import Conflict, Forbidden, ServiceUnavailable, Unauthenticated
+from app.core.errors import (
+    BadRequest,
+    Conflict,
+    Forbidden,
+    ServiceUnavailable,
+    Unauthenticated,
+)
 
 
 class TokenRejection(StrEnum):
@@ -23,6 +29,9 @@ class TokenRejection(StrEnum):
     EXPIRED = "expired"
     NOT_YET_VALID = "not_yet_valid"
     LIFETIME = "lifetime"
+    NONCE = "nonce"
+    EVENTS = "events"
+    REPLAY = "replay"
 
 
 class TokenInvalid(Unauthenticated):
@@ -97,3 +106,51 @@ class SessionSecurityViolation(SessionRevoked):
         self.session_id = session_id
         self.user_id = user_id
         self.signal = signal
+
+
+class AuthCallbackRejected(BadRequest):
+    """400 AUTH_CALLBACK_REJECTED: the sign-in return was refused. One generic answer for every
+    cause (state, binding, code, token); the cause goes to the audit log only."""
+
+    code = "AUTH_CALLBACK_REJECTED"
+    title = "Sign-in could not be completed"
+
+
+class CsrfInvalid(Forbidden):
+    code = "CSRF_INVALID"
+    title = "Request could not be verified"
+
+
+class AmbiguousCredentials(BadRequest):
+    code = "AMBIGUOUS_CREDENTIALS"
+    title = "Send either a session cookie or a bearer token, not both"
+
+
+class AuthRequired(Unauthenticated):
+    code = "AUTH_REQUIRED"
+    title = "Authentication required"
+
+
+class AuthNotConfigured(ServiceUnavailable):
+    code = "AUTH_NOT_CONFIGURED"
+    title = "Authentication is not configured"
+
+
+class LogoutTokenInvalid(BadRequest):
+    code = "LOGOUT_TOKEN_INVALID"
+    title = "Invalid logout token"
+
+
+class StepUpRequired(Unauthenticated):
+    """401 STEP_UP_REQUIRED with the RFC 9470 challenge (D23)."""
+
+    code = "STEP_UP_REQUIRED"
+    title = "Stronger or fresher authentication required"
+
+    def __init__(self, *, acr_values: str, max_age: int) -> None:
+        challenge = (
+            'Bearer error="insufficient_user_authentication", '
+            f'error_description="A different authentication level is required", '
+            f'acr_values="{acr_values}", max_age="{max_age}"'
+        )
+        super().__init__(headers={"WWW-Authenticate": challenge})

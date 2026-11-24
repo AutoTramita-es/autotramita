@@ -29,3 +29,27 @@ class RequestIdMiddleware:
             await self.app(scope, receive, send_with_id)
         finally:
             set_request_id(None)
+
+
+class NoStoreAuthMiddleware:
+    """``Cache-Control: no-store`` on every answer of the sign-in routes, errors included, so
+    no session state, redirect or error body is kept by a browser or intermediary cache."""
+
+    PREFIX = "/api/v1/auth/"
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not str(scope.get("path", "")).startswith(self.PREFIX):
+            await self.app(scope, receive, send)
+            return
+
+        async def send_no_store(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers["Cache-Control"] = "no-store"
+                headers["Pragma"] = "no-cache"
+            await send(message)
+
+        await self.app(scope, receive, send_no_store)

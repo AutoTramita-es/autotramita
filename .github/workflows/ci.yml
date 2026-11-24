@@ -142,8 +142,27 @@ jobs:
     name: Keycloak 26.4.7 integration (disposable container)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    services:
+      postgres:
+        # PostgreSQL 16, pinned by digest (the web sign-in tests need a real database).
+        image: postgres:16@sha256:07abc3f43c9395b0bdbbab36bc25ddb0e8d83cd4fcafb5fb7d6abe14ff156dd8
+        env:
+          POSTGRES_PASSWORD: ci-throwaway-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        # Redis 7, pinned by digest.
+        image: redis:7@sha256:6b645a37f49b0546582468706b32e71a8b7fbb5ba4583d0f9e27a8004716b738
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       CI: "true"
+      TEST_PG_ADMIN_URL: postgresql://postgres:ci-throwaway-password@127.0.0.1:5432/postgres
+      TEST_REDIS_URL: redis://127.0.0.1:6379/14
       # Throwaway values that exist only inside this job; the realm file holds no secret.
       TEST_KEYCLOAK_URL: http://127.0.0.1:18081
       TEST_KEYCLOAK_ADMIN_USER: ci-admin

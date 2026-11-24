@@ -53,7 +53,10 @@ def test_every_operation_is_described_and_has_a_success_response(spec: dict[str,
     for path, operations in spec["paths"].items():
         for method, operation in operations.items():
             assert operation.get("summary"), (path, method)
-            assert any(code.startswith("2") for code in operation["responses"]), (path, method)
+            assert any(code[0] in "23" for code in operation["responses"]), (
+                path,
+                method,
+            )  # 2xx, or a redirect
 
 
 def test_errors_are_problem_json_and_no_default_validation_schema(spec: dict[str, Any]) -> None:
@@ -61,7 +64,7 @@ def test_errors_are_problem_json_and_no_default_validation_schema(spec: dict[str
     for path, operations in spec["paths"].items():
         for method, operation in operations.items():
             for status, response in operation["responses"].items():
-                if status.startswith("2"):
+                if status[0] in "23":  # success and redirects carry no problem body
                     continue
                 assert list(response["content"]) == [PROBLEM], (path, method, status)
 
@@ -130,16 +133,30 @@ def test_schema_does_not_depend_on_runtime_configuration(spec: dict[str, Any]) -
     assert "components" in spec and "securitySchemes" not in spec["components"]  # no auth in F1
 
 
-def test_only_the_health_route_is_exposed_and_nothing_else_is_documented() -> None:
+F2_AUTH_PATHS = [
+    "/api/v1/auth/callback",
+    "/api/v1/auth/login",
+    "/api/v1/auth/logout",
+    "/api/v1/auth/oidc/backchannel-logout",
+    "/api/v1/auth/session",
+    "/api/v1/auth/step-up",
+]
+
+
+def test_only_the_documented_routes_are_exposed_and_nothing_else() -> None:
     app = create_app()
-    assert [p for p in json.loads(render())["paths"]] == ["/api/v1/health"]
+    paths = sorted(json.loads(render())["paths"])
+    assert paths == sorted([*F2_AUTH_PATHS, "/api/v1/health"])  # F1 health + F2-T06 web sign-in
     plain = [getattr(route, "path", None) for route in app.routes]
     assert {p for p in plain if p} <= {"/openapi.json"}  # no hidden docs or test routes
 
 
 def test_common_response_models(spec: dict[str, Any]) -> None:
     schemas = spec["components"]["schemas"]
-    assert set(schemas) == {"Health", "Problem"}
+    assert set(schemas) == {
+        "Health", "Problem", "LogoutResult", "SessionInfo", "StepUpPurpose", "StepUpRequest",
+        "StepUpResult", "UserSummary", "WorkspaceInfo",
+    }  # fmt: skip
     assert set(schemas["Problem"]["required"]) == {"type", "title", "status", "code"}
     assert set(schemas["Problem"]["properties"]) == {
         "type",

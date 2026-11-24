@@ -7,6 +7,7 @@ import base64
 import hashlib
 import hmac
 import json
+import uuid
 from collections.abc import Mapping
 from typing import Any
 
@@ -99,6 +100,53 @@ class FakeIdp:
         claims = self.claims(now, **overrides)
         key = self.rsa[kid] if algorithm == "RS256" else self.ec[kid]
         return jwt.encode(claims, key, algorithm=algorithm, headers={"kid": kid, **(headers or {})})
+
+    def sign(
+        self, claims: Mapping[str, Any], *, kid: str = "rsa-1", algorithm: str = "RS256"
+    ) -> str:
+        """Sign arbitrary claims (ID and logout tokens in the web sign-in tests)."""
+        key = self.rsa[kid] if algorithm == "RS256" else self.ec[kid]
+        return jwt.encode(dict(claims), key, algorithm=algorithm, headers={"kid": kid})
+
+    @staticmethod
+    def id_claims(
+        nonce: str, *, client_id: str = "at-web", now: float = NOW, **overrides: Any
+    ) -> dict[str, Any]:
+        base: dict[str, Any] = {
+            "iss": ISSUER,
+            "sub": "7b2f0c1e-6f9e-4f0e-9a52-0d4b6b2f8a11",
+            "sid": "5d1c5b7e-0f0c-4f5a-8f0a-9b0c1d2e3f40",
+            "aud": client_id,
+            "azp": client_id,
+            "typ": "ID",
+            "nonce": nonce,
+            "iat": int(now) - 5,
+            "exp": int(now) + 295,
+            "auth_time": int(now) - 5,
+            "acr": "loa1",
+            "email": "person@example.test",
+            "email_verified": True,
+        }
+        base.update(overrides)
+        return {k: v for k, v in base.items() if v is not _DROP}
+
+    @staticmethod
+    def logout_claims(
+        *, client_id: str = "at-web", now: float = NOW, **overrides: Any
+    ) -> dict[str, Any]:
+        base: dict[str, Any] = {
+            "iss": ISSUER,
+            "aud": client_id,
+            "iat": int(now) - 2,
+            "exp": int(now) + 120,
+            "jti": uuid.uuid4().hex,
+            "sub": "7b2f0c1e-6f9e-4f0e-9a52-0d4b6b2f8a11",
+            "sid": "5d1c5b7e-0f0c-4f5a-8f0a-9b0c1d2e3f40",
+            "typ": "Logout",
+            "events": {"http://schemas.openid.net/event/backchannel-logout": {}},
+        }
+        base.update(overrides)
+        return {k: v for k, v in base.items() if v is not _DROP}
 
     def unsigned(self, **overrides: Any) -> str:
         """``alg: none`` token with the right claims (the classic downgrade attack)."""

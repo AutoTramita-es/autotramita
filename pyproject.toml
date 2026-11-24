@@ -43,6 +43,8 @@ select = ["E", "F", "I", "UP", "B", "S", "SIM", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S608"]  # asserts and fake test credentials
+# Long scenario tables and banners in the end-to-end web tests read better unwrapped.
+"tests/auth/web/test_web_flow.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"
