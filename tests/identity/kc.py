@@ -191,12 +191,32 @@ class Browser:
 
     def __init__(self, env: Env) -> None:
         self.env = env
-        self.http = httpx.Client(timeout=20, follow_redirects=False)
+        # Keycloak marks its cookies Secure even on plain-http loopback, which a standard
+        # cookie jar will not send back; this tiny jar keeps them for the single test host.
+        self.cookies: dict[str, str] = {}
+        self.http = httpx.Client(
+            timeout=20,
+            follow_redirects=False,
+            event_hooks={"request": [self._send_cookies], "response": [self._store_cookies]},
+        )
         self._last = ""
         self.verifier: str | None = None
 
     def close(self) -> None:
         self.http.close()
+
+    def _send_cookies(self, request: httpx.Request) -> None:
+        if self.cookies:
+            request.headers["Cookie"] = "; ".join(f"{k}={v}" for k, v in self.cookies.items())
+
+    def _store_cookies(self, response: httpx.Response) -> None:
+        for header in response.headers.get_list("set-cookie"):
+            name, _, rest = header.partition("=")
+            value = rest.split(";", 1)[0]
+            if value in ("", "deleted") or "Max-Age=0" in header:
+                self.cookies.pop(name.strip(), None)
+            else:
+                self.cookies[name.strip()] = value
 
     def _settle(self, response: httpx.Response, stop_at: str) -> Page:
         for _ in range(15):
@@ -244,7 +264,8 @@ class Browser:
         return self._settle(response, self._last)
 
     def get(self, url: str) -> Page:
-        return self._settle(self.http.get(url), self._last)
+        target = url if url.startswith("http") else self.env.base_url + url
+        return self._settle(self.http.get(target), self._last)
 
     def login(self, user: TestUser | str, password: str | None = None, **kw: Any) -> Page:
         """Authorize and fill the password form. Returns the next page (a redirect with a
