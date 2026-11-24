@@ -1,6 +1,6 @@
 # F2 — Redoslijed izvršavanja (execution order)
 
-Datum: 2026-11-24 | Status: **CP00 prihvaćen 2026-11-24; autoriziran samo F2-T01** | T02–T13 nisu autorizirani
+Datum: 2026-11-24 | Status: **CP00 i CP01 prihvaćeni 2026-11-24; autoriziran samo F2-T02** | T03–T13 nisu autorizirani
 [Plan](F2-IMPLEMENTATION-PLAN.md) · [Specifikacija AT-02](../specifications/AT-02-identity-security.md) · [Registar odluka](F2-DECISION-REGISTER.md) · [Kriteriji](F2-ACCEPTANCE-CRITERIA.md) · [G6 (F1 obrazac)](../G6-EXECUTION-ORDER.md)
 
 **Sažetak:** 13 paketa (F2-T01…T13), 14 checkpointova (F2-CP00 planiranje, CP01…CP12 po paketu, CP13 završno prihvaćanje).
@@ -208,11 +208,18 @@ Prihvaćene odluke: D01–D41, D43 (D42 OPEN, AT-20) | Preduvjet: F2-CP00 prihva
 Zabranjeno izričito: T02–T13, merge u main, deployment, zajednička infrastruktura, izmjena Compose/Traefik, pokretanje Keycloaka izvan CI-a i jednokratnog lokalnog composea
 ```
 
+```
+Paket: F2-T02 | Datum: 2026-11-24
+Tekst autorizacije vlasnika (doslovno): "Prihvaćam CP01 s predloženim izmjenama D37; autoriziram samo F2-T02"
+Prihvaćene odluke: D01–D41 (D37 izmijenjen), D43; D42 OPEN | Preduvjet: F2-CP01 prihvaćen 2026-11-24 (kod 8599382, CI run 45454710907, izvještaj 3ff9837)
+Zabranjeno izričito: T03–T13, merge u main, deployment, zajednička infrastruktura, promjena Compose/Traefik
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
 | **F2-CP00** | Planiranje (ova dokumentacija) | **PRIHVAĆEN 2026-11-24**: opseg, paketi, D01–D41 i D43; autorizacija samo T01 | Docs commit 0e5a2d1 |
-| F2-CP01 | T01 | Ishodi spika S1–S10, realm, CI Keycloak | CI run + `F2-KEYCLOAK-SPIKE-REPORT.md` |
+| F2-CP01 | T01 | **PRIHVAĆEN 2026-11-24** (D37 izmijenjen): ishodi spika S1–S10, realm, CI Keycloak | CI run 45454710907 + `F2-KEYCLOAK-SPIKE-REPORT.md` |
 | F2-CP02 | T02 | Validacija tokena, lažni IdP | CI run, mutation rezultat |
 | F2-CP03 | T03 | Audit shema + D17 implementacija | CI run, pregled migracija 0002/0003 |
 | F2-CP04 | T04 | `users` i životni ciklus | CI run, pregled migracije 0004 |

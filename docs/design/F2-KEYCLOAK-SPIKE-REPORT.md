@@ -1,6 +1,6 @@
 # F2-T01 — Keycloak spike report (S1–S10)
 
-Datum: 2026-11-24 | Paket: F2-T01 | Status: **ČEKA F2-CP01 (vlasnik)** | Kod: `identity/`, `scripts/identity/`, `tests/identity/`
+Datum: 2026-11-24 | Paket: F2-T01 | Status: **F2-CP01 PRIHVAĆEN 2026-11-24 (D37 izmijenjen)** | Kod: `identity/`, `scripts/identity/`, `tests/identity/`
 **Dokaz:** commit `8599382a37f0ab42f85962f925925662b6c54c87` na `dev`, CI run [45454710907](https://github.com/AutoTramita-es/autotramita/actions/runs/45454710907): sva četiri joba uspješna. Keycloak job: **11 passed, 0 skipped, 0 failed** (Keycloak 26.4.7 po digestu `sha256:9409c59b…`, jednokratni container, `-W error`). Glavni job (PG16/Redis7) i postojeći F1 testovi nepromijenjeni i zeleni. Ništa nije pokrenuto na zajedničkoj infrastrukturi.
 
 ## Rezultati
@@ -36,5 +36,5 @@ Pokazano je i **ograničenje dokaza**: realmovi `dev` i `prod` nisu uvezeni u Ke
 ## Isporučeno
 `identity/keycloak/realm-template.json` + generirani `realm-{dev,prod,test}.json`; renderer `scripts/identity/render_realms.py`; linter `tests/identity/realm_lint.py` (22 negativna slučaja); testovi okruženja (digest, bez trajnog stanja, samo test realm u CI); `identity/docker-compose.keycloak-test.yml`; CI job `identity`; [identity/README.md](../../identity/README.md) (rad, tajne, rotacija ključeva). Test `tests/test_ci_workflow.py` ažuriran za četvrti job (3 → 4 timeouta, 3 setup-uv).
 
-## STOP — F2-CP01
-Čekam vlasnikovu odluku o ishodima (osobito **S9/UpdateEmail → izmjena D37**) i prihvaćanje CP01. T02 nije autoriziran.
+## Odluka vlasnika (CP01)
+CP01 prihvaćen; D37 izmijenjen prema prijedlogu. Minimizacija tokena i ime/prezime ostaju prijedlozi za T09 (nisu izričito prihvaćeni). Autoriziran samo F2-T02.
