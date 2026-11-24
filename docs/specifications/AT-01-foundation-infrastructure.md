@@ -4,6 +4,11 @@
 - Status: APPROVED (2026-11-24) — vlasnik odobrio v1.1; O01/O02/O03/O18/O19 ACCEPTED; 15 odluka ostaje PROPOSED
 - Prihvaćene odluke ostaju Accepted; ovaj dokument ne autorizira F1, kod, migracije, provisioning ili deployment.
 
+## Aktualni status izvršavanja — REC-02 (dokumentacijski dodatak, normativna v1.1 nepromijenjena)
+REC-02 (2026-11-24): F1 implementation exists on f1/foundation at e22ae3b0c9b2bed861f29ed4d7dfd1c366a8ff7a, preserved identically in archive/f1-foundation-2026-11-24; not merged or accepted. Historical broad authorization quoted in c467005 ("Autoriziram F1 prema G6-EXECUTION-ORDER.md") is UNVERIFIED: repository record exists, original owner instruction not established; neither confirmed nor invalidated retroactively. Later explicit T01-only authorization b6462e4 / 0973e24 remains recorded; CP01 blocked in preflight, no new implementation authorized or executable during reconciliation. T02–T10 not currently authorized. Audit reports 93 passing CI tests at e22ae3b (run 45398235580), not independently rerun; T01–05/T08–10 PARTIAL, T06–07 NON-COMPLIANT; AC05–08 compliant per reported CI, 7 partial, 3 non-compliant, AC09 not verified. F1 acceptance pending REC-07. REC-01 and REC-02 documentation approved; REC-03–07 require separate approval. No merge, deployment, F2 or infrastructure changes authorized. O01/O02/O03/O18/O19 remain ACCEPTED; 15 deferred decisions remain PROPOSED. Maintenance page and routing reported on implementation branch; live state and separate authorization unverified. Preserve both histories; no duplicate implementation or automatic cherry-pick.
+
+[Audit](../design/F1-RECONCILIATION-AUDIT.md) | [Plan](../design/F1-RECONCILIATION-PLAN.md)
+
 ## 1. Izvori i prvenstvo
 [Master blueprint](../MASTER-BLUEPRINT.md), [ADR registar](../adr/ADR-REGISTER.md), [ADR-001](../adr/ADR-001-technology-stack.md), [ADR-002](../adr/ADR-002-multi-tenancy-rls.md), [ADR-003](../adr/ADR-003-identity-customer-membership.md), [ADR-004](../adr/ADR-004-api-contracts.md), [ADR-005](../adr/ADR-005-document-storage.md), [ADR-008](../adr/ADR-008-delivery-governance.md), [ADR-010](../adr/ADR-010-identity-provider-keycloak.md), [ADR-011](../adr/ADR-011-documents-on-shared-nextcloud.md), [G5](../design/FOUNDATION-G5-REVIEW.md), [G6](../G6-EXECUTION-ORDER.md), [DNS/Nextcloud/mail](../DNS-NEXTCLOUD-MAIL.md), [Compose](../DOCKER-COMPOSE.md).
 Prihvaćeni ADR-ovi i kasnije eksplicitne odluke imaju prvenstvo; G6 određuje granice F1. Povijesni prijedlozi G5 nisu novi nalozi. ADR-006/007/009 ostaju mjerodavni za poslovne module.
@@ -33,7 +38,7 @@ AT-09: WebDAV/OCS preko zasebnih računa i AutoTramita/PROD, AutoTramita/DEV; Te
 AT-16: FS-Mailserver poslovna pošta; vanjski transakcijski SMTP provider još nije odabran. DEV Mailpit uz obveznu buduću egress zaštitu. Dovecot izvor istine za inbound dokumente, Sieve/IDLE/reconciliation prema budućem ugovoru; ne povezivati samo po adresi pošiljatelja. Bez osjetljivih automatskih privitaka.
 AT-20: GDPR/LOPDGDD, EU lokacija podataka, audit, retention, legal hold, incidenti i backup; pravne i operativne odluke ostaju otvorene.
 
-## 8. F1 izvršavanje (Accepted G6, NOT AUTHORIZED)
+## 8. F1 izvršavanje (Accepted G6, RECONCILIATION / NOT ACCEPTED)
 Dopuštene putanje: pyproject.toml, uv.lock, .python-version, alembic.ini, app/core/**, app/api/**, migrations/**, tests/**, scripts/db/**, openapi/**, .github/workflows/**, docs/DEVELOPMENT.md.
 Zabranjeno: poslovni moduli uključujući app/auth, frontend/Flutter, Keycloak/Nextcloud/Celery, Compose i secrets izmjene, shared DB provisioning, deployment. Redis samo za rate limiting. Svaki korak test i mali commit na grani; bez automatskog nastavka.
 1. Python 3.12/uv, pinning alata.
@@ -65,7 +70,7 @@ F2 zasebna specifikacija identiteta; F3a tek nakon usklađivanja AT-03 dokumenat
 | AC13 | OpenAPI odgovara stvarnim odgovorima; TS/Dart generatori prolaze |
 | AC14 | CI lint, mypy, pytest, migration i sigurnosne provjere prolaze |
 | AC15 | DEVELOPMENT.md, izvještaj testova, rizici i rollback; nema poslovnih tablica ili izmjena izvan opsega |
-Nijedan kriterij nije trenutno potvrđen izvršenjem. G6 stop: neriješena odluka, sigurnosni test pada, neočekivana shema, vanjske vjerodajnice/shared DB ili proširenje opsega. Izvještaj: datoteke, migracije, naredbe, rezultati, neuspjesi, rizici, rollback i sljedeća ovisnost.
+Povijesno pri odobrenju specifikacije nijedan kriterij nije bio potvrđen izvršenjem; aktualni dokazi i odstupanja navedeni su u REC-02 i auditu. G6 stop: neriješena odluka, sigurnosni test pada, neočekivana shema, vanjske vjerodajnice/shared DB ili proširenje opsega. Izvještaj: datoteke, migracije, naredbe, rezultati, neuspjesi, rizici, rollback i sljedeća ovisnost.
 
 ## 10. Otvorene odluke — PROPOSED, ne odobrene
 | ID | Prijedlog | Gate |
@@ -114,4 +119,4 @@ Shared host/DB/Nextcloud/Traefik predstavljaju zajednički blast radius; odvojen
 Financijski utjecaj: reuse smanjuje dodatne servise, ali offsite backup, SMTP, monitoring i kapacitet mogu imati trošak; nema odobrenog budžeta ili procjene. AT-01 ne autorizira plaćanja.
 
 ## 12. Sljedeći korak
-Vlasnik je 2026-11-24 odobrio cjelovitu specifikaciju v1.1; pet F1 odluka je potvrđeno, preostalih 15 ostaje otvoreno. Slijedi priprema naloga za Claude Code, bez izvršavanja. F1 zahtijeva zasebnu eksplicitnu autorizaciju prema G6. Nema automatskog deploymenta. Dokumentacijska revizija nije live audit niti provjera koda/testova. Postojeći ADR-ovi nisu izmijenjeni; G6 je usklađen s §10a bez proširenja opsega.
+Vlasnik je 2026-11-24 odobrio cjelovitu specifikaciju v1.1; pet F1 odluka je potvrđeno, preostalih 15 ostaje otvoreno. Povijesno je slijedila priprema naloga za Claude Code; aktualni sljedeći korak je REC-03 uz zasebno odobrenje. F1 zahtijeva zasebnu eksplicitnu autorizaciju prema G6. Nema automatskog deploymenta. Dokumentacijska revizija nije live audit niti provjera koda/testova. Postojeći ADR-ovi nisu izmijenjeni; G6 je usklađen s §10a bez proširenja opsega.
