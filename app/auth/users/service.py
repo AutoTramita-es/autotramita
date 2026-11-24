@@ -114,10 +114,16 @@ def provision_or_link(
                     status=UserStatus.ACTIVE if email_verified else UserStatus.PENDING_VERIFICATION,
                 )
         except IntegrityError as exc:
-            if _is_email_conflict(exc):
+            if not _is_email_conflict(exc):
+                raise
+            # The same person signing in twice at once trips the e-mail key before the subject
+            # key can say "already there"; if the winner's row is this subject, it is no conflict.
+            user = repository.get_by_subject(session, subject, lock="share")
+            if user is None:
                 raise _conflict(audit_factory) from None
-            raise
-        created = user is not None
+            created = False
+        else:
+            created = user is not None
         if user is None:  # lost a race for the same subject: read the winner's row
             user = repository.get_by_subject(session, subject, lock="share")
     if user is None:  # pragma: no cover - the row exists after a lost race
