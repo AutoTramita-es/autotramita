@@ -57,6 +57,7 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - [UI-COMPONENTS-G1-REVIEW.md](UI-COMPONENTS-G1-REVIEW.md) — G1 review: 7 findings, 4 owner decisions.
 - [IMAGE-ASSETS.md](IMAGE-ASSETS.md) — 85 indexed SVGs, 28 raster briefs, export/rights/QA requirements; G3 documentation drafted, raster recovery pending.
 - [RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md) — responsive web and Flutter, capture, security, lifecycle and 80 acceptance criteria; G2 approved 2026-11-24 (specification only).
+- [FOUNDATION-G5-REVIEW.md](FOUNDATION-G5-REVIEW.md) — G5 foundation technical review: 11 findings, F1/F2/F3a boundaries, decisions H1–H6.
 - [RESPONSIVE-DESIGN-G2-REVIEW.md](RESPONSIVE-DESIGN-G2-REVIEW.md) — G2 review: 6 findings, 5 owner decisions.
 - [DESIGN-ROADMAP.md](DESIGN-ROADMAP.md) — 20 modules, 9 ADRs, 23 input designs, MVP, dependency packets and 40 acceptance criteria.
 

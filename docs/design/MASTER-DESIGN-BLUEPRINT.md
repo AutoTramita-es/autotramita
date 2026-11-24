@@ -147,3 +147,6 @@ Owner approved the component specification ([UI-COMPONENTS.md](UI-COMPONENTS.md)
 
 ## 18. G2 approval — 2026-11-24
 Owner approved the responsive and mobile specification ([RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md), review in [RESPONSIVE-DESIGN-G2-REVIEW.md](RESPONSIVE-DESIGN-G2-REVIEW.md)). Fixes: bottom navigation label Trámites everywhere, content-width thresholds override shell rows, topbar 64/56. Specification only; browser/OS matrix, performance budgets, session and cleanup policies, and AT-01/02/09/14/16/20 gates remain open; no runtime evidence. G0–G3 documentation now reviewed; next G5 foundation technical review. No ADR changes or implementation.
+
+## 19. G5 foundation review — 2026-11-24
+[FOUNDATION-G5-REVIEW.md](FOUNDATION-G5-REVIEW.md): 11 findings (3 P0), proposed F1/F2/F3a boundaries, owner decisions H1–H6 approved. Database role model, context bootstrapping, sessions, platform path, audit, routing, API conventions and tooling defined as proposals; ADR-010 (Keycloak) and ADR-011 (Nextcloud storage) are Proposed. No implementation, migration or deployment authorized; next G6 execution order and explicit authorization for F1.

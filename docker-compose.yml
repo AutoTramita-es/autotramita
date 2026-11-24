@@ -50,8 +50,8 @@ services:
       ENVIRONMENT: ${ENVIRONMENT}
       POSTGRES_HOST: postgres
       POSTGRES_DB: ${APP_DB_NAME}
-      POSTGRES_USER: ${APP_DB_USER}
-      POSTGRES_PASSWORD: ${APP_DB_PASSWORD}
+      POSTGRES_USER: ${APP_DB_APP_USER}
+      POSTGRES_PASSWORD: ${APP_DB_APP_PASSWORD}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CLAMAV_HOST: clamav
@@ -76,7 +76,10 @@ services:
     profiles: [application]
     command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
     restart: unless-stopped
-    environment: *app-env
+    environment:
+      <<: *app-env
+      POSTGRES_USER: ${APP_DB_WORKER_USER}
+      POSTGRES_PASSWORD: ${APP_DB_WORKER_PASSWORD}
     networks: [internal, backend]
 
   scheduler:
@@ -84,7 +87,10 @@ services:
     profiles: [application]
     command: ["celery", "-A", "app.celery_app", "beat", "--loglevel=info", "--schedule=/data/celerybeat-schedule"]
     restart: unless-stopped
-    environment: *app-env
+    environment:
+      <<: *app-env
+      POSTGRES_USER: ${APP_DB_WORKER_USER}
+      POSTGRES_PASSWORD: ${APP_DB_WORKER_PASSWORD}
     volumes:
       - celery-beat-data:/data
     networks: [internal, backend]
