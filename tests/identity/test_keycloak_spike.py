@@ -192,7 +192,7 @@ def test_s03_step_up_loa2_requires_otp_and_loa1_does_not(env: Env, admin: Admin)
     )
     first.require_code()  # password-only login (dealership user without MFA) must succeed
     tokens = b.token("at-web", first.require_code(), WEB_REDIRECT, verifier=verifier)
-    assert decode_jwt(tokens["id_token"]).get("acr") == "1", decode_jwt(tokens["id_token"])
+    assert decode_jwt(tokens["id_token"]).get("acr") == "loa1", decode_jwt(tokens["id_token"])
     # step-up: same browser (SSO cookie), loa2 requested; user has no OTP yet -> setup prompt
     verifier2, challenge2 = pkce_pair()
     page = b.authorize("at-web", WEB_REDIRECT, challenge=challenge2, acr_values="loa2")
@@ -210,7 +210,7 @@ def test_s03_step_up_loa2_requires_otp_and_loa1_does_not(env: Env, admin: Admin)
     done = b.submit(page, fields, action=form_action(page.text))
     done.require_code()
     second = b.token("at-web", done.require_code(), WEB_REDIRECT, verifier=verifier2)
-    assert decode_jwt(second["id_token"]).get("acr") == "2", decode_jwt(second["id_token"])
+    assert decode_jwt(second["id_token"]).get("acr") == "loa2", decode_jwt(second["id_token"])
     b.close()
     record_result("S3.step_up", "loa1 password-only; loa2 prompts OTP setup then acr=2")
 
