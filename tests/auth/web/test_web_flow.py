@@ -332,8 +332,10 @@ def test_safe_methods_need_no_csrf_token(web: Web) -> None:
 def test_cookie_and_bearer_together_are_refused_and_no_credential_is_a_401(web: Web) -> None:
     client = web.client()
     problem(client.get(f"{API}/session"), 401, "AUTH_REQUIRED")
-    problem(
-        client.get(f"{API}/session", headers={"Authorization": "Bearer abc"}), 401, "AUTH_REQUIRED"
+    problem(  # bearer sessions exist since F2-T07: a bad token is an invalid token
+        client.get(f"{API}/session", headers={"Authorization": "Bearer abc"}),
+        401,
+        "AUTH_TOKEN_INVALID",
     )
     web.sign_in(client)
     problem(
