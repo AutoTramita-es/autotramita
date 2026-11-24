@@ -1,5 +1,8 @@
 name: CI
 
+# Verification only: there is no deployment, no production secret and no privileged runner.
+# Triggers use `pull_request` (never `pull_request_target`), so code from forks runs without
+# secrets; the service credentials below are throwaway values that exist only inside the job.
 on:
   push:
     branches: [dev, main]
@@ -16,11 +19,12 @@ concurrency:
 jobs:
   test:
     name: Lint, types, tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:16
+        # PostgreSQL 16, pinned by digest.
+        image: postgres:16@sha256:07abc3f43c9395b0bdbbab36bc25ddb0e8d83cd4fcafb5fb7d6abe14ff156dd8
         env:
           POSTGRES_PASSWORD: ci-throwaway-password
         ports: ["5432:5432"]
@@ -28,7 +32,8 @@ jobs:
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 5s --health-retries 10
       redis:
-        image: redis:7
+        # Redis 7, pinned by digest.
+        image: redis:7@sha256:6b645a37f49b0546582468706b32e71a8b7fbb5ba4583d0f9e27a8004716b738
         ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping"
@@ -40,48 +45,114 @@ jobs:
       TEST_PG_ADMIN_URL: postgresql://postgres:ci-throwaway-password@127.0.0.1:5432/postgres
       TEST_REDIS_URL: redis://127.0.0.1:6379/15
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          python-version: "3.12"
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          version: "0.13.9"
+          python-version: "3.12.16"
           enable-cache: true
-      - run: uv sync --locked
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+      - name: Install locked dependencies
+        run: uv sync --locked
+      - name: Wait for PostgreSQL and Redis
+        run: |
+          uv run python - <<'PY'
+          import os, sys, time
+          import psycopg
+          import redis
+
+          deadline = time.monotonic() + 60
+          pending = {"postgresql", "redis"}
+          while pending and time.monotonic() < deadline:
+              if "postgresql" in pending:
+                  try:
+                      with psycopg.connect(os.environ["TEST_PG_ADMIN_URL"], connect_timeout=3) as c:
+                          c.execute("SELECT 1")
+                      pending.discard("postgresql")
+                  except psycopg.Error:
+                      pass
+              if "redis" in pending:
+                  try:
+                      redis.Redis.from_url(os.environ["TEST_REDIS_URL"], socket_timeout=3).ping()
+                      pending.discard("redis")
+                  except redis.RedisError:
+                      pass
+              time.sleep(1)
+          if pending:
+              sys.exit("Not ready: " + ", ".join(sorted(pending)))
+          print("PostgreSQL and Redis answer.")
+          PY
       - name: Ruff lint
-        run: uv run ruff check .
+        run: uv run --locked ruff check .
       - name: Ruff format
-        run: uv run ruff format --check .
+        run: uv run --locked ruff format --check .
       - name: mypy
-        run: uv run mypy
-      - name: Tests (real PostgreSQL 16 and Redis; migrations up/down, RLS, rate limiting)
-        run: uv run pytest -q
+        run: uv run --locked mypy
+      - name: Tests (real PostgreSQL 16 and Redis 7; RLS, API conventions, rate limiting)
+        run: uv run --locked pytest -q -ra --junitxml="$RUNNER_TEMP/junit.xml"
+      - name: Test counts (no skipped tests allowed)
+        run: |
+          python3 - <<'PY'
+          import os, sys
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse(os.path.join(os.environ["RUNNER_TEMP"], "junit.xml")).getroot()
+          suite = root if root.tag == "testsuite" else root.find("testsuite")
+          total, failed, errors, skipped = (
+              int(suite.get(k, 0)) for k in ("tests", "failures", "errors", "skipped")
+          )
+          passed = total - failed - errors - skipped
+          line = f"tests={total} passed={passed} failed={failed} errors={errors} skipped={skipped}"
+          print(line)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write(f"### Test counts\n\n`{line}`\n")
+          if skipped or failed or errors:
+              sys.exit("Skipped, failed or errored tests are not allowed in CI.")
+          PY
+      - name: Owner migrations (upgrade head, downgrade base, upgrade again; role SQL twice)
+        run: >-
+          uv run --locked pytest -q
+          tests/test_role_sql.py::test_upgrade_downgrade_upgrade_and_schema_contents
+          tests/test_role_sql.py::test_role_sql_is_idempotent
+          tests/test_roles_and_migrations.py::test_baseline_up_and_down
+          tests/test_role_sql.py::test_migrations_refuse_non_owner_roles
       - name: OpenAPI contract is current
-        run: uv run python -m app.api.export_openapi --check
+        run: uv run --locked python -m app.api.export_openapi --check
       - name: TypeScript and Dart clients can be generated
         run: ./openapi/check-clients.sh
 
   secrets:
     name: Secret scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
-      - name: gitleaks (full history)
+          persist-credentials: false
+      - name: gitleaks v8.21.2 (full history)
         run: >-
-          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2
+          docker run --rm -v "$PWD:/repo"
+          zricethezav/gitleaks:v8.21.2@sha256:0e99e8821643ea5b235718642b93bb32486af9c8162c8b8731f7cbdc951a7f46
           detect --source /repo --redact --no-banner --exit-code 1
 
   dependencies:
     name: Dependency audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          python-version: "3.12"
-      - name: pip-audit against the locked dependency set
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          version: "0.13.9"
+          python-version: "3.12.16"
+      - name: pip-audit 2.10.1 against the locked dependency set
         run: |
           uv export --locked --no-hashes --no-emit-project --format requirements-txt > "$RUNNER_TEMP/requirements.txt"
-          uvx pip-audit --requirement "$RUNNER_TEMP/requirements.txt" --no-deps --disable-pip --strict
+          uvx pip-audit==2.10.1 --requirement "$RUNNER_TEMP/requirements.txt" --no-deps --disable-pip --strict

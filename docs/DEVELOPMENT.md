@@ -40,7 +40,13 @@ uv run pytest -q
 Without these variables integration tests are skipped locally; when `CI` is set a missing variable fails the run. Tests create and drop their own databases and roles.
 
 ## Checks run in CI
-`.github/workflows/ci.yml`: Ruff, mypy, pytest on PostgreSQL 16 and Redis service containers (migrations up/down, RLS negative tests, rate limiting), OpenAPI drift check, TypeScript and Dart client generation (`openapi/check-clients.sh`), gitleaks over full history, `pip-audit` on the locked dependencies.
+`.github/workflows/ci.yml` is verification only: no deployment, no production secret, no privileged runner, `permissions: contents: read`, `pull_request` (never `pull_request_target`) so fork code never sees secrets. It runs on pushes and pull requests to `dev` and `main` with three jobs:
+
+- **Lint, types, tests**: PostgreSQL 16 and Redis 7 service containers (pinned by digest, throwaway credentials, health checks plus an explicit wait step), `uv sync --locked`, Ruff lint and format, mypy, the full pytest suite with a junit summary that fails the job if any test is skipped, failed or errored, a named step for owner migrations (upgrade head, downgrade base, upgrade again, role SQL applied twice, migration refused for non-owner roles), the OpenAPI drift check and the TypeScript and Dart generation check.
+- **Secret scan**: gitleaks v8.21.2 (image pinned by digest) over the full history. Exceptions are exact fingerprints in `.gitleaksignore`.
+- **Dependency audit**: `pip-audit==2.10.1` against the locked requirements.
+
+Everything is pinned: actions by commit SHA, runner `ubuntu-24.04`, uv 0.13.9, Python 3.12.16, Node 20, container images by digest. `tests/test_ci_workflow.py` guards these properties. Dependabot is not configured (a separate owner decision). When a pin needs updating, look up the new SHA or digest, change it in the workflow (and `openapi/check-clients.sh` for the Dart generator), and let CI prove it.
 
 ## Layout
 - `app/core/` configuration, database layer and request context, role model, errors, pagination, idempotency, versioning, rate limiting, logging.
@@ -67,5 +73,20 @@ Without these variables integration tests are skipped locally; when `CI` is set 
 - **OpenAPI contract** (`app/api/openapi.py`, `app/api/export_openapi.py`, `openapi/`, F1-T09): `uv run python -m app.api.export_openapi` writes `openapi/openapi.json` from the real FastAPI app (sorted keys, stable across runs, processes and environments; it needs no configuration); `--check` fails when the committed file is out of date. `info.version` comes from `API_VERSION` and must equal `pyproject.toml`; all paths are under `/api/v1/`. Every response declares `X-Request-ID`; 429 documents `Retry-After` and `RateLimit-*`, 503 documents `Retry-After`, 409 documents the optional `Retry-After` of an in-flight idempotent request. Validation errors (422) are documented and returned as `Problem`, so FastAPI's own validation schemas are removed. The contract currently exposes only the health route and the shared models `Health` and `Problem`; it makes no claim of business client coverage. Business routers reuse `PROBLEM_RESPONSES`. Client generation is checked, not committed: `./openapi/check-clients.sh` generates TypeScript with `openapi-typescript@7.13.0` (compiled with `typescript@5.6.3`, needs Node 20) and Dart with the Docker image `openapitools/openapi-generator-cli:v7.10.0` into a temporary directory that is deleted afterwards; CI runs it (AC13 stays partial until the final CI evidence of T10).
 - **Never** put secrets, personal data or real documents in the repository, fixtures or logs.
 
+## Rollback
+F1 is not deployed and nothing here touches a shared environment, so rollback is local and reversible:
+- **Code**: `git revert` the offending commit on `dev` (history is never rewritten); `main` only ever receives reviewed merges.
+- **Database** (disposable or explicitly provisioned only): as the owner role, `alembic downgrade base` removes the baseline functions; `scripts/db/harden.sql` is idempotent and can be re-applied; test databases and roles are dropped by the tests themselves.
+- **Disposable containers**: `docker rm -f at-f1-pg at-f1-redis`.
+- **OpenAPI**: regenerate with `uv run python -m app.api.export_openapi` after reverting code.
+
 ## Known limits of F1
-The in-database context is set by the application; code that can run arbitrary SQL as a runtime role could set another tenant's context, so SQL is always parameterized and runtime roles have no DDL rights. `scripts/provision-postgres.py` has its own copy of the hardening statements and is not run by F1; it should be aligned with `scripts/db/harden.sql` before first use. Keycloak, authentication, tenant tables, documents and deployment belong to later phases.
+- The in-database context is set by the application; code that can run arbitrary SQL as a runtime role could set another tenant's context, so SQL is always parameterized and runtime roles have no DDL rights.
+- `scripts/provision-postgres.py` has its own copy of the hardening statements and is not run by F1; align it with `scripts/db/harden.sql` before first use.
+- The idempotency table is not part of the migrations (owner decision): a later phase must add it with the shape in `tests/idempotency_fixture.py`. Likewise there are no tenant or business tables.
+- Authentication, Keycloak, the worker process and real tenants do not exist; tests use synthetic contexts and test-only routes. Readiness is not exposed publicly (open decision O20); live proxy addresses for `TRUSTED_PROXY_HOPS` are deferred.
+- The rate limiter is an approximation by design and, if Redis is down, limited endpoints answer 503 (security over availability).
+- `CurrencyCode` checks the ISO 4217 format only. The OpenAPI contract covers only the health route and the shared models.
+- TypeScript and Dart generation is checked, not committed; npm transitive packages of the generator are not locked.
+- Migration 0002 was removed from the chain on the basis of repository documentation that no persistent database was ever migrated, not of a check of the live databases.
+- Keycloak, documents and deployment belong to later phases.

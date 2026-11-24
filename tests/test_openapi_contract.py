@@ -297,7 +297,9 @@ def test_client_generation_commands_are_pinned_and_write_only_temporary_output()
     script = (ROOT / "openapi" / "check-clients.sh").read_text()
     assert re.search(r'^TS_GENERATOR="openapi-typescript@\d+\.\d+\.\d+"$', script, re.M)
     assert re.search(r'^TS_COMPILER="typescript@\d+\.\d+\.\d+"$', script, re.M)
-    assert re.search(r'^DART_GENERATOR_IMAGE="[\w/.-]+:v\d+\.\d+\.\d+"$', script, re.M)
+    assert re.search(
+        r'^DART_GENERATOR_IMAGE="[\w/.-]+:v\d+\.\d+\.\d+@sha256:[0-9a-f]{64}"$', script, re.M
+    )
     assert "latest" not in script
     assert 'work="$(mktemp -d)"' in script and "trap 'rm -rf \"$work\"' EXIT" in script
     assert 'spec="$root/openapi/openapi.json"' in script  # the committed, real contract

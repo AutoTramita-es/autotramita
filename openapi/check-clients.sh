@@ -5,7 +5,7 @@ set -euo pipefail
 
 TS_GENERATOR="openapi-typescript@7.13.0"
 TS_COMPILER="typescript@5.6.3"
-DART_GENERATOR_IMAGE="openapitools/openapi-generator-cli:v7.10.0"
+DART_GENERATOR_IMAGE="openapitools/openapi-generator-cli:v7.10.0@sha256:f2054a5a7908ad81017d0f0839514ba5eab06ae628914ff71554d46fac1bcf7a"
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 spec="$root/openapi/openapi.json"
