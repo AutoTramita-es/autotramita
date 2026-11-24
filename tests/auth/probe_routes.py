@@ -101,11 +101,11 @@ def needs_mfa(principal: Annotated[Principal, Depends(MFA)]) -> dict[str, str]:
     return {"level": principal.session.auth_level.value}
 
 
-@router.get("/limited-by-tenant", dependencies=[Depends(TENANT_LIMIT)])
+@router.get("/limited-by-tenant", dependencies=[Depends(WORKSPACE), Depends(TENANT_LIMIT)])
 def limited_tenant(principal: Annotated[Principal, Depends(WORKSPACE)]) -> dict[str, str]:
     return {"tenant": str(principal.workspace.tenant_id) if principal.workspace else ""}
 
 
-@router.get("/limited-by-user", dependencies=[Depends(USER_LIMIT)])
+@router.get("/limited-by-user", dependencies=[Depends(USER), Depends(USER_LIMIT)])
 def limited_user(principal: Annotated[Principal, Depends(USER)]) -> dict[str, str]:
     return {"user": str(principal.user.id)}

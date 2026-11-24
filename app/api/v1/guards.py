@@ -88,6 +88,7 @@ def declared(kind: AccessKind) -> Callable[[Request], None]:
 
     def dependency(request: Request) -> None:
         if kind in (AccessKind.SESSION, AccessKind.TOKEN):
+            runtime_of(request)  # an unconfigured service answers 503 before anything else
             has_cookie = any(
                 request.cookies.get(name) for name in ("__Host-at_session", "at_session")
             )
