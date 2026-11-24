@@ -82,7 +82,7 @@ def test_idempotency_table_exists_only_as_a_test_fixture() -> None:
     config = Config(str(root / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["0003"]  # chain: 0001 baseline, F2 0002 bootstrap, 0003 audit
+    assert script.get_heads() == ["0004"]  # F2: 0002 bootstrap, 0003 audit, 0004 users
     for path in (root / "migrations").rglob("*.py"):
         assert "idempotency" not in path.read_text().lower(), path
     assert "CREATE TABLE idempotency_keys" in (root / "tests/idempotency_fixture.py").read_text()
