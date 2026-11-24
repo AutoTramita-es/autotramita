@@ -1,6 +1,6 @@
 # F2 — Redoslijed izvršavanja (execution order)
 
-Datum: 2026-11-24 | Status: **CP00–CP05 prihvaćeni 2026-11-24; autoriziran samo F2-T06** | T07–T13 nisu autorizirani
+Datum: 2026-11-24 | Status: **CP00–CP06 prihvaćeni 2026-11-24; autoriziran samo F2-T07** | T08–T13 nisu autorizirani
 [Plan](F2-IMPLEMENTATION-PLAN.md) · [Specifikacija AT-02](../specifications/AT-02-identity-security.md) · [Registar odluka](F2-DECISION-REGISTER.md) · [Kriteriji](F2-ACCEPTANCE-CRITERIA.md) · [G6 (F1 obrazac)](../G6-EXECUTION-ORDER.md)
 
 **Sažetak:** 13 paketa (F2-T01…T13), 14 checkpointova (F2-CP00 planiranje, CP01…CP12 po paketu, CP13 završno prihvaćanje).
@@ -244,6 +244,13 @@ Napomena prihvaćena uz CP05 (potvrda odstupanja): rotacija credential_hash dopu
 Zabranjeno izričito: T07–T13, merge u main, deployment, zajednička infrastruktura, izmjena Compose/Traefik (D13 ostaje live stavka)
 ```
 
+```
+Paket: F2-T07 | Datum: 2026-11-24
+Tekst autorizacije vlasnika (doslovno): "Prihvaćam CP06; autoriziram samo F2-T07" (potvrđeno: "Nastavi s F2-T07 čim CI za T06 prođe")
+Prihvaćene odluke: D01–D41 (D37 izmijenjen), D43; D42 OPEN | Preduvjet: F2-CP06 prihvaćen 2026-11-24 (kod e2736d6, CI run 45467370715 zelen; prihvaćanje je dano prije izvještaja, CI je potvrđen tek nakon)
+Zabranjeno izričito: T08–T13, merge u main, deployment, zajednička infrastruktura, izmjena Compose/Traefik
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
@@ -253,7 +260,7 @@ Zabranjeno izričito: T07–T13, merge u main, deployment, zajednička infrastru
 | F2-CP03 | T03 | **PRIHVAĆEN 2026-11-24**: audit shema + D17 | CI run 45458303174 (kod 8fb61e5) |
 | F2-CP04 | T04 | **PRIHVAĆEN 2026-11-24**: `users` i životni ciklus | CI run 45460844674 (kod bfbda04) |
 | F2-CP05 | T05 | **PRIHVAĆEN 2026-11-24**: `user_sessions`, opoziv, konkurentnost | CI run 45463940778 (kod 3f64cfd) |
-| F2-CP06 | T06 | Web tok, kolačić, CSRF | CI run + KC integracija |
+| F2-CP06 | T06 | **PRIHVAĆEN 2026-11-24**: web tok, kolačić, CSRF | CI run 45467370715 (kod e2736d6) |
 | F2-CP07 | T07 | Mobilni tok | CI run + KC integracija |
 | F2-CP08 | T08 | Pipeline konteksta, port AT-03, cross-tenant | CI run, cross-tenant izvještaj |
 | F2-CP09 | T09 | Sigurnosne politike i anti-enumeracija | CI run, rezultati spika naspram implementacije |
