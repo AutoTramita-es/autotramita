@@ -1,7 +1,7 @@
 # AutoTramita.es — MASTER BLUEPRINT
 
 **Status:** MASTER INDEX / WORKING BLUEPRINT (not implementation authorization)  
-**Version:** 1.2  
+**Version:** 1.3
 **Date:** 2026-11-24  
 **Repository:** [AutoTramita-es/autotramita](https://github.com/AutoTramita-es/autotramita)  
 **Language:** Croatian for planning; existing technical ADRs remain authoritative.
@@ -10,11 +10,11 @@
 
 AutoTramita.es is a Spanish multi-tenant SaaS platform for vehicle-related administrative procedures, connecting dealerships (including autónomos), end customers, AutoTramita operators and authorized external professional partners. This blueprint is the central navigation index for 20 workstreams; it is **not** a claim that those features are implemented or approved in detail.
 
-The existing ADRs and specifications take precedence over high-level summaries here. A status such as “ADR accepted” applies to the referenced core decision, **not** to every feature or outstanding detail in the module. Unresolved decisions must remain open until explicitly approved.
+The existing ADRs and specifications take precedence over high-level summaries here, except where a later explicit user decision supersedes them, as recorded in [DNS, Nextcloud and mail](DNS-NEXTCLOUD-MAIL.md). A status such as “ADR accepted” applies to the referenced core decision, **not** to every feature or outstanding detail in the module. Unresolved decisions must remain open until explicitly approved.
 
 ## 2. Accepted architectural foundation
 
-- **ADR-001:** Python/FastAPI modular monolith, Pydantic v2, PostgreSQL, SQLAlchemy 2.x, Alembic, psycopg 3, Redis/Celery, private S3-compatible storage, Next.js/TypeScript, Flutter, Docker Compose.
+- **ADR-001:** Python/FastAPI modular monolith, Pydantic v2, PostgreSQL, SQLAlchemy 2.x, Alembic, psycopg 3, Redis/Celery, Next.js/TypeScript, Flutter, Docker Compose. Its S3-compatible storage proposal is superseded by the later shared Nextcloud decision in [DNS, Nextcloud and mail](DNS-NEXTCLOUD-MAIL.md).
 - **ADR-002:** Shared PostgreSQL tenant-scoped tables, server-validated tenant context and enforced row-level security (RLS).
 - **ADR-003:** Global user identities, tenant-local customers and memberships, controlled anonymous-case claiming.
 - **ADR-004:** REST `/api/v1/`, OpenAPI-first generated TypeScript/Dart clients, idempotency and contract tests.
@@ -28,7 +28,7 @@ The existing ADRs and specifications take precedence over high-level summaries h
 
 | ID | Module | Scope | Existing ADRs | Status |
 |---|---|---|---|---|
-| **AT-01** | Temelj sustava i infrastruktura | FastAPI, PostgreSQL, Redis, Celery, Docker, CI/CD, razvojna i produkcijska okruženja. | [ADR-001](adr/ADR-001-technology-stack.md), [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-004](adr/ADR-004-api-contracts.md), [ADR-008](adr/ADR-008-delivery-governance.md) | ADR prihvaćen; implementacija nije započela |
+| **AT-01** | Temelj sustava i infrastruktura | FastAPI, PostgreSQL, Redis, Celery, Docker, CI/CD, razvojna i produkcijska okruženja. | [ADR-001](adr/ADR-001-technology-stack.md), [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-004](adr/ADR-004-api-contracts.md), [ADR-008](adr/ADR-008-delivery-governance.md) | DNS, tuneli i DEV TLS djelomično postavljeni; Compose pripremljen, aplikacija nije implementirana |
 | **AT-02** | Korisnički računi i sigurnost | Prijava, registracija, OIDC, e-mail verifikacija, sesije, MFA, uloge. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | Djelomično definirano |
 | **AT-03** | Autokuće, poslovnice i zaposlenici | Tenant, NIF, pravni oblici, provjera autokuća, poslovnice, pozivnice i pristupi. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-007](adr/ADR-007-pricing-credit-payments.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | [27 poslovnih odluka potvrđeno](specifications/AT-03-decisions.md); tehničko usklađivanje prije implementacije |
 | **AT-04** | Klijenti i vlasnici vozila | Fizičke i pravne osobe, anonimni zahtjevi, korisnički profili, zastupanje, povezivanje predmeta. | [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | [AT-04 specifikacija — prijedlog za pregled](specifications/AT-04-customers-vehicle-owners.md); bez implementacije |
@@ -36,7 +36,7 @@ The existing ADRs and specifications take precedence over high-level summaries h
 | **AT-06** | Katalog administrativnih usluga | Registracija, prijenos vlasništva, uvoz, tehnička dokumentacija i drugi postupci. | [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | Osnovna arhitektura prihvaćena |
 | **AT-07** | Predmeti i radni procesi | Otvaranje, statusi, zadaci, dodjele, kontrolne liste, završetak i arhiva. | [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | Osnovna arhitektura; detalji otvoreni |
 | **AT-08** | Rokovi, prioriteti i nadzor predmeta | Zakonski i interni rokovi, službeni kalendari, nadležnosti, revizije i eskalacije. | [ADR-006](adr/ADR-006-service-catalog-case-workflows.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | Opsežna specifikacija; bez implementacije |
-| **AT-09** | Dokumenti i digitalna obrada | Upload, PDF, OCR, klasifikacija, validacija, potpisi, predlošci, S3 i audit. | [ADR-005](adr/ADR-005-document-storage.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | ADR prihvaćen; detalji otvoreni |
+| **AT-09** | Dokumenti i digitalna obrada | Upload, PDF, OCR, klasifikacija, validacija, potpisi, predlošci, Nextcloud i audit. | [ADR-005](adr/ADR-005-document-storage.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | Zajednički Nextcloud dostupan; integracija i detalji otvoreni |
 | **AT-10** | Gestorías i profesionalni partneri | Ovlašteni gestor administrativo, partneri i delegiranje reguliranih radnji. | [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | Za razradu |
 | **AT-11** | Vanjski inženjeri i Ficha Reducida | AutoTramita naručuje Ficha Reducida od kvalificiranog vanjskog inženjera u pozadini. | [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | Poslovni princip prihvaćen; tijek za razradu |
 | **AT-12** | Cjenik, ponude i popusti | Jedinstveni javni maloprodajni cjenik, popusti autokuća, marže, zasebne pristojbe. | [ADR-007](adr/ADR-007-pricing-credit-payments.md) | ADR prihvaćen; detalji otvoreni |
@@ -50,6 +50,9 @@ The existing ADRs and specifications take precedence over high-level summaries h
 | **AT-20** | Pravna usklađenost i operacije | GDPR, ovlasti, audit, backup, monitoring, incidenti i ugovori. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-005](adr/ADR-005-document-storage.md), [ADR-008](adr/ADR-008-delivery-governance.md) | Djelomično definirano |
 
 ## 4. Existing source documentation
+
+- [DNS, Nextcloud and mail](DNS-NEXTCLOUD-MAIL.md) — current domain and infrastructure decisions, deployed components and remaining work.
+- [Docker Compose operations](DOCKER-COMPOSE.md) — prepared environments, shared services, configuration and prerequisites; not evidence that the application stack is deployed.
 
 - [Master Design Blueprint](design/MASTER-DESIGN-BLUEPRINT.md) — consolidated design review, verified indexed assets, gaps and approval gates; not implementation authorization.
 
@@ -85,11 +88,11 @@ Next modules should be selected according to dependencies, not forced into a rig
 
 ## 7. Cross-cutting decisions to keep open
 
-- Identity provider, precise permissions, account recovery, privacy retention and security controls.
+- Keycloak is the chosen identity provider; deployment, configuration, precise permissions, account recovery, privacy retention and security controls remain open.
 - Full service catalog, exact per-service regulatory requirements, case state machines and partner integrations.
 - Payment provider, merchant-of-record/funds flow, discounts/invoice allocation, holiday calendars and collection policies under ADR-007.
 - Official DGT/AEAT/ITV integration availability, authority to perform regulated acts, and legal evidence sources.
-- Hosting provider, deployment topology, monitoring, backup/recovery, test strategy and operational SLAs.
+- Backup/recovery provider and procedures, independent monitoring, test strategy and operational SLAs. The current shared-server topology and partially deployed components are recorded in [DNS, Nextcloud and mail](DNS-NEXTCLOUD-MAIL.md).
 
 ## 8. Blueprint maintenance
 
@@ -97,3 +100,12 @@ Update this file when a module is added, renamed, split, superseded or its verif
 
 ## 9. Design roadmap follow-up — 2026-11-24
 [Design Roadmap](design/DESIGN-ROADMAP.md) proposes dependency slices, limited prepaid commercial MVP, manual Tramisur and integrated Ficha procurement, and readiness/release gates. All five originally missing design documents drafted for review; no domain approval or implementation inferred. Next G5 foundation technical review (AT-01/02/03 plus minimal AT-09/17/20 contracts), then G6 bounded execution order. No deployment authorization.
+
+## 10. Infrastructure status — 2026-11-24
+
+- Cloudflare DNS is active. PROD application hostnames point to the running PROD tunnel, whose ingress currently returns 404. Nested DEV hostnames use a DNS-only wildcard `*.dev.autotramita.es` directly to shared Traefik, with an issued Let's Encrypt wildcard certificate and an HTTP 418 fallback until application routers exist. The separate DEV tunnel runs but is not used by those nested hostnames.
+- Existing `cloud.autotramita.es` reaches the shared Nextcloud through Cloudflare and Traefik. PROD and DEV will use that instance with separate service accounts and folder roots; these accounts and roots are not yet provisioned. Existing shared PostgreSQL, Traefik, mailserver and SnappyMail are to be reused; Uptime Kuma is a monitoring candidate on the same host.
+- PROD and DEV Docker Compose configurations and database provisioning script are prepared and validated. The application, Keycloak, Redis, ClamAV and DEV Mailpit services are not deployed, and the application code remains a skeleton. Database roles and databases have not yet been provisioned by the script.
+- DNSSEC, SMTP/domain setup, transactional mail provider, Nextcloud integration, authentication, malware scanning and backup/recovery remain incomplete. Cloudflare Zero Trust is not required by the current decision. See [DNS, Nextcloud and mail](DNS-NEXTCLOUD-MAIL.md) and [Docker Compose operations](DOCKER-COMPOSE.md) for details and current limitations.
+
+- **Design raster import — 2026-11-24:** 80 raster candidates imported into [design/assets](design/assets/MANIFEST.csv) via Git LFS (see [Master Design Blueprint §15](design/MASTER-DESIGN-BLUEPRINT.md)); not approved for release.

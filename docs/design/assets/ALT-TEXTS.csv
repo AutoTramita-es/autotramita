@@ -1,0 +1,29 @@
+brief_id,repo_path,alt_es,review_flags,status
+R1-01,hero/021-homepage-coast-car-laptop.png,"Coche plateado junto a un portátil que muestra el seguimiento de un trámite, con una ciudad costera al fondo",bandera de España,proposed
+R1-02,hero/065-dealer-showroom.png,Concesionario luminoso con varios coches expuestos tras grandes ventanales,,proposed
+R1-03,hero/064-digital-service-devices.png,Portátil y móvil con el estado de un trámite junto a documentos del vehículo y una llave,placa con 'E' y símbolo UE,proposed
+R1-04,hero/034-import-transport-road.png,Camión portacoches circulando por una carretera costera,bandera de España,proposed
+R1-05,hero/033-professional-gestor.png,Gestor sonriente revisando documentos y una tableta en una oficina,bandera de España; persona generada,proposed
+R2-01,services/005-registration.png,Coche con una matrícula y un documento de matriculación validado con una marca verde,escudo de España en el documento; placa con símbolo UE,proposed
+R2-02,services/026-ownership-transfer.png,Entrega de llaves entre dos personas con un formulario de cambio de titularidad,personas generadas,proposed
+R2-03,services/031-eu-import.png,Todoterreno con un globo terráqueo y una flecha hacia España junto a una lista de requisitos,bandera de España; símbolo UE,proposed
+R2-04,services/037-non-eu-import.png,"Todoterreno con contenedor, barco y una flecha hacia España junto a una lista de comprobación",bandera de España; placa con símbolo UE,proposed
+R2-05,services/024-ficha-reducida.png,"Planos técnicos de un vehículo, calibre y un documento con sello de conformidad",,proposed
+R2-06,services/R2-06-service-duplicado-permiso.png,Dos documentos del vehículo con un icono de copia,,proposed
+R2-07,services/010-deregistration.png,Coche azul con un documento marcado con una cruz roja que indica baja,,proposed
+R2-08,services/R2-08-service-alta-vehiculo.png,Coche con una lista de comprobación y un botón verde de añadir,emblema genérico en la parrilla,proposed
+R2-09,services/004-vehicle-report.png,Informe de vehículo con una lupa sobre un coche y gráficos de estado,,proposed
+R2-10,services/009-environmental-label.png,Coche con una etiqueta medioambiental verde con hoja y código QR,"símbolo similar a distintivo DGT, revisar",proposed
+R2-11,services/R2-11-service-canje-matricula.png,Dos matrículas con flechas que indican el cambio de una por otra,placas con símbolo UE y 'E',proposed
+R2-12,services/R2-12-service-homologacion.png,Todoterreno junto a planos técnicos y una marca de verificación,emblema genérico en la parrilla,proposed
+R3-01,business/R3-01-business-dealership-showroom.png,Interior de un concesionario con coches expuestos y mostradores al fondo,emblema genérico en la parrilla,proposed
+R3-02,business/001-dealer-consultation.png,Asesor de concesionario mostrando una tableta a una clienta,personas generadas,proposed
+R3-03,business/003-customer-couple.png,Pareja sonriente junto a su coche en una calle de una ciudad andaluza,personas generadas,proposed
+R3-04,business/035-vehicle-logistics.png,Operario con chaleco reflectante junto a un camión portacoches en un puerto,bandera de España; persona generada,proposed
+R3-05,business/020-gestor-office.png,Gestor trabajando con documentos y un portátil en su oficina,persona generada; logotipo en cristal,proposed
+R3-06,business/067-technical-inspection.png,Técnico con tableta inspeccionando el frontal de un coche en un taller,persona generada,proposed
+R4-01,process/007-select-service.png,Persona eligiendo un servicio en la pantalla de un portátil,,proposed
+R4-02,process/006-upload-documents.png,Portátil subiendo documentos con un escudo de seguridad,símbolo UE en documento,proposed
+R4-03,process/R4-03-process-quote-review.png,"Documento de oferta con calculadora y lupa, validado con una marca verde",emblema genérico en el coche,proposed
+R4-04,process/012-processing-review.png,Profesional revisando un expediente en el portátil con carpetas y una marca de verificación,persona generada,proposed
+R4-05,process/011-receive-documents.png,Portátil y móvil que reciben documentos del vehículo con un sobre y una marca verde,,proposed

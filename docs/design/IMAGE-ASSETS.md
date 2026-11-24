@@ -247,3 +247,59 @@ Record generated vs commissioned vs licensed origin, tool terms at creation, com
 
 ## 11. Governance
 G3 documentation drafted; visual review/export/upload and owner approval remain open. R18 not closed, R19 runtime evidence pending. R01 document gap reduced to DESIGN-ROADMAP.md. Next G4 roadmap may proceed as documentation while asset recovery remains parallel prerequisite for affected release. No ADR changes.
+
+## 10. Raster recovery update — 2026-11-24
+Originals recovered from the owner Design Package (70 PNG, status `candidate`) and stored unmodified under `assets/{brand/raster,hero,services,business,process,mockups}/` with SHA-256, dimensions and `repo_path` in [assets/MANIFEST.csv](assets/MANIFEST.csv); tracked with Git LFS. A second archive of 41 originals was confirmed byte-identical to a subset. This supersedes "original unverified" in §4 for existence and hashes only; the R-ID to file mapping remains a proposal pending visual review. Rights/origin, trademark and content review, alt text, optimized AVIF/WebP derivatives, social/OG exports and approval remain open; dimensions (≈1448×1086, 1672×941) are below the 2560 hero target, so do not upscale. Files in `mockups/` are visual-direction references, not source of business rules; DESIGN-SYSTEM.md and ADRs prevail. Never ship `originals` or `mockups` to public builds by default.
+
+## 11. Visual review outcome and proposed R-ID mapping — 2026-11-24
+Product owner reviewed the 70 candidates in the thumbnail catalog and approved proceeding with them as the visual-direction raster set; `071-user-annotated-language-correction` was removed as not needed. This is direction acceptance only: per-asset status stays `candidate` (not APPROVED/RELEASED) until rights/origin, trademark and content checks, Spanish alt text and optimized exports are done. Mapping below is a proposal from file names, to be confirmed on rendered review; `mockups/` and `mockups/archive/` are reference only and are not mapped.
+
+| Brief | Proposed file(s) in `assets/` | Alternates / note |
+|---|---|---|
+| R1-01 hero-home | hero/021-homepage-coast-car-laptop | |
+| R1-02 hero-dealers | hero/065-dealer-showroom | 069-dealer-showroom-suv |
+| R1-03 hero-customers | hero/064-digital-service-devices | 066-car-studio |
+| R1-04 hero-importers | hero/034-import-transport-road | 036-import-port |
+| R1-05 hero-partners | hero/033-professional-gestor | |
+| R2-01 matriculacion | services/005-registration | 032-spanish-registration |
+| R2-02 cambio-titularidad | services/026-ownership-transfer | 059-ownership-transfer-alternative |
+| R2-03 importacion-ue | services/031-eu-import | |
+| R2-04 importacion-no-ue | services/037-non-eu-import | |
+| R2-05 ficha-reducida | services/024-ficha-reducida | 014-technical-sheet |
+| R2-07 baja-vehiculo | services/010-deregistration | |
+| R2-09 informe-vehiculo | services/004-vehicle-report | 018-vehicle-report-alternative |
+| R2-10 distintivo-ambiental | services/009-environmental-label | |
+| R2-12 homologacion | services/R2-12-service-homologacion | corrected image; earlier alternates 008/025 are ITV, not homologation |
+| R2-06 duplicado-permiso | services/R2-06-service-duplicado-permiso | added from R2-Additional-Images.zip |
+| R2-08 alta-vehiculo | services/R2-08-service-alta-vehiculo | added; car grille shows a brand-like emblem, review before release |
+| R2-11 canje-matricula | services/R2-11-service-canje-matricula | added; shows EU flag "E" plates, check against official-symbol rule |
+| R3-01 dealership-exterior | business/R3-01-business-dealership-showroom | corrected image; showroom interior, no true exterior; 070 alternate |
+| R3-02 dealer-advisor | business/001-dealer-consultation | |
+| R3-03 customer-handover | business/003-customer-couple | |
+| R3-04 importer-logistics | business/035-vehicle-logistics | |
+| R3-05 gestor-office | business/020-gestor-office | |
+| R3-06 engineer-inspection | business/067-technical-inspection | |
+| R4-01 select-service | process/007-select-service | |
+| R4-02 submit-documents | process/006-upload-documents | |
+| R4-03 review-quote | process/R4-03-process-quote-review | corrected image (no demo prices or text); 013 alternate |
+| R4-04 professional-processing | process/012-processing-review | |
+| R4-05 receive-result | process/011-receive-documents | |
+Unmapped extras: services/015-taxes-fees, business/002-office-team, process/016-online-payment, process/017-digital-signature, brand/raster/027-logo-raster-concept (concept only; SVG brand sources prevail).
+
+### 11.1 R2 additional images — 2026-11-24
+Three selected images (about 720×724, cropped from 2172×724 triptychs) fill the previously missing R2-06, R2-08 and R2-11 briefs; the 4 source sets are kept under `assets/services/r2-additional-originals/`. All 28 service/hero/business/process briefs now have a proposed file (R2-12, R3-01 and R4-03 were later replaced by corrected images, see §11.2). Resolution is below the 1024×1024 service master target, so avoid upscaling and review at 640 px. Status `candidate`; rights and approval still open.
+
+### 11.2 Corrected final three — 2026-11-24
+A first set of R2-12, R3-01 and R4-03 was reviewed and **not imported**: it embedded the AutoTramita logo, DGT/ITV marks, the Spanish coat of arms, headlines and buttons, and demo prices with a person's name and a vehicle make. The corrected set (`AutoTramita-Corrected-3-Images.zip`) is text-free and free of official marks and demo data, and replaces the three tentative mappings. All 28 briefs now have a proposed file, none tentative. Remaining open before release: vehicle grilles show generic brand-like emblems (check trademark), generated people in R3-01 are not real staff, rights/origin, Spanish alt text, optimized exports. Having a mapped file does not mean approval; status stays `candidate`.
+
+### 11.3 Origin statement — 2026-11-24
+Product owner states all imported raster images were generated by the owner with ChatGPT image generation (original creations, not downloaded stock or third-party files). Recorded as `origin: AI-generated (ChatGPT), owner-created`, taken from the owner's statement and not independently verified. Per §8, AI generation does not guarantee exclusive copyright or non-infringement, so commercial-rights terms of the tool at creation time, trademark review (vehicle emblems) and legal sign-off remain open; status stays `candidate`.
+
+### 11.4 Spanish alt text and review flags — 2026-11-24
+[assets/ALT-TEXTS.csv](assets/ALT-TEXTS.csv) holds proposed Spanish alt text (status `proposed`, native-speaker review pending) for the 28 mapped briefs, written from a contact-sheet review of the images, plus `review_flags`. Flags to resolve before release: **Spanish flag** in R1-01, R1-04, R1-05, R2-03, R2-04, R3-04 and **coat of arms** in R2-01 (state symbols; decide whether acceptable under the no-official-marks rule, otherwise regenerate); EU-symbol plates (R1-03, R2-01, R2-04, R2-11); a lookalike environmental-label symbol in R2-10 (must not imply an official DGT label); generic vehicle-grille emblems; generated people (not real staff or testimonials). Alt text must change if an image is regenerated.
+
+### 11.5 Spanish public slugs — 2026-11-24
+`assets/MANIFEST.csv` now has `public_slug_es` for the 28 mapped briefs (lowercase, no accents, hyphenated, unique). Repository originals keep their current names so hashes, IDs and ALT-TEXTS.csv stay stable. Export tooling should derive public names as `<public_slug_es>-<width>.<ext>` under `public/images/`; slugs are proposals aligned with the not-yet-approved service catalog (ADR-006) and must change if service names change. Filename is a weak SEO signal; Spanish alt text and surrounding page copy matter more. The English basenames in §4 remain as historical brief IDs.
+
+### 11.6 Owner decision on state symbols — 2026-11-24
+Product owner decided the Spanish flag (R1-01, R1-04, R1-05, R2-03, R2-04, R3-04) and the Spanish coat of arms (R2-01) **stay** in the images. The other flags in §11.4 (EU-symbol plates, lookalike environmental label in R2-10, generic grille emblems, generated people) remain open. Legal confirmation that state symbols may be used this way is not recorded here.

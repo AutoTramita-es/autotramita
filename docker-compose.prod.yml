@@ -1,0 +1,12 @@
+# Production SMTP reaches the existing mailserver via the shared host network.
+services:
+  api:
+    networks: [internal, backend, proxy, mail]
+  worker:
+    networks: [internal, backend, mail]
+  scheduler:
+    networks: [internal, backend, mail]
+networks:
+  mail:
+    external: true
+    name: hetzner_net

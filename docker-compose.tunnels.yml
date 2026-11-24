@@ -1,0 +1,22 @@
+services:
+  cloudflared-prod:
+    image: cloudflare/cloudflared:2026.10.0
+    container_name: autotramita-cloudflared-prod
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    env_file: .secrets/cloudflared-prod.env
+    networks:
+      - proxy
+
+  cloudflared-dev:
+    image: cloudflare/cloudflared:2026.10.0
+    container_name: autotramita-cloudflared-dev
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    env_file: .secrets/cloudflared-dev.env
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
