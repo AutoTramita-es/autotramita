@@ -32,6 +32,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - [Dealer dashboard wireframe](assets/wireframes/dealer-dashboard.svg) — fictional data concept.
 - [CASE-MANAGEMENT.md](CASE-MANAGEMENT.md) — case list, board, creation, detail, deadlines and assignments.
 - Case wireframes: [table](assets/wireframes/case-table.svg), [Kanban](assets/wireframes/case-kanban.svg), [detail](assets/wireframes/case-detail.svg), [wizard](assets/wireframes/case-wizard.svg).
+- [DEALER-CRM-VEHICLES.md](DEALER-CRM-VEHICLES.md) — customer and vehicle registry UX, representation and ownership evidence.
+- CRM wireframes: [customers](assets/wireframes/crm-customers.svg), [customer detail](assets/wireframes/crm-customer-detail.svg), [vehicles](assets/wireframes/crm-vehicles.svg), [vehicle detail](assets/wireframes/crm-vehicle-detail.svg).
 - UI-COMPONENTS.md — forms, tables, navigation, status, dialogs and states.
 - IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
 - RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
