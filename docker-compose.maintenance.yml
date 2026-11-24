@@ -1,0 +1,26 @@
+services:
+  maintenance:
+    image: nginx:1.27-alpine
+    container_name: autotramita-maintenance
+    restart: unless-stopped
+    volumes:
+      - ./maintenance:/usr/share/nginx/html:ro
+    networks: [proxy]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.autotramita-maintenance.rule=Host(`autotramita.es`)
+      - traefik.http.routers.autotramita-maintenance.entrypoints=websecure
+      - traefik.http.routers.autotramita-maintenance.tls.certresolver=cloudflare
+      - traefik.http.services.autotramita-maintenance.loadbalancer.server.port=80
+      - traefik.http.routers.autotramita-maintenance-www.rule=Host(`www.autotramita.es`)
+      - traefik.http.routers.autotramita-maintenance-www.entrypoints=websecure
+      - traefik.http.routers.autotramita-maintenance-www.tls.certresolver=cloudflare
+      - traefik.http.routers.autotramita-maintenance-www.middlewares=autotramita-maintenance-www-redirect
+      - traefik.http.routers.autotramita-maintenance-www.service=autotramita-maintenance
+      - traefik.http.middlewares.autotramita-maintenance-www-redirect.redirectregex.regex=^https://www[.]autotramita[.]es/(.*)
+      - traefik.http.middlewares.autotramita-maintenance-www-redirect.redirectregex.replacement=https://autotramita.es/$${1}
+      - traefik.http.middlewares.autotramita-maintenance-www-redirect.redirectregex.permanent=true
+networks:
+  proxy:
+    external: true
