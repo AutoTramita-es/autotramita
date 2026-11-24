@@ -20,5 +20,8 @@ RLS alone does not protect object storage. Storage policies, access checks, rete
 ## Open decisions
 Storage provider, retention periods, malware scanning pipeline, file-size limits, encryption key management and deletion/legal-hold rules.
 
+## Later amendments
+- Storage mechanism amended by [ADR-011](ADR-011-documents-on-shared-nextcloud.md) (shared Nextcloud instead of S3-compatible storage); authorization, audit and isolation rules here remain in force.
+
 ## Scope
 Architecture only.

@@ -25,5 +25,8 @@ REST API routes are versioned under `/api/v1/`. OpenAPI is the contract for gene
 ## Consequences
 One deployable backend simplifies transactions, development and operations. Domains remain separated so services can be extracted later if justified. Product-specific infrastructure, authentication provider and deployment details are future decisions.
 
+## Later amendments
+- The S3-compatible object storage clause is superseded by [ADR-011](ADR-011-documents-on-shared-nextcloud.md); the OIDC provider is [ADR-010](ADR-010-identity-provider-keycloak.md) (Keycloak).
+
 ## Scope
 Architecture decision only; no application implementation or deployment.
