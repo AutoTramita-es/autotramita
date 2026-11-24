@@ -11,7 +11,7 @@
 | [ADR-007](ADR-007-pricing-credit-payments.md) | Unified pricing, dealership credit and central payment collection | Accepted | 2026-11-23 |
 | [ADR-008](ADR-008-delivery-governance.md) | Architecture-first, module-by-module delivery with Claude Code | Accepted | 2026-11-23 |
 | [ADR-009](ADR-009-tenant-organization-membership-verification.md) | Tenant organization, memberships and verification | Accepted | 2026-11-23 |
-| [ADR-010](ADR-010-identity-provider-keycloak.md) | Keycloak as identity provider | **Proposed** | 2026-11-24 |
+| [ADR-010](ADR-010-identity-provider-keycloak.md) | Keycloak as identity provider | Accepted | 2026-11-24 |
 | [ADR-011](ADR-011-documents-on-shared-nextcloud.md) | Document content on the shared Nextcloud | **Proposed** | 2026-11-24 |
 
 ## Conventions
