@@ -506,7 +506,9 @@ def test_429_response_headers_and_body(
     assert body["type"] == "https://docs.autotramita.es/errors/rate-limit-exceeded"
     assert body["status"] == 429
     assert body["request_id"] == denied.headers["x-request-id"]
-    assert 1 <= int(denied.headers["retry-after"]) <= 60
+    # Waiting out the rest of the bucket plus the decay of the full previous bucket takes up to
+    # two windows, so the bound is 120 s (the policy window is 60 s).
+    assert 1 <= int(denied.headers["retry-after"]) <= 120
     assert denied.headers["ratelimit-remaining"] == "0"
 
 
