@@ -18,7 +18,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 ## Planned documents
 - [BRAND-IDENTITY.md](BRAND-IDENTITY.md) — logo variants, color tokens, typography, usage rules.
 - DESIGN-SYSTEM.md — semantic tokens, spacing, elevation, themes and accessibility.
-- WEBSITE-STRUCTURE.md — public routes, navigation, page sections and Spanish copy.
+- [WEBSITE-STRUCTURE.md](WEBSITE-STRUCTURE.md) — homepage UX, public routes, Spanish copy and responsive rules.
+- [Homepage desktop wireframe](assets/wireframes/homepage-desktop.svg) — editable layout concept; raster placeholders pending.
 - UI-COMPONENTS.md — forms, tables, navigation, status, dialogs and states.
 - IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
 - RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
