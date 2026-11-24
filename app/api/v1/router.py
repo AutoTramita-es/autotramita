@@ -10,7 +10,9 @@ from fastapi import APIRouter, Depends
 
 def build_v1_router(settings: RateLimitSettings) -> APIRouter:
     default_limit = rate_limit(
-        build_policies(settings)["public"], by_ip(settings.trusted_proxy_hops)
+        build_policies(settings)["public"],
+        by_ip(settings.trusted_proxy_networks),
+        settings.trusted_proxy_networks,
     )
     router = APIRouter(prefix="/api/v1")
     router.include_router(health.router)  # exempt from rate limiting

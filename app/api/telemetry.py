@@ -11,24 +11,34 @@ UNMATCHED_ROUTE = "unmatched"
 
 
 def route_template(scope: Scope) -> str:
-    """Route template for the span: never contains values from the request path.
+    """Route template for the span (R08): only a registered template or ``unmatched``.
 
-    FastAPI reports routes of included routers relative to their prefix, so the full template
-    is rebuilt from the request path by replacing every path parameter value with its name; if
-    a value cannot be located as a whole segment, the relative template is used instead."""
+    The template always comes from the matched route object (``path_format``), never from
+    the request path, so no request value can appear in it. FastAPI reports routes of included
+    routers and mounts relative to their prefix; the literal prefix is recovered from the
+    request path only when it provably holds no path-parameter value: the relative path is
+    rebuilt from the route and the matched parameters, must be an exact suffix of the request
+    path, and no parameter value may occur in the remaining prefix. Otherwise (converters that
+    normalize values, parameterized mounts, any doubt) the relative registered template is
+    used, which is value-free by construction."""
     route = scope.get("route")
-    if route is None:
+    template = getattr(route, "path_format", None) or getattr(route, "path", None)
+    if not isinstance(template, str) or not template:
         return UNMATCHED_ROUTE
-    full = str(scope.get("path", ""))
-    params = {str(value): name for name, value in (scope.get("path_params") or {}).items()}
-    if not params:
-        return full  # a literal route: the path is its template
-    segments = full.split("/")
-    rebuilt = ["{" + params[seg] + "}" if seg in params else seg for seg in segments]
-    if {seg for seg in segments if seg in params} != set(params):
-        template = getattr(route, "path_format", None) or getattr(route, "path", None)
-        return str(template) if template else UNMATCHED_ROUTE
-    return "/".join(rebuilt)
+    params = {str(k): str(v) for k, v in (scope.get("path_params") or {}).items()}
+    full = scope.get("path")
+    if not isinstance(full, str):
+        return template
+    try:
+        relative = template.format_map(params)
+    except (KeyError, IndexError, ValueError):
+        return template
+    if not full.endswith(relative):
+        return template
+    prefix = full[: len(full) - len(relative)]
+    if any(value and value in prefix for value in params.values()):
+        return template
+    return prefix.rstrip("/") + template
 
 
 class TelemetryMiddleware:

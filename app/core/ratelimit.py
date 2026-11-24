@@ -215,21 +215,44 @@ class RateLimiter:
         )
 
 
-def client_ip(request: Request, trusted_hops: int = 0) -> str:
-    """Client address. ``X-Forwarded-For`` is used only for the configured number of trusted
-    proxies and then only the entry the closest trusted proxy appended; entries a client
-    prepends are ignored. Anything unexpected falls back to the direct peer address."""
-    peer = request.client.host if request.client else "unknown"
-    if trusted_hops <= 0:
-        return peer
-    joined = ",".join(request.headers.getlist("x-forwarded-for"))
-    forwarded = [p for p in (part.strip() for part in joined.split(",")) if p]
-    if len(forwarded) < trusted_hops:
-        return peer
+IPNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network
+MAX_FORWARDED_ENTRIES = 20
+
+
+def _parse_ip(value: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
     try:
-        return str(ipaddress.ip_address(forwarded[-trusted_hops]))
+        address = ipaddress.ip_address(value.strip())
     except ValueError:
-        return peer
+        return None
+    if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None:
+        return address.ipv4_mapped
+    return address
+
+
+def client_ip(request: Request, trusted_proxies: Sequence[IPNetwork] = ()) -> str:
+    """Client address (R06). ``X-Forwarded-For`` is considered only when the direct peer is
+    itself inside ``trusted_proxies`` (CIDR networks); a peer outside them cannot influence the
+    result. The header is then read from the right, skipping entries that are trusted proxies;
+    the first untrusted entry is the client. Anything unexpected (no trusted proxies, missing
+    or unparsable peer, malformed or oversized header, only trusted entries) falls back to the
+    direct peer address, the safe and conservative choice. Header lines are joined."""
+    raw_peer = request.client.host if request.client else "unknown"
+    peer = _parse_ip(raw_peer)
+    if peer is None:
+        return raw_peer
+    if not trusted_proxies or not any(peer in net for net in trusted_proxies):
+        return str(peer)
+    joined = ",".join(request.headers.getlist("x-forwarded-for"))
+    entries = [e for e in (part.strip() for part in joined.split(",")) if e]
+    if not entries or len(entries) > MAX_FORWARDED_ENTRIES:
+        return str(peer)
+    for entry in reversed(entries):
+        address = _parse_ip(entry)
+        if address is None:
+            return str(peer)
+        if not any(address in net for net in trusted_proxies):
+            return str(address)
+    return str(peer)
 
 
 def _headers(decision: Decision) -> dict[str, str]:
@@ -249,7 +272,7 @@ class Rule:
 
 
 def rate_limits(
-    rules: Sequence[Rule], trusted_hops: int = 0
+    rules: Sequence[Rule], trusted_proxies: Sequence[IPNetwork] = ()
 ) -> Callable[[Request, Response], None]:
     """Dependency factory: every rule must allow the request (checked together).
 
@@ -265,7 +288,7 @@ def rate_limits(
                 headers={"Retry-After": str(UNAVAILABLE_RETRY_AFTER_SECONDS)},
             )
         checks = [
-            (rule.policy, rule.identity(request) or client_ip(request, trusted_hops))
+            (rule.policy, rule.identity(request) or client_ip(request, trusted_proxies))
             for rule in rules
         ]
         decision = limiter.check_all(checks)
@@ -281,14 +304,16 @@ def rate_limits(
 
 
 def rate_limit(
-    policy: Policy, identity: Callable[[Request], str | None], trusted_hops: int = 0
+    policy: Policy,
+    identity: Callable[[Request], str | None],
+    trusted_proxies: Sequence[IPNetwork] = (),
 ) -> Callable[[Request, Response], None]:
     """Dependency for a single limit (see ``rate_limits``)."""
-    return rate_limits([Rule(policy, identity)], trusted_hops)
+    return rate_limits([Rule(policy, identity)], trusted_proxies)
 
 
-def by_ip(trusted_hops: int = 0) -> Callable[[Request], str | None]:
-    return lambda request: client_ip(request, trusted_hops)
+def by_ip(trusted_proxies: Sequence[IPNetwork] = ()) -> Callable[[Request], str | None]:
+    return lambda request: client_ip(request, trusted_proxies)
 
 
 def by_principal(request: Request) -> str | None:

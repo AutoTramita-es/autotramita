@@ -19,6 +19,7 @@ or building ``Settings`` performs no network access.
 from __future__ import annotations
 
 from functools import lru_cache
+from ipaddress import IPv4Network, IPv6Network, ip_network
 from typing import Any, Literal
 from urllib.parse import urlsplit
 
@@ -268,8 +269,33 @@ class RateLimitSettings(BaseSettings):
     password_recovery_per_hour: int = Field(
         default=3, ge=1, validation_alias="RATE_LIMIT_PASSWORD_RECOVERY_PER_HOUR"
     )
-    # Number of trusted reverse proxies in front of the API; 0 ignores X-Forwarded-For.
-    trusted_proxy_hops: int = Field(default=0, ge=0, le=5, validation_alias="TRUSTED_PROXY_HOPS")
+    # Comma-separated CIDR networks of the reverse proxies in front of the API (R06). Empty
+    # (default) ignores X-Forwarded-For. A peer outside these networks is never trusted.
+    trusted_proxy_cidrs: str = Field(default="", validation_alias="TRUSTED_PROXY_CIDRS")
+
+    @field_validator("trusted_proxy_cidrs", mode="after")
+    @classmethod
+    def _valid_cidrs(cls, value: str) -> str:
+        for item in (part.strip() for part in value.split(",")):
+            if not item:
+                continue
+            try:
+                network = ip_network(item, strict=True)
+            except ValueError:
+                raise ValueError(
+                    "TRUSTED_PROXY_CIDRS must be comma-separated CIDR networks"
+                ) from None
+            if network.prefixlen == 0:
+                raise ValueError("TRUSTED_PROXY_CIDRS must not trust every address")
+        return value
+
+    @property
+    def trusted_proxy_networks(self) -> tuple[IPv4Network | IPv6Network, ...]:
+        return tuple(
+            ip_network(item.strip(), strict=True)
+            for item in self.trusted_proxy_cidrs.split(",")
+            if item.strip()
+        )
 
 
 @lru_cache
