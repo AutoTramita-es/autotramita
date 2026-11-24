@@ -13,6 +13,7 @@ from app.core.config import RateLimitSettings
 from app.core.ratelimit import RateLimiter, create_redis
 from fastapi.testclient import TestClient
 from sqlalchemy import text
+from tests.auth.fake_admin import RecordingNotifier
 from tests.conftest import RoleEnv
 from tests.identity.kc import REALM, Browser, Env, TestUser
 
@@ -31,17 +32,25 @@ class Rig:
                 "AUTH_COOKIE_SECURE": "false",
                 "AUTH_WEB_CLIENT_SECRET": env.web_secret,
                 "AUTH_JWKS_MIN_REFRESH_SECONDS": 0,
+                "AUTH_ADMIN_CLIENT_SECRET": env.svc_secret,  # F2-T09: the real admin client
+                "AUTH_SECURITY_HMAC_KEY": "k" * 32,
             }
         )
         client = create_redis(redis_url)
         engine = role_env.engine("app")
         runtime = AuthRuntime.build(settings, client, engine, namespace=f"kc{id(self)}")
+        self.notices = RecordingNotifier()
+        runtime.notifier = self.notices
+        self.runtime = runtime
         limiter = RateLimiter(client, namespace=f"kc{id(self)}")
         app = create_app(limiter, engine, RateLimitSettings(), runtime)
         self.api = TestClient(app, base_url=ORIGIN, follow_redirects=False)
         self.browser = Browser(env)
+        self.extra: list[TestClient] = []
 
     def close(self) -> None:
+        for client in self.extra:
+            client.close()
         self.api.close()
         self.browser.close()
 
@@ -62,9 +71,18 @@ class Rig:
         assert page.location and page.location.startswith(f"{ORIGIN}{API}/callback"), page.summary
         return page.location
 
-    def sign_in(self, user: TestUser, return_to: str = "/app") -> httpx.Response:
-        start = self.api.get(f"{API}/login", params={"return_to": return_to})
+    def sign_in(
+        self, user: TestUser, return_to: str = "/app", client: TestClient | None = None
+    ) -> httpx.Response:
+        api = client or self.api
+        start = api.get(f"{API}/login", params={"return_to": return_to})
         assert start.status_code == 302, start.text
         callback = self.at_keycloak(start.headers["location"], user)
-        done: httpx.Response = self.api.get(callback)
+        done: httpx.Response = api.get(callback)
         return done
+
+    def another_client(self) -> TestClient:
+        """A second browser tab of the application (own cookie jar, same Keycloak browser)."""
+        client = TestClient(self.api.app, base_url=ORIGIN, follow_redirects=False)
+        self.extra.append(client)
+        return client

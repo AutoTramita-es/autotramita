@@ -29,6 +29,9 @@ class LoginOutcome:
     secret: str
     absolute_expires_at: datetime
     disabled_user_id: UUID | None = None
+    user_id: UUID | None = None
+    session_id: UUID | None = None
+    email: str | None = None
 
 
 def complete_login(
@@ -78,7 +81,13 @@ def complete_login(
                 details={"client_type": client_type.value, "auth_level": level.value},
             ),
         )
-        return LoginOutcome(created.credential or "", created.session.absolute_expires_at)
+        return LoginOutcome(
+            created.credential or "",
+            created.session.absolute_expires_at,
+            user_id=user.id,
+            session_id=created.session.id,
+            email=user.email,
+        )
 
 
 def revoke_for_logout(rt: AuthRuntime, verified: VerifiedLogout) -> None:

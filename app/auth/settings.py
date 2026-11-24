@@ -108,6 +108,45 @@ class AuthSettings(AuthLimitSettings):
         default=10, ge=1, le=100, validation_alias="AUTH_MAX_SESSIONS_PER_USER"
     )
 
+    # --- Identity-provider admin client and security notices (F2-T09, D20/D27) ---
+    admin_client_id: str = Field(
+        default="at-admin-svc", min_length=1, validation_alias="AUTH_ADMIN_CLIENT_ID"
+    )
+    admin_client_secret: SecretStr | None = Field(
+        default=None, validation_alias="AUTH_ADMIN_CLIENT_SECRET"
+    )
+    admin_timeout_seconds: float = Field(
+        default=5.0, gt=0, le=20, validation_alias="AUTH_ADMIN_TIMEOUT_SECONDS"
+    )
+    # Key that turns an e-mail address into a rate-limit identity (an HMAC), so a leaked Redis
+    # never lists addresses. Without it the recovery endpoint answers 503.
+    security_hmac_key: SecretStr | None = Field(
+        default=None, validation_alias="AUTH_SECURITY_HMAC_KEY"
+    )
+    recovery_link_minutes: int = Field(
+        default=30, ge=5, le=60, validation_alias="AUTH_RECOVERY_LINK_MINUTES"
+    )
+    notify_mode: str = Field(default="disabled", validation_alias="AUTH_NOTIFY_MODE")
+    smtp_host: str | None = Field(default=None, validation_alias="AUTH_SMTP_HOST")
+    smtp_port: int = Field(default=1025, ge=1, le=65535, validation_alias="AUTH_SMTP_PORT")
+    smtp_from: str | None = Field(default=None, validation_alias="AUTH_SMTP_FROM")
+    smtp_starttls: bool = Field(default=False, validation_alias="AUTH_SMTP_STARTTLS")
+    smtp_user: str | None = Field(default=None, validation_alias="AUTH_SMTP_USER")
+    smtp_password: SecretStr | None = Field(default=None, validation_alias="AUTH_SMTP_PASSWORD")
+
+    @field_validator("notify_mode", mode="after")
+    @classmethod
+    def _notify_mode_known(cls, value: str) -> str:
+        if value not in ("disabled", "smtp"):
+            raise ValueError("AUTH_NOTIFY_MODE must be 'disabled' or 'smtp'")
+        return value
+
+    @model_validator(mode="after")
+    def _smtp_needs_a_host(self) -> AuthSettings:
+        if self.notify_mode == "smtp" and not (self.smtp_host and self.smtp_from):
+            raise ValueError("AUTH_NOTIFY_MODE=smtp needs AUTH_SMTP_HOST and AUTH_SMTP_FROM")
+        return self
+
     @field_validator("issuer", mode="after")
     @classmethod
     def _issuer_secure(cls, value: str) -> str:
@@ -159,6 +198,14 @@ class AuthSettings(AuthLimitSettings):
         if self.admin_absolute_hours > self.web_absolute_hours:
             raise ValueError("central administration session must not outlive the web one")
         return self
+
+    @property
+    def admin_base_url(self) -> str:
+        """Admin REST base derived from the issuer: ``…/realms/x`` becomes ``…/admin/realms/x``."""
+        head, separator, realm = self.issuer.rpartition("/realms/")
+        if not separator:
+            raise ValueError("AUTH_OIDC_ISSUER must contain /realms/<realm>")
+        return f"{head}/admin/realms/{realm}"
 
     @property
     def cookie_name(self) -> str:

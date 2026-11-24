@@ -27,7 +27,11 @@ def build_v1_router(
     # policies are added per endpoint by their modules.
     limited = APIRouter(dependencies=[Depends(default_limit)])
     limited.include_router(
-        build_auth_router(auth_limits or AuthLimitSettings(), settings.trusted_proxy_networks),
+        build_auth_router(
+            auth_limits or AuthLimitSettings(),
+            settings.trusted_proxy_networks,
+            settings.password_recovery_per_hour,
+        ),
         responses=PROBLEM_RESPONSES,
     )
     limited.include_router(
@@ -35,7 +39,8 @@ def build_v1_router(
         responses=PROBLEM_RESPONSES,
     )
     limited.include_router(
-        build_me_router(settings.trusted_proxy_networks), responses=PROBLEM_RESPONSES
+        build_me_router(auth_limits or AuthLimitSettings(), settings.trusted_proxy_networks),
+        responses=PROBLEM_RESPONSES,
     )
     router.include_router(limited)
     return router

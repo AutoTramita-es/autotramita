@@ -48,6 +48,8 @@ select = ["E", "F", "I", "UP", "B", "S", "SIM", "RUF"]
 "tests/auth/mobile/test_mobile_flow.py" = ["E501"]
 "tests/auth/probe_routes.py" = ["E501"]
 "tests/auth/context/*.py" = ["E501"]
+"tests/auth/security/*.py" = ["E501"]
+"tests/identity/test_security_keycloak.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

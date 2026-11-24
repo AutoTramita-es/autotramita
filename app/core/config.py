@@ -246,9 +246,10 @@ class RateLimitSettings(BaseSettings):
     """Rate limits (requests per minute unless stated). Configurable; business modules add
     their own policies in their phases. Health checks are never limited.
 
-    The Keycloak brute-force and password-recovery values are reserved here as the agreed
-    source of truth; they are enforced by Keycloak configuration in phase F2, not by this
-    application layer.
+    ``password_recovery_per_hour`` is enforced by the application (D20, F2-T09): the recovery
+    endpoint counts requests per account in Redis, because Keycloak has no native per-account
+    limit. The two ``keycloak_*`` brute-force values mirror the realm configuration, which
+    enforces them (realm template, verified by the Keycloak integration tests).
     """
 
     model_config = SettingsConfigDict(extra="ignore", case_sensitive=True, env_file=None)

@@ -75,7 +75,8 @@
       "serviceAccountsEnabled": false,
       "redirectUris": [
         "https://autotramita.es/api/v1/auth/callback",
-        "https://admin.autotramita.es/api/v1/auth/callback"
+        "https://admin.autotramita.es/api/v1/auth/callback",
+        "https://autotramita.es/"
       ],
       "webOrigins": [],
       "attributes": {

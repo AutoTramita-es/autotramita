@@ -148,6 +148,12 @@ F2_AUTH_PATHS = [
     "/api/v1/sessions/{session_id}",
     "/api/v1/me",
     "/api/v1/me/workspaces",
+    "/api/v1/auth/password-recovery",
+    "/api/v1/me/email-verification",
+    "/api/v1/me/security",
+    "/api/v1/me/security/mfa-enrollment-requests",
+    "/api/v1/me/security/password-change-requests",
+    "/api/v1/me/security/second-factors/{credential_id}",
 ]
 
 
@@ -156,7 +162,7 @@ def test_only_the_documented_routes_are_exposed_and_nothing_else() -> None:
     paths = sorted(json.loads(render())["paths"])
     assert paths == sorted(
         [*F2_AUTH_PATHS, "/api/v1/health"]
-    )  # F1 health, F2-T06 web sign-in, F2-T07 mobile and sessions, F2-T08 profile and workspaces
+    )  # F1 health; F2: T06 web sign-in, T07 mobile and sessions, T08 profile, T09 security
     plain = [getattr(route, "path", None) for route in app.routes]
     assert {p for p in plain if p} <= {"/openapi.json"}  # no hidden docs or test routes
 
@@ -168,6 +174,8 @@ def test_common_response_models(spec: dict[str, Any]) -> None:
         "StepUpResult", "UserSummary", "WorkspaceInfo", "CursorPage_SessionSummary_", "DeviceBody",
         "MobileSessionRequest", "Revoked", "SessionSummary", "CursorPage_WorkspaceOption_",
         "ProfilePatch", "UserProfile", "WorkspaceOption", "WorkspaceSwitch",
+        "Accepted", "ActionStart", "MfaEnrollment", "PasswordChange", "RecoveryAccepted",
+        "RecoveryRequest", "SecondFactor", "SecurityOverview",
     }  # fmt: skip
     assert set(schemas["Problem"]["required"]) == {"type", "title", "status", "code"}
     assert set(schemas["Problem"]["properties"]) == {

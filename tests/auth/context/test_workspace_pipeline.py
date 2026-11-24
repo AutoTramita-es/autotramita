@@ -481,6 +481,12 @@ EXPECTED_ACCESS = {
     ("GET", "/api/v1/me"): AccessKind.USER,
     ("PATCH", "/api/v1/me"): AccessKind.USER,
     ("GET", "/api/v1/me/workspaces"): AccessKind.USER,
+    ("POST", "/api/v1/auth/password-recovery"): AccessKind.PUBLIC,
+    ("GET", "/api/v1/me/security"): AccessKind.USER,
+    ("POST", "/api/v1/me/email-verification"): AccessKind.USER,
+    ("POST", "/api/v1/me/security/password-change-requests"): AccessKind.USER,
+    ("POST", "/api/v1/me/security/mfa-enrollment-requests"): AccessKind.USER,
+    ("DELETE", "/api/v1/me/security/second-factors/{credential_id}"): AccessKind.USER,
 }
 
 
@@ -503,7 +509,7 @@ def test_anonymous_callers_are_refused_before_anything_else_on_every_protected_r
     for (method, path), kind in EXPECTED_ACCESS.items():
         if kind is AccessKind.PUBLIC:
             continue
-        url = path.replace("{session_id}", str(uuid.uuid4()))
+        url = path.replace("{session_id}", str(uuid.uuid4())).replace("{credential_id}", "c1")
         response = anonymous.request(method, url, json={} if method in ("POST", "PATCH") else None)
         assert response.status_code == 401 and response.json()["code"] == "AUTH_REQUIRED", (
             method,

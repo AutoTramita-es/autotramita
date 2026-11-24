@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Any, NoReturn
+from typing import Any, Literal, NoReturn
 from urllib.parse import parse_qs
 
 from app.api.v1.authn import SessionInfo, authenticated, request_facts, session_info
@@ -17,6 +17,7 @@ from app.api.v1.guards import AccessKind, declared
 from app.audit.models import ActorType, AuditEvent, Outcome
 from app.audit.record import record, record_independent
 from app.auth import credentials
+from app.auth.email import normalize_email
 from app.auth.errors import (
     AccountDisabled,
     AuthCallbackRejected,
@@ -24,6 +25,7 @@ from app.auth.errors import (
     TokenInvalid,
 )
 from app.auth.runtime import AuthRuntime, runtime_of
+from app.auth.security import actions, recovery
 from app.auth.sessions import service as sessions
 from app.auth.sessions.models import AuthLevel, ClientType, RevokeReason, UserSession
 from app.auth.settings import AuthLimitSettings
@@ -40,10 +42,10 @@ from app.auth.web.oidc_flow import (
 from app.auth.web.redirects import safe_return_to
 from app.auth.web.stepup import StepUpPurpose, authorization_params, level_from_acr
 from app.core.db import RequestContext, session_scope
-from app.core.errors import TooManyRequests
+from app.core.errors import TooManyRequests, UnprocessableEntity
 from app.core.ratelimit import IPNetwork, Policy, by_ip, rate_limit
 from app.core.versioning import format_etag
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from starlette.responses import RedirectResponse
@@ -67,6 +69,16 @@ class StepUpResult(BaseModel):
     redirect_url: str
 
 
+class RecoveryRequest(BaseModel):
+    email: str = Field(max_length=320, description="The address of the account")
+
+
+class RecoveryAccepted(BaseModel):
+    """Identical for known, unknown, blocked and rate-limited accounts (D26)."""
+
+    status: Literal["accepted"] = "accepted"
+
+
 def _reject(request: Request, rt: AuthRuntime, reason: str) -> NoReturn:
     prefix, family = request_facts(request, rt)
     record_independent(
@@ -84,7 +96,7 @@ def _reject(request: Request, rt: AuthRuntime, reason: str) -> NoReturn:
     raise AuthCallbackRejected()
 
 
-def _new_flow(
+def new_flow(
     request: Request, rt: AuthRuntime, *, purpose: str, return_to: str | None, extra: dict[str, Any]
 ) -> tuple[str, str, str, str, str, str]:
     origin, client = rt.site_for(request)
@@ -107,11 +119,16 @@ def _new_flow(
     return origin, state, nonce, binder, verifier, challenge
 
 
-def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()) -> APIRouter:
+def build_auth_router(
+    limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = (), recovery_per_hour: int = 3
+) -> APIRouter:
     router = APIRouter(prefix="/auth", tags=["auth"])
     ip = by_ip(trusted)
     login_limit = rate_limit(Policy("auth_login", limits.login_per_min_ip), ip, trusted)
     callback_limit = rate_limit(Policy("auth_callback", limits.callback_per_min_ip), ip, trusted)
+    recovery_ip_limit = rate_limit(
+        Policy("auth_recovery_ip", limits.recovery_per_hour_ip, 3600), ip, trusted
+    )
 
     @router.get(
         "/login",
@@ -123,7 +140,7 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
     )
     def login(request: Request, return_to: str | None = None) -> Response:
         rt = runtime_of(request)
-        origin, state, nonce, binder, _verifier, challenge = _new_flow(
+        origin, state, nonce, binder, _verifier, challenge = new_flow(
             request, rt, purpose="LOGIN", return_to=return_to, extra={}
         )
         url = rt.endpoints.authorization_url(
@@ -147,6 +164,7 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
         code: str | None = None,
         state: str | None = None,
         error: str | None = None,
+        kc_action_status: str | None = None,
     ) -> Response:
         rt = runtime_of(request)
         flow = rt.flows.take(state)  # single use: a replayed callback finds nothing
@@ -176,6 +194,8 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
             _reject(request, rt, f"TOKEN_{rejected.reason.value.upper()}")
         if flow.get("purpose") == "STEP_UP":
             response = _finish_step_up(request, rt, flow, identity)
+        elif flow.get("purpose") == "SECURITY_ACTION":
+            response = _finish_security_action(request, rt, flow, identity, kc_action_status)
         else:
             response = _finish_login(request, rt, flow, identity, client_type)
         cookies.clear_flow_cookie(response, rt.settings)
@@ -209,10 +229,75 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
                 ),
             )
             raise AccountDisabled()
+        if outcome.user_id and outcome.session_id and outcome.email:
+            recovery.after_sign_in(
+                rt,
+                subject=identity.subject,
+                user_id=outcome.user_id,
+                email=outcome.email,
+                keep_session_id=outcome.session_id,
+            )
         response = RedirectResponse(str(flow.get("return_to", "/")), status_code=302)
         remaining = int((outcome.absolute_expires_at - datetime.now(UTC)).total_seconds())
         cookies.set_session_cookie(response, rt.settings, outcome.secret, max_age_seconds=remaining)
         return response
+
+    def _finish_security_action(
+        request: Request,
+        rt: AuthRuntime,
+        flow: dict[str, Any],
+        identity: VerifiedIdToken,
+        kc_status: str | None,
+    ) -> Response:
+        outcome = actions.complete_action(
+            rt,
+            credential=request.cookies.get(rt.settings.cookie_name, ""),
+            flow=flow,
+            subject=identity.subject,
+            kc_status=kc_status,
+            reject=lambda reason: _reject(request, rt, reason),
+        )
+        target = str(flow.get("return_to", "/"))
+        joiner = "&" if "?" in target else "?"
+        status = "success" if outcome.succeeded else "cancelled"
+        response = RedirectResponse(f"{target}{joiner}security_action={status}", status_code=302)
+        if outcome.succeeded and outcome.secret and outcome.absolute_expires_at:
+            remaining = int((outcome.absolute_expires_at - datetime.now(UTC)).total_seconds())
+            cookies.set_session_cookie(
+                response, rt.settings, outcome.secret, max_age_seconds=remaining
+            )
+        return response
+
+    @router.post(
+        "/password-recovery",
+        status_code=202,
+        summary="Ask for a password recovery e-mail (always the same answer)",
+        response_model=RecoveryAccepted,
+        dependencies=[Depends(declared(AccessKind.PUBLIC)), Depends(recovery_ip_limit)],
+    )
+    def password_recovery(
+        request: Request,
+        body: RecoveryRequest,
+        response: Response,
+        background: BackgroundTasks,
+    ) -> RecoveryAccepted:
+        rt = runtime_of(request)
+        try:
+            email = normalize_email(body.email)
+        except ValueError:
+            raise UnprocessableEntity("Enter a valid e-mail address.") from None
+        limiter = recovery.limiter_of(request)
+        # The one thing done before answering: count this account (Redis down: 503 for all).
+        allowed = recovery.account_allowed(
+            rt, limiter, "auth_recovery_account", recovery_per_hour, email
+        )
+        prefix, family = request_facts(request, rt)
+        background.add_task(
+            recovery.process_recovery, rt, email, allowed=allowed, ip_prefix=prefix,
+            ua_family=family,
+        )  # fmt: skip
+        cookies.no_store(response)
+        return RecoveryAccepted()
 
     def _finish_step_up(
         request: Request, rt: AuthRuntime, flow: dict[str, Any], identity: VerifiedIdToken
@@ -344,7 +429,7 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
                     headers={"Retry-After": str(decision.retry_after_seconds)},
                 )
         params = authorization_params(body.purpose)
-        origin, state, nonce, binder, _verifier, challenge = _new_flow(
+        origin, state, nonce, binder, _verifier, challenge = new_flow(
             request,
             rt,
             purpose="STEP_UP",

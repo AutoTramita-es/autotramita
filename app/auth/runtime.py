@@ -8,11 +8,18 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network
+from typing import Any
 from urllib.parse import urlsplit
 
 import redis
+from app.audit.models import ActorType, AuditEvent, Outcome
+from app.audit.record import record_independent
 from app.auth.errors import AuthNotConfigured
+from app.auth.idp import IdentityProviderAdmin
+from app.auth.idp_admin import KeycloakAdmin
 from app.auth.membership import DenyAllAuthorizer, MembershipAuthorizer
+from app.auth.security.markers import RecoveryMarkers
+from app.auth.security.notify import DisabledNotifier, SecurityNotifier, build_notifier
 from app.auth.sessions.models import ClientType, SessionPolicy
 from app.auth.settings import AuthSettings
 from app.auth.tokens import (
@@ -29,7 +36,7 @@ from app.auth.web.oidc_flow import (
     TokenExchanger,
     http_token_exchanger,
 )
-from app.core.db import create_session_factory
+from app.core.db import RequestContext, create_session_factory
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.requests import Request
@@ -53,6 +60,31 @@ class AuthRuntime:
     # F2 ships no memberships: the only production authorizer says no to everything (D18).
     membership: MembershipAuthorizer = field(default_factory=DenyAllAuthorizer)
     clock: Callable[[], float] = field(default=time.time)
+    # F2-T09: identity-provider admin port, security notices and pending-reset markers.
+    admin: IdentityProviderAdmin | None = None
+    notifier: SecurityNotifier = field(default_factory=DisabledNotifier)
+    markers: RecoveryMarkers | None = None
+
+    def record_anonymous(
+        self,
+        action: str,
+        outcome: Outcome,
+        ip_prefix: str | None,
+        ua_family: str | None,
+        details: dict[str, Any],
+    ) -> None:
+        record_independent(
+            self.factory,
+            AuditEvent(
+                action=action,
+                outcome=outcome,
+                actor_type=ActorType.ANONYMOUS,
+                ip_prefix=ip_prefix,
+                ua_family=ua_family,
+                details=details,
+            ),
+            RequestContext(),
+        )
 
     @classmethod
     def build(
@@ -83,6 +115,9 @@ class AuthRuntime:
             factory=create_session_factory(engine),
             policy=SessionPolicy.from_settings(settings),
             trusted_proxies=trusted_proxies,
+            admin=KeycloakAdmin(settings) if settings.admin_client_secret else None,
+            notifier=build_notifier(settings),
+            markers=RecoveryMarkers(redis_client, namespace=namespace),
         )
 
     # --- origins: which of our sites a request belongs to --------------------------------------

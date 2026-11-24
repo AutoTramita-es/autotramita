@@ -161,6 +161,7 @@ class OidcEndpoints:
         acr_values: str | None = None,
         prompt: str | None = None,
         max_age: int | None = None,
+        kc_action: str | None = None,
     ) -> str:
         params: dict[str, str] = {
             "client_id": self._settings.web_client_id,
@@ -178,6 +179,8 @@ class OidcEndpoints:
             params["prompt"] = prompt
         if max_age is not None:
             params["max_age"] = str(max_age)
+        if kc_action:  # application-initiated action (D37): password change, second factor
+            params["kc_action"] = kc_action
         return f"{self._settings.issuer}/protocol/openid-connect/auth?{urlencode(params)}"
 
     def end_session_url(self, post_logout_redirect_uri: str) -> str:
