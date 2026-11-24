@@ -87,7 +87,7 @@ F1 is not deployed and nothing here touches a shared environment, so rollback is
 - Authentication, Keycloak, the worker process and real tenants do not exist; tests use synthetic contexts and test-only routes. Readiness is not exposed publicly (open decision O20); live proxy networks for `TRUSTED_PROXY_CIDRS` are deferred.
 - The rate limiter is an approximation by design and, if Redis is down, limited endpoints answer 503 (security over availability).
 - `CurrencyCode` checks the ISO 4217 format only. The OpenAPI contract covers only the health route and the shared models.
-- TypeScript and Dart generation is checked, not committed; npm transitive packages of the generator are not locked.
+- TypeScript and Dart generation is checked, not committed; the npm toolchain is locked (`openapi/toolchain/`), Dart output is generated but not analyzed or compiled (R10, owner-deferred).
 - Migration 0002 was removed from the chain on the basis of repository documentation that no persistent database was ever migrated, not of a check of the live databases.
 - Keycloak, documents and deployment belong to later phases.
 
