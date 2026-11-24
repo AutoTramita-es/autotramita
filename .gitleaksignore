@@ -2,3 +2,6 @@
 # branch before they were renamed. Fingerprints are commit:file:rule:line.
 dcc2640d1d8695b06f901bffb35ab239d4df8be5:tests/test_idempotency.py:generic-api-key:25
 dcc2640d1d8695b06f901bffb35ab239d4df8be5:tests/test_idempotency.py:generic-api-key:93
+# Synthetic UUID used as the Idempotency-Key in the F1-T06 test (renamed to
+# IDEMPOTENCY_TOKEN_A and later built without a literal); confirmed a false positive by reviewing the source.
+05c49be90416a3103242f889786dbf51ca351a02:tests/test_idempotency.py:generic-api-key:34

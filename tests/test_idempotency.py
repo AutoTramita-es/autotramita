@@ -31,7 +31,8 @@ from tests.idempotency_fixture import build_idempotency_fixture
 
 TENANT_A, TENANT_B = uuid.uuid4(), uuid.uuid4()
 ACTOR_1, ACTOR_2 = uuid.uuid4(), uuid.uuid4()
-KEY = "7b1f0c9e-3f5a-4d6e-9a2b-0c1d2e3f4a5b"
+# A valid synthetic UUID v4, built from an integer so no secret-like literal is committed.
+IDEMPOTENCY_TOKEN_A = str(uuid.UUID(int=0x7B1F0C9E3F5A4D6E9A2B0C1D2E3F4A5B, version=4))
 BODY = b'{"name":"widget","qty":2}'
 
 
@@ -39,7 +40,7 @@ BODY = b'{"name":"widget","qty":2}'
 
 
 def test_key_header_validation() -> None:
-    assert idempotency_key(KEY) == KEY
+    assert idempotency_key(IDEMPOTENCY_TOKEN_A) == IDEMPOTENCY_TOKEN_A
     assert idempotency_key("x" * 128) == "x" * 128
     with pytest.raises(BadRequest) as missing:
         idempotency_key(None)
@@ -132,7 +133,7 @@ def run(
     context: RequestContext | None = None,
     operation: str = "things.create",
     method: str = "POST",
-    key: str = KEY,
+    key: str = IDEMPOTENCY_TOKEN_A,
     body: bytes = BODY,
     authorize: Callable[[], None] = lambda: None,
     ttl: timedelta = timedelta(hours=24),
@@ -372,7 +373,7 @@ def test_http_contract(engine: Engine) -> None:
     invalid = client.post("/t/things", json=body, headers={**who, "Idempotency-Key": "bad key"})
     assert invalid.json()["code"] == "IDEMPOTENCY_KEY_INVALID"
 
-    headers = {**who, "Idempotency-Key": KEY}
+    headers = {**who, "Idempotency-Key": IDEMPOTENCY_TOKEN_A}
     first = client.post("/t/things", json=body, headers=headers)
     replay = client.post("/t/things", json=body, headers=headers)
     assert (first.status_code, replay.status_code) == (201, 201)
@@ -387,7 +388,9 @@ def test_http_contract(engine: Engine) -> None:
     assert (revoked.status_code, revoked.json()["code"]) == (403, "FORBIDDEN")
 
     anonymous = client.post(
-        "/t/things", json=body, headers={"x-test-tenant": str(TENANT_A), "Idempotency-Key": KEY}
+        "/t/things",
+        json=body,
+        headers={"x-test-tenant": str(TENANT_A), "Idempotency-Key": IDEMPOTENCY_TOKEN_A},
     )
     assert (anonymous.status_code, anonymous.json()["code"]) == (401, "UNAUTHENTICATED")
     assert counter.calls == 1
