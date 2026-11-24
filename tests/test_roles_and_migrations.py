@@ -259,6 +259,7 @@ def test_migration_rejects_set_role_session(role_env: RoleEnv) -> None:
     cfg, conn = alembic_config(engine)
     try:
         conn.exec_driver_sql(f'SET ROLE "{role_env.names.owner}"')  # type: ignore[attr-defined]
+        conn.commit()  # type: ignore[attr-defined]  # reset SQLAlchemy state; SET ROLE persists
         assert not conn.in_transaction()  # type: ignore[attr-defined]
         with pytest.raises(RuntimeError, match=REJECTED):
             command.upgrade(cfg, "head")
