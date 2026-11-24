@@ -24,6 +24,10 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
 - DESIGN-ROADMAP.md — review gates and acceptance criteria.
 
+- [ICON-SYSTEM.md](ICON-SYSTEM.md) — 50 core Lucide icons and accessibility rules.
+- [BACKGROUND-PATTERNS.md](BACKGROUND-PATTERNS.md) — three editable SVG patterns.
+- [HERO-BANNERS.md](HERO-BANNERS.md) — hero concepts and integration requirements.
+
 ## Asset production plan
 5 logo variants (SVG/PNG); 5 hero banners (AVIF/WebP); 12 service illustrations; 6 business photographs; 5 process illustrations; 30–50 SVG icons (prefer Lucide); 5 product screenshots after implementation; 3 background patterns; favicon SVG/ICO; 3 PWA PNG icons including maskable variant; 5 social and 5 Open Graph PNG images. Counts are planning targets, not completed assets. Generated concept images are not yet production assets.
 First asset: homepage hero, target 2560×1440, text-free and logo-free, light background with left-side negative space, car and digital administration visual on right. Generate mobile crop separately if necessary. No official agency marks or misleading real interface claims.
