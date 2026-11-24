@@ -11,8 +11,17 @@ from tests.conftest import RoleEnv
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def alembic_config(engine: Engine) -> tuple[Config, object]:
+USE_ENGINE_USER = object()  # default: expect the role the engine connects as
+
+
+def alembic_config(
+    engine: Engine, expected_owner: object = USE_ENGINE_USER
+) -> tuple[Config, object]:
     cfg = Config(str(ROOT / "alembic.ini"))
+    if expected_owner is USE_ENGINE_USER:
+        expected_owner = engine.url.username
+    if expected_owner is not None:
+        cfg.attributes["expected_owner"] = expected_owner
     cfg.set_main_option("script_location", str(ROOT / "migrations"))
     conn = engine.connect()
     cfg.attributes["connection"] = conn
@@ -125,10 +134,8 @@ def test_baseline_up_and_down(role_env: RoleEnv) -> None:
 # --- R02 / R03: migration owner identity and caller-transaction protection -----------------
 
 
-def try_upgrade(engine: Engine, expected_owner: str | None = None) -> None:
-    cfg, conn = alembic_config(engine)
-    if expected_owner is not None:
-        cfg.attributes["expected_owner"] = expected_owner
+def try_upgrade(engine: Engine, expected_owner: object = USE_ENGINE_USER) -> None:
+    cfg, conn = alembic_config(engine, expected_owner)
     try:
         command.upgrade(cfg, "head")
     finally:
@@ -256,7 +263,7 @@ def test_migration_rejects_set_role_session(role_env: RoleEnv) -> None:
     engine = create_engine(
         role_env.admin_engine().url, isolation_level="AUTOCOMMIT"
     )  # superuser login
-    cfg, conn = alembic_config(engine)
+    cfg, conn = alembic_config(engine, role_env.names.owner)
     try:
         conn.exec_driver_sql(f'SET ROLE "{role_env.names.owner}"')  # type: ignore[attr-defined]
         conn.commit()  # type: ignore[attr-defined]  # reset SQLAlchemy state; SET ROLE persists
@@ -272,7 +279,6 @@ def test_migration_rejects_set_role_session(role_env: RoleEnv) -> None:
 def test_migration_rejects_caller_transaction_without_touching_it(role_env: RoleEnv) -> None:
     owner = role_env.engine("owner")
     cfg, conn = alembic_config(owner)
-    cfg.attributes["expected_owner"] = role_env.names.owner
     conn.execute(text("CREATE TABLE caller_sentinel (id int)"))  # type: ignore[attr-defined]
     conn.execute(text("INSERT INTO caller_sentinel VALUES (42)"))  # type: ignore[attr-defined]
     try:
@@ -298,3 +304,23 @@ def test_migration_lifecycle_on_fresh_owner_connection_up_down_up(role_env: Role
     for action, revision in (("upgrade", "head"), ("downgrade", "base"), ("upgrade", "head")):
         migrate(owner, action, revision)
     owner.dispose()
+
+
+@pytest.mark.parametrize("missing", [None, "", 5], ids=["none", "empty", "not-a-string"])
+def test_expected_owner_is_mandatory_even_for_the_real_owner(
+    role_env: RoleEnv, missing: object
+) -> None:
+    owner = role_env.engine("owner")
+    with pytest.raises(RuntimeError, match="expected owner role name"):
+        try_upgrade(owner, expected_owner=missing)
+    owner.dispose()
+    assert_nothing_migrated(role_env)
+
+
+def test_expected_owner_must_match_the_connected_role_exactly(role_env: RoleEnv) -> None:
+    owner = role_env.engine("owner")
+    for wrong in (role_env.names.owner.upper(), role_env.names.owner + "x", role_env.names.app):
+        with pytest.raises(RuntimeError, match=REJECTED):
+            try_upgrade(owner, expected_owner=wrong)
+    owner.dispose()
+    assert_nothing_migrated(role_env)

@@ -52,37 +52,36 @@ def test_no_route_is_constant_unmatched() -> None:
     assert route_template(scope(None, f"/x/{SECRET}")) == UNMATCHED_ROUTE
     assert route_template({"type": "http", "path": f"/x/{SECRET}"}) == UNMATCHED_ROUTE
     assert route_template(scope(object(), f"/x/{SECRET}")) == UNMATCHED_ROUTE
+    assert route_template(scope(FakeRoute(""), f"/x/{SECRET}")) == UNMATCHED_ROUTE
 
 
-def test_literal_and_prefixed_templates() -> None:
-    assert route_template(scope(FakeRoute("/health"), "/api/v1/health")) == "/api/v1/health"
-    assert route_template(scope(FakeRoute("/health"), "/health")) == "/health"
-    got = route_template(scope(FakeRoute("/cases/{cid}"), f"/api/v1/cases/{SECRET}", cid=SECRET))
-    assert got == "/api/v1/cases/{cid}"
+def test_template_is_the_registered_one_and_never_reads_the_request_path() -> None:
+    cases = [
+        (FakeRoute("/health"), "/api/v1/health", {}),
+        (FakeRoute("/cases/{cid}"), f"/api/v1/cases/{SECRET}", {"cid": SECRET}),
+        (FakeRoute("/a/{x}/b/{y}"), f"/p/a/{SECRET}/b/{SECRET}", {"x": SECRET, "y": SECRET}),
+        (FakeRoute("/c/{x}"), "/v1/c/v1", {"x": "v1"}),
+        (FakeRoute("/n/{i}"), "/api/n/007", {"i": 7}),
+        (FakeRoute("/x/{a}"), f"/sub/{SECRET}/x/AVAL", {"tenant": SECRET, "a": "AVAL"}),
+    ]
+    for route, path, params in cases:
+        got = route_template(scope(route, path, **params))
+        assert got == route.path_format
+        assert SECRET not in got
 
 
-def test_repeated_or_equal_values_use_the_registered_template() -> None:
-    route = FakeRoute("/a/{x}/b/{y}")
-    assert route_template(scope(route, f"/p/a/{SECRET}/b/{SECRET}", x=SECRET, y=SECRET)) == (
-        "/p/a/{x}/b/{y}"
-    )
-    # A value that also occurs in the literal prefix: fall back to the relative template.
-    assert route_template(scope(FakeRoute("/c/{x}"), "/v1/c/v1", x="v1")) == "/c/{x}"
-
-
-def test_values_in_a_parameterized_prefix_never_leak() -> None:
-    got = route_template(
-        scope(FakeRoute("/x/{a}"), f"/sub/{SECRET}/x/AVAL", tenant=SECRET, a="AVAL")
-    )
-    assert got == "/x/{a}"
-    assert SECRET not in got
-
-
-def test_normalizing_converters_and_missing_params_fall_back_safely() -> None:
-    # int converter: the parsed value (7) differs from the raw segment (007).
-    assert route_template(scope(FakeRoute("/n/{i}"), "/api/n/007", i=7)) == "/n/{i}"
-    assert route_template(scope(FakeRoute("/n/{i}"), "/api/n/007")) == "/n/{i}"
-    assert route_template(scope(FakeRoute("/n/{i}"), None, i=7)) == "/n/{i}"  # type: ignore[arg-type]
+def test_path_and_params_cannot_change_the_result() -> None:
+    route = FakeRoute("/cases/{cid}")
+    results = {
+        route_template(scope(route, path, **params))
+        for path, params in [
+            ("/", {}),
+            ("/anything/at/all", {"cid": "v"}),
+            (f"/{SECRET}", {"cid": SECRET, "z": SECRET}),
+        ]
+    }
+    assert results == {"/cases/{cid}"}
+    assert route_template({"type": "http", "route": route}) == "/cases/{cid}"
 
 
 # --- real app: spans ------------------------------------------------------------------------
@@ -122,14 +121,14 @@ def build_app() -> TestClient:
     [
         (
             f"/api/v1/t/cases/{SECRET}/docs/a/b/{SECRET}?token={SECRET}",
-            "/api/v1/t/cases/{case_id}/docs/{name}",
+            "/cases/{case_id}/docs/{name}",
         ),
         (
             f"/api/v1/t/cases/{SECRET}/docs/{SECRET}/{SECRET}",
-            "/api/v1/t/cases/{case_id}/docs/{name}",
+            "/cases/{case_id}/docs/{name}",
         ),
-        (f"/api/v1/t/cases/{SECRET}/n/007", None),  # relative or full template, never values
-        (f"/api/v1/t/cases/boom/{SECRET}", "/api/v1/t/cases/boom/{case_id}"),
+        (f"/api/v1/t/cases/{SECRET}/n/007", None),  # registered relative template
+        (f"/api/v1/t/cases/boom/{SECRET}", "/cases/boom/{case_id}"),
         (f"/tenant/{SECRET}/x/{SECRET}2", None),
     ],
 )
@@ -156,7 +155,7 @@ def test_unmatched_and_method_not_allowed_use_the_constant(spans: InMemorySpanEx
     names = [s.name for s in spans.get_finished_spans()]
     assert names[0] == "GET unmatched"
     assert all(SECRET not in s.to_json() for s in spans.get_finished_spans())
-    assert names[1] in ("POST unmatched", "POST /api/v1/health")
+    assert names[1] in ("POST unmatched", "POST /health")
 
 
 def test_no_exporter_means_no_spans_leave_the_process() -> None:

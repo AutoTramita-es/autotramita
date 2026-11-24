@@ -11,34 +11,15 @@ UNMATCHED_ROUTE = "unmatched"
 
 
 def route_template(scope: Scope) -> str:
-    """Route template for the span (R08): only a registered template or ``unmatched``.
-
-    The template always comes from the matched route object (``path_format``), never from
-    the request path, so no request value can appear in it. FastAPI reports routes of included
-    routers and mounts relative to their prefix; the literal prefix is recovered from the
-    request path only when it provably holds no path-parameter value: the relative path is
-    rebuilt from the route and the matched parameters, must be an exact suffix of the request
-    path, and no parameter value may occur in the remaining prefix. Otherwise (converters that
-    normalize values, parameterized mounts, any doubt) the relative registered template is
-    used, which is value-free by construction."""
+    """Route template for the span (R08): only the matched route's registered template, or the
+    constant ``unmatched``. Nothing is ever derived from the request path, so no request
+    value can appear in it. Where the framework registers a route relative to its router
+    prefix, that relative registered template is reported (it is value-free by construction)."""
     route = scope.get("route")
     template = getattr(route, "path_format", None) or getattr(route, "path", None)
     if not isinstance(template, str) or not template:
         return UNMATCHED_ROUTE
-    params = {str(k): str(v) for k, v in (scope.get("path_params") or {}).items()}
-    full = scope.get("path")
-    if not isinstance(full, str):
-        return template
-    try:
-        relative = template.format_map(params)
-    except (KeyError, IndexError, ValueError):
-        return template
-    if not full.endswith(relative):
-        return template
-    prefix = full[: len(full) - len(relative)]
-    if any(value and value in prefix for value in params.values()):
-        return template
-    return prefix.rstrip("/") + template
+    return template
 
 
 class TelemetryMiddleware:

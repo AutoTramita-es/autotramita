@@ -168,10 +168,10 @@ def test_each_request_gets_one_span_with_only_safe_attributes(
     client = TestClient(create_app())
     r = client.get("/api/v1/health?token=query-secret", headers={"Authorization": "Bearer abc"})
     span = server_span(spans)
-    assert span.name == "GET /api/v1/health"
+    assert span.name == "GET /health"
     assert dict(span.attributes or {}) == {
         "http.request.method": "GET",
-        "http.route": "/api/v1/health",
+        "http.route": "/health",
         "http.response.status_code": 200,
         "autotramita.request_id": r.headers["x-request-id"],
     }

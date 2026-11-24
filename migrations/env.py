@@ -27,13 +27,20 @@ def _require_owner(connection: Connection, expected: str | None) -> None:
     """Refuse to migrate unless the connection is the least-privileged owner role (R02, R03).
 
     The connection must be fresh: a caller-owned transaction is rejected without being
-    committed or rolled back. The connected role must be the expected owner (when known),
-    log in as itself (no SET ROLE / SET SESSION AUTHORIZATION), own both ``schema_migrations``
-    and ``public`` as prepared by scripts/db/harden.sql, have no superuser, BYPASSRLS,
-    CREATEROLE, CREATEDB or REPLICATION attribute, and not be a member of a role that does.
-    Runtime roles (app, worker, platform) fail the ownership checks. Nothing is executed on
-    rejection beyond this read-only catalog query.
+    committed or rolled back. The expected owner role name is MANDATORY (engine path: the
+    configured owner; supplied connection: ``config.attributes["expected_owner"]``); a missing
+    or empty name, or one that differs from the connected role, rejects the migration. The role
+    must also log in as itself (no SET ROLE / SET SESSION AUTHORIZATION), own both
+    ``schema_migrations`` and ``public`` as prepared by scripts/db/harden.sql, have no
+    superuser, BYPASSRLS, CREATEROLE, CREATEDB or REPLICATION attribute, and not be a
+    member of a role that does. Runtime roles (app, worker, platform) fail the ownership
+    checks. Nothing is executed on rejection beyond this read-only catalog query.
     """
+    if not isinstance(expected, str) or not expected:
+        raise RuntimeError(
+            "Migrations require the expected owner role name (config.attributes"
+            "['expected_owner']); none was given, nothing was executed."
+        )
     if connection.in_transaction():
         raise RuntimeError(
             "Migrations need a fresh connection without an active transaction; "
@@ -49,7 +56,7 @@ def _require_owner(connection: Connection, expected: str | None) -> None:
         any(attributes)
         or member
         or not (can_login and same_session and owns_migrations and owns_public)
-        or (expected is not None and current != expected)
+        or current != expected
     ):
         raise RuntimeError(
             "Migrations must run as the expected least-privileged owner role on a hardened "
@@ -71,7 +78,7 @@ def _run(connection: Connection, expected_owner: str | None) -> None:
 def run_migrations_online() -> None:
     supplied = context.config.attributes.get("connection")
     if supplied is not None:
-        # Optional: tests and tooling may pass the expected owner role name.
+        # Mandatory: callers supplying a connection must name the owner role they expect.
         _run(supplied, context.config.attributes.get("expected_owner"))
         return
     settings = get_settings()
