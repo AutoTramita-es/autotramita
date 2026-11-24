@@ -1,10 +1,15 @@
 # AutoTramita.es — MASTER BLUEPRINT
 
 **Status:** MASTER INDEX / WORKING BLUEPRINT (not implementation authorization)  
-**Version:** 1.4
+**Version:** 1.5
 **Date:** 2026-11-24  
 **Repository:** [AutoTramita-es/autotramita](https://github.com/AutoTramita-es/autotramita)  
 **Language:** Croatian for planning; existing technical ADRs remain authoritative.
+
+## Current F1 status — REC-02
+REC-02 (2026-11-24): F1 implementation exists on f1/foundation at e22ae3b0c9b2bed861f29ed4d7dfd1c366a8ff7a, preserved identically in archive/f1-foundation-2026-11-24; not merged or accepted. Historical broad authorization quoted in c467005 ("Autoriziram F1 prema G6-EXECUTION-ORDER.md") is UNVERIFIED: repository record exists, original owner instruction not established; neither confirmed nor invalidated retroactively. Later explicit T01-only authorization b6462e4 / 0973e24 remains recorded; CP01 blocked in preflight, no new implementation authorized or executable during reconciliation. T02–T10 not currently authorized. Audit reports 93 passing CI tests at e22ae3b (run 45398235580), not independently rerun; T01–05/T08–10 PARTIAL, T06–07 NON-COMPLIANT; AC05–08 compliant per reported CI, 7 partial, 3 non-compliant, AC09 not verified. F1 acceptance pending REC-07. REC-01 and REC-02 documentation approved; REC-03–07 require separate approval. No merge, deployment, F2 or infrastructure changes authorized. O01/O02/O03/O18/O19 remain ACCEPTED; 15 deferred decisions remain PROPOSED. Maintenance page and routing reported on implementation branch; live state and separate authorization unverified. Preserve both histories; no duplicate implementation or automatic cherry-pick.
+
+[Audit](design/F1-RECONCILIATION-AUDIT.md) | [Plan](design/F1-RECONCILIATION-PLAN.md)
 
 ## 1. Purpose and scope
 
@@ -28,7 +33,7 @@ The existing ADRs and specifications take precedence over high-level summaries h
 
 | ID | Module | Scope | Existing ADRs | Status |
 |---|---|---|---|---|
-| **AT-01** | Temelj sustava i infrastruktura | FastAPI, PostgreSQL, Redis, Celery, Docker, CI/CD, razvojna i produkcijska okruženja. | [ADR-001](adr/ADR-001-technology-stack.md), [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-004](adr/ADR-004-api-contracts.md), [ADR-008](adr/ADR-008-delivery-governance.md) | [AT-01 v1.1 APPROVED](specifications/AT-01-foundation-infrastructure.md); 5 F1 odluka potvrđeno, 15 otvoreno; F1 nije autoriziran; infrastruktura djelomično pripremljena, aplikacija nije implementirana |
+| **AT-01** | Temelj sustava i infrastruktura | FastAPI, PostgreSQL, Redis, Celery, Docker, CI/CD, razvojna i produkcijska okruženja. | [ADR-001](adr/ADR-001-technology-stack.md), [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-004](adr/ADR-004-api-contracts.md), [ADR-008](adr/ADR-008-delivery-governance.md) | [AT-01 v1.1 APPROVED](specifications/AT-01-foundation-infrastructure.md); 5 F1 odluka potvrđeno, 15 otvoreno; F1 implementation on separate branch; RECONCILIATION / NOT ACCEPTED; REC-03 pending |
 | **AT-02** | Korisnički računi i sigurnost | Prijava, registracija, OIDC, e-mail verifikacija, sesije, MFA, uloge. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | Djelomično definirano |
 | **AT-03** | Autokuće, poslovnice i zaposlenici | Tenant, NIF, pravni oblici, provjera autokuća, poslovnice, pozivnice i pristupi. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-007](adr/ADR-007-pricing-credit-payments.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | [27 poslovnih odluka potvrđeno](specifications/AT-03-decisions.md); tehničko usklađivanje prije implementacije |
 | **AT-04** | Klijenti i vlasnici vozila | Fizičke i pravne osobe, anonimni zahtjevi, korisnički profili, zastupanje, povezivanje predmeta. | [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | [AT-04 specifikacija — prijedlog za pregled](specifications/AT-04-customers-vehicle-owners.md); bez implementacije |
@@ -51,7 +56,7 @@ The existing ADRs and specifications take precedence over high-level summaries h
 
 ## 4. Existing source documentation
 
-- [AT-01 foundation specification v1.1](specifications/AT-01-foundation-infrastructure.md) — APPROVED 2026-11-24; 15 deferred decisions remain PROPOSED; [G6 execution order](G6-EXECUTION-ORDER.md) Accepted, F1 not authorized.
+- [AT-01 foundation specification v1.1](specifications/AT-01-foundation-infrastructure.md) — APPROVED 2026-11-24; 15 deferred decisions remain PROPOSED; [G6 execution order](G6-EXECUTION-ORDER.md) Accepted; F1 reconciliation pending.
 
 - [DNS, Nextcloud and mail](DNS-NEXTCLOUD-MAIL.md) — current domain and infrastructure decisions, deployed components and remaining work.
 - [Docker Compose operations](DOCKER-COMPOSE.md) — prepared environments, shared services, configuration and prerequisites; not evidence that the application stack is deployed.
@@ -67,7 +72,7 @@ The existing ADRs and specifications take precedence over high-level summaries h
 - [TenantMembership and workspace specification](specifications/tenant-membership.md) — draft containing confirmed decisions; no implementation.
 - [Case deadlines and priority specification](specifications/case-deadlines.md) — design approved in principle, no implementation.
 
-The current repository includes placeholder folders `app/api`, `app/auth`, `app/billing`, `app/cases`, `app/core`, `app/credit`, `app/customers`, `app/documents`, `app/integrations`, `app/services`, `app/tenants`, `app/vehicles`, `migrations` and `tests`. These are **not implemented modules**. The AT-01–AT-20 workstreams are logical planning units, not a mandated one-folder-per-module code layout.
+The current repository includes placeholder folders `app/api`, `app/auth`, `app/billing`, `app/cases`, `app/core`, `app/credit`, `app/customers`, `app/documents`, `app/integrations`, `app/services`, `app/tenants`, `app/vehicles`, `migrations` and `tests`. On main these are placeholders; the separate F1 branch contains foundation code, not accepted business modules. The AT-01–AT-20 workstreams are logical planning units, not a mandated one-folder-per-module code layout.
 
 ## 5. Collaboration and separate conversation rules
 
@@ -101,13 +106,13 @@ Next modules should be selected according to dependencies, not forced into a rig
 Update this file when a module is added, renamed, split, superseded or its verified status changes. Link to the approved decision/specification; do not replace them with an informal summary. Record substantive changes in Git commits. This document remains a **planning index**, not an executable specification or deployment plan.
 
 ## 9. Design roadmap follow-up — 2026-11-24
-[Design Roadmap](design/DESIGN-ROADMAP.md) proposes dependency slices, limited prepaid commercial MVP, manual Tramisur and integrated Ficha procurement, and readiness/release gates. All five originally missing design documents drafted for review; no domain approval or implementation inferred. G5 foundation technical review completed and G6 bounded execution order accepted; AT-01 v1.1 approved. Next AT-01 step is preparation of the Claude Code execution brief, not implementation. No deployment authorization.
+[Design Roadmap](design/DESIGN-ROADMAP.md) proposes dependency slices, limited prepaid commercial MVP, manual Tramisur and integrated Ficha procurement, and readiness/release gates. All five originally missing design documents drafted for review; no domain approval or implementation inferred. G5 foundation technical review completed and G6 bounded execution order accepted; AT-01 v1.1 approved. Execution brief v1.0 approved; next gate REC-03 after separate authorization. No deployment authorization.
 
 ## 10. Infrastructure status — 2026-11-24
 
 - Cloudflare DNS is active. PROD application hostnames point to the running PROD tunnel, whose ingress currently returns 404. Nested DEV hostnames use a DNS-only wildcard `*.dev.autotramita.es` directly to shared Traefik, with an issued Let's Encrypt wildcard certificate and an HTTP 418 fallback until application routers exist. The separate DEV tunnel runs but is not used by those nested hostnames.
 - Existing `cloud.autotramita.es` reaches the shared Nextcloud through Cloudflare and Traefik. PROD and DEV will use that instance with separate service accounts and folder roots; these accounts and roots are not yet provisioned. Existing shared PostgreSQL, Traefik, mailserver and SnappyMail are to be reused; Uptime Kuma is a monitoring candidate on the same host.
-- PROD and DEV Docker Compose configurations and database provisioning script are prepared and validated. The application, Keycloak, Redis, ClamAV and DEV Mailpit services are not deployed, and the application code remains a skeleton. Database roles and databases have not yet been provisioned by the script.
+- PROD and DEV Docker Compose configurations and database provisioning script are prepared and validated. The application, Keycloak, Redis, ClamAV and DEV Mailpit services are not deployed, and main contains placeholders; separate F1 implementation branch exists and is not accepted. Database roles and databases have not yet been provisioned by the script.
 - DNSSEC, SMTP/domain setup, transactional mail provider, Nextcloud integration, authentication, malware scanning and backup/recovery remain incomplete. Cloudflare Zero Trust is not required by the current decision. See [DNS, Nextcloud and mail](DNS-NEXTCLOUD-MAIL.md) and [Docker Compose operations](DOCKER-COMPOSE.md) for details and current limitations.
 
 - **Design raster import — 2026-11-24:** 80 raster candidates imported into [design/assets](design/assets/MANIFEST.csv) via Git LFS (see [Master Design Blueprint §15](design/MASTER-DESIGN-BLUEPRINT.md)); not approved for release.
