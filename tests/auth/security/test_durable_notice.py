@@ -2,6 +2,7 @@
 
 import smtplib
 from datetime import UTC, datetime
+from email.message import EmailMessage
 from uuid import uuid4
 
 import pytest
@@ -12,7 +13,7 @@ from app.auth.settings import AuthSettings
 def test_durable_notice_reuses_message_id_and_reports_failures(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    sent = []
+    sent: list[EmailMessage] = []
 
     class FakeSMTP:
         def __init__(self, *args: object, **kwargs: object) -> None:
@@ -24,7 +25,7 @@ def test_durable_notice_reuses_message_id_and_reports_failures(
         def __exit__(self, *args: object) -> None:
             pass
 
-        def send_message(self, message: object) -> dict[str, object]:
+        def send_message(self, message: EmailMessage) -> dict[str, object]:
             sent.append(message)
             return {}
 
@@ -48,7 +49,7 @@ def test_durable_notice_reuses_message_id_and_reports_failures(
         notifier.send_durable(Notice(notice.kind, "bad\r\nBcc: x", notice.occurred_at), job_id)
 
     class Down(FakeSMTP):
-        def send_message(self, message: object) -> dict[str, object]:
+        def send_message(self, message: EmailMessage) -> dict[str, object]:
             raise smtplib.SMTPException("unavailable")
 
     monkeypatch.setattr(smtplib, "SMTP", Down)
