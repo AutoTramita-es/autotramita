@@ -1,6 +1,6 @@
 # F2 — Redoslijed izvršavanja (execution order)
 
-Datum: 2026-11-24 | Status: **CP00–CP08 prihvaćeni 2026-11-24; autoriziran samo F2-T09** | T10–T13 nisu autorizirani
+Datum: 2026-11-24 | Status: **CP00–CP08 prihvaćeni 2026-11-24; autoriziran F2-T09-REC; CP09 nije prihvaćen** | T10–T13 nisu autorizirani
 [Plan](F2-IMPLEMENTATION-PLAN.md) · [Specifikacija AT-02](../specifications/AT-02-identity-security.md) · [Registar odluka](F2-DECISION-REGISTER.md) · [Kriteriji](F2-ACCEPTANCE-CRITERIA.md) · [G6 (F1 obrazac)](../G6-EXECUTION-ORDER.md)
 
 **Sažetak:** 13 paketa (F2-T01…T13), 14 checkpointova (F2-CP00 planiranje, CP01…CP12 po paketu, CP13 završno prihvaćanje).
@@ -296,9 +296,15 @@ Zabranjeno: opći Celery/outbox T11, T10–T13, migracije na trajnu bazu, deploy
 | F2-CP06 | T06 | **PRIHVAĆEN 2026-11-24**: web tok, kolačić, CSRF | CI run 45467370715 (kod e2736d6) |
 | F2-CP07 | T07 | **PRIHVAĆEN 2026-11-24**: mobilni tok | CI run 45469542994 (kod 850316b) |
 | F2-CP08 | T08 | **PRIHVAĆEN 2026-11-24**: pipeline konteksta, port AT-03, cross-tenant | CI run 45472663659 (kod dd7f492) |
-| F2-CP09 | T09 | Sigurnosne politike i anti-enumeracija | CI run, [bilješke T09](F2-T09-SECURITY-POLICY-NOTES.md) (rezultati spika naspram implementacije, prijedlog za D37) |
-| F2-CP10 | T10 | `platform_grants`, eskalacije, bootstrap | CI run, pregled migracije 0006 |
-| F2-CP11 | T11 | Admin korisnika, outbox, KC događaji | CI run, pregled migracije 0007 |
+| F2-CP09 | T09-REC | **NIJE PRIHVAĆEN**; implementacija dovršena, dvije P1 stavke (F-0, F-1) čekaju odluku vlasnika | [Izvještaj CP09](F2-CP09-RECONCILIATION-REPORT.md); kod 6ca14ad, CI run 45504609210 (1.163 + 54 testa) |
+| F2-CP10 | T10 | `platform_grants`, eskalacije, bootstrap | CI run, pregled migracije (sljedeći slobodan broj, od 0009) |
+| F2-CP11 | T11 | Admin korisnika, outbox, KC događaji | CI run, pregled migracije (sljedeći slobodan broj) |
 | F2-CP12 | T12 | Zamrznuti API ugovor | CI run, OpenAPI diff, klijenti |
 | **F2-CP13** | T13 | **Završno prihvaćanje F2** (AC matrica, rizici, preostale odluke) | `F2-FINAL-ACCEPTANCE-EVIDENCE.md`, CI run na točnom SHA |
 Prihvaćanje je **zasebno** od merge-a u `main`, release-a i deploymenta; svaki traži vlastitu autorizaciju. Nakon CP13: F3a ostaje blokiran do usklađivanja AT-03 (G6 pravilo 4).
+
+## F2-T09-REC — izvršni zapis
+
+D37 koristi 0007; 0008 zatvara nalaze konteksta/audita. Sve migracije dodjeljuju prava isključivo eksplicitno imenovanim DB rolama, što `migrations/env.py` provjerava prije prve naredbe. T10 i T11 koriste sljedeće slobodne brojeve (od 0009); brojevi 0006/0007 u opisu paketa T10/T11 više ne vrijede. `app/api/app.py`, `app/api/middleware.py` i `migrations/env.py` potrebne su promjene za odobreni worker, no-store i R07; izvan su izvornog D35 popisa i evidentiraju se za pregled vlasnika, bez zaključka da je širi opseg prihvaćen. Nema T10–T13, deploymenta ili trajnih migracija.
+
+**Stanje 2026-11-24:** implementacijski SHA `6ca14ad7f12702cda8defa132104bdac76cb3c14`, CI run [45504609210](https://github.com/AutoTramita-es/autotramita/actions/runs/45504609210) zelen. F2-CP09 se **ne** predlaže za prihvaćanje dok vlasnik ne odluči o F-0 i F-1 (izvještaj §2).

@@ -2,6 +2,8 @@
 
 Datum: 2026-11-24 | Status: **ACCEPTED uz CP00 (2026-11-24)** | Povezano: [Execution order](F2-EXECUTION-ORDER.md) · [Plan §4](F2-IMPLEMENTATION-PLAN.md) · [AT-02](../specifications/AT-02-identity-security.md) · [Registar](F2-DECISION-REGISTER.md)
 
+> **F2-T09-REC:** [Izvještaj CP09 s dokazom po kriteriju](F2-CP09-RECONCILIATION-REPORT.md#8-acceptance-matrix-t01t13) bilježi trenutne rezultate i nedostatke. Kriteriji ostaju normativni; CP09 nije prihvaćen. Migracija 0007 pripada D37, a 0008 izolaciji konteksta i audita: brojevi u AC-PLT-12 (0006), AC-ADM-10 (0007) i raspon u §13.2 čitaju se kao sljedeći slobodni brojevi (od 0009).
+
 ## Pravila dokazivanja
 - Kriterij vrijedi samo uz **dokaz**: imenovani test u CI runu na točnom SHA-u (3+1 job zelen, 0 skipped, `-W error`), ili pregledan artefakt naveden u koloni „Dokaz". Tvrdnja bez dokaza = nije ispunjeno.
 - Svaki AC ima barem jedan pozitivan i (gdje je sigurnosni) barem jedan **negativan** test. Matricu AC→test provjerava `tests/test_f2_traceability.py` (T13): AC bez testa ruši CI.

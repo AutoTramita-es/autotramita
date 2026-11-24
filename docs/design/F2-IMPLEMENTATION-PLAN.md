@@ -52,6 +52,8 @@ MASTER-BLUEPRINT, G6, DESIGN-ROADMAP (§3, §5 F2, R07/R11), FOUNDATION-G5-REVIE
 ## 3. Strategija isporuke
 **Redoslijed i razlozi.** T01 prvo dokazuje Keycloak pretpostavke (spike) jer D19/D20/D23 ovise o njima; T02 token validacija i lažni IdP; T03 audit *prije* ostalih tablica (svi kasniji paketi pišu audit i nema FK ovisnosti); T04 `users`; T05 `user_sessions`; T06 web tok; T07 mobilni tok; T08 kontekst/workspace/port; T09 sigurnosne politike; T10 `platform_grants`; T11 platformska administracija korisnika + outbox + obavijesti + KC događaji; T12 zamrzavanje API ugovora; T13 završna validacija bez novih funkcionalnosti.
 **Granice i dopuštene putanje:** D35. **Nova ovisnost:** `PyJWT[crypto]` (D34), eventualno `celery` (već u stacku, D33); svaka prolazi `uv lock --check` i pip-audit.
+> Stanje nakon F2-T09-REC (2026-11-24): 0006 je jedinstvenost žive sesije (T06), 0007 D37, 0008 izolacija konteksta i audita. `platform_grants` (T10) i `identity_outbox` (T11) uzimaju sljedeće slobodne brojeve (od 0009). Izvorni plan ostaje niže radi povijesti.
+
 **Migracije (sekvencijalno, svaka reverzibilna, owner rola):** `0002_auth_bootstrap_context` (D17: funkcije `app_auth_subject()`, `app_session_hash()`; samo ako D17 bude prihvaćen), `0003_audit_events` (T03), `0004_users` (T04), `0005_user_sessions` (T05), `0006_platform_grants` (T10), `0007_identity_outbox` (T11). Redoslijed ovisnosti je normativan; ako D17 bude odbijen, numeracija se pomiče, a T03–T05 se prilagođavaju alternativi (SECURITY DEFINER lookup) uz novi pregled. Migracije se izvode samo na jednokratnoj/CI bazi; **nijedna se ne primjenjuje na trajnu DEV/PROD bazu** (R05).
 **Što F2 ne dira:** Compose, Traefik, `.secrets/`, shared PostgreSQL, Nextcloud, mail server, frontend, Flutter.
 

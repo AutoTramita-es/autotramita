@@ -29,7 +29,7 @@ Contract: [OpenAPI](../../openapi/openapi.json) · [AT-02 §6.5](../specificatio
 |---|---|---|
 | 401 `AUTH_TOKEN_INVALID` | token invalid or expired | refresh with Keycloak, retry once; if that fails, sign in again |
 | 401 `SESSION_REQUIRED` | valid token, no application session | call `POST /auth/mobile/session` |
-| 401 `SESSION_REVOKED` | the session was ended (here or elsewhere) | **sign in again**; do not retry `POST /auth/mobile/session` with the same token: it is refused |
+| 401 `SESSION_REVOKED` | the session was ended (here or elsewhere), or this Keycloak sign-in is older than a password or e-mail change | **sign in again with `prompt=login`** (a silent single sign-on is refused again); do not retry `POST /auth/mobile/session` with the same token |
 | 401 `SESSION_EXPIRED` | idle (7 days) or absolute (30 days) limit | call `POST /auth/mobile/session` (works while the Keycloak session lives) |
 | 401 `STEP_UP_REQUIRED` | a sensitive action needs a fresh authentication | re-authenticate with Keycloak (`prompt=login`; `acr_values=loa2` for MFA), then retry with the new token |
 | 403 `ACCOUNT_DISABLED` | account blocked or deactivated | show the generic message; no retry |
@@ -43,8 +43,10 @@ but the current one, `POST /sessions/revoke-all` ends everything and needs a tok
 ## 5. Known limits (deliberate in F2)
 - Revoking a session in the application does not yet end the Keycloak session (the outbox that does so arrives with F2-T11);
   the revoked session stays refused, so the device has to sign in again.
-- Back-channel logout from Keycloak is wired for the web client only; native sessions end by app-side revocation,
-  token expiry or the outbox of F2-T11.
+- Keycloak back-channel logout is wired for the web and mobile clients; the signed mobile logout token
+  revokes the application session by subject and session ID (isolated Keycloak CI test).
 - User-agent changes are **not** treated as theft for mobile sessions (app updates change the agent); refresh-token reuse
   detection in Keycloak is the signal there.
+- Refresh-token reuse ends the token family in Keycloak but the application is not told (no back-channel logout): the
+  `REFRESH_REUSE` reason arrives with the T11 event ingestion.
 - Dart/Flutter compilation of the generated client is still deferred (finding R10).

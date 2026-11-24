@@ -2,6 +2,8 @@
 
 Date: 2026-11-24 | Package: F2-T09 (only) | Status: implemented, awaiting owner acceptance of CP09
 
+> **REC update (2026-11-24):** D37, token minimisation and session-revocation notices have since been implemented; the older proposal, status and deviation rows below are historical. Reset detection changed: the marker keeps the earliest request and the handled password change, a sign-in older than the new password is refused (web asks for the password again, mobile answers `SESSION_REVOKED`), and mobile sign-in performs the same check. Immediate revocation at the moment of a reset is still open (F-0). Current evidence and limitations: [CP09 reconciliation](F2-CP09-RECONCILIATION-REPORT.md). CP09 has not been accepted.
+
 ## 1. What exists
 
 | Area | Where | Behaviour |

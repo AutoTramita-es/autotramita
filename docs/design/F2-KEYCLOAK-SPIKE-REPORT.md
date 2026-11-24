@@ -3,6 +3,17 @@
 Datum: 2026-11-24 | Paket: F2-T01 | Status: **F2-CP01 PRIHVAĆEN 2026-11-24 (D37 izmijenjen)** | Kod: `identity/`, `scripts/identity/`, `tests/identity/`
 **Dokaz:** commit `8599382a37f0ab42f85962f925925662b6c54c87` na `dev`, CI run [45454710907](https://github.com/AutoTramita-es/autotramita/actions/runs/45454710907): sva četiri joba uspješna. Keycloak job: **11 passed, 0 skipped, 0 failed** (Keycloak 26.4.7 po digestu `sha256:9409c59b…`, jednokratni container, `-W error`). Glavni job (PG16/Redis7) i postojeći F1 testovi nepromijenjeni i zeleni. Ništa nije pokrenuto na zajedničkoj infrastrukturi.
 
+> **REC evidence (2026-11-24, CI run [45504609210](https://github.com/AutoTramita-es/autotramita/actions/runs/45504609210), Keycloak 26.4.7):**
+> - S1: lock expiry proven with a 5 s window (the committed 15 min were not waited).
+> - S2: the direct reset URL is denied while the option is off.
+> - S3: `max_age=0` forces a password; LoA2 asks again after its `loa-max-age` (shortened to 5 s; committed 600 s asserted); removing OTP needs LoA2 on Keycloak's own pages and account API. **WebAuthn:** enrolment works, but the committed flow does not use it for LoA2 — a passkey-only account is offered OTP setup after the password alone (open finding F-1).
+> - S6: reuse of a refresh token is refused; Keycloak sends **no** back-channel logout and the user session remains.
+> - Password reset sends a back-channel logout only if “Sign out from other devices” is ticked (not preselected; open finding F-0).
+> - The e-mail address is read-only for the person (profile page and account API).
+> - Mobile back-channel logout, optional names, minimized tokens and separate DEV/PROD imports pass.
+>
+> The table below is the historical T01 result.
+
 ## Rezultati
 | ID | Tvrdnja | Ishod | Dokaz i granice |
 |---|---|---|---|
