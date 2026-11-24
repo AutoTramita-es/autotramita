@@ -61,7 +61,10 @@ def test_catalog_roles_and_force_rls(probe: Probe) -> None:
             )
         ).all()
         policies = c.execute(
-            text("SELECT tablename, count(*) FROM pg_policies GROUP BY 1 ORDER BY 1")
+            text(
+                "SELECT tablename, count(*) FROM pg_policies "
+                "WHERE tablename LIKE 'rls\\_%' GROUP BY 1 ORDER BY 1"
+            )
         ).all()
     assert {f[0] for f in flags} == set(TABLES)
     assert all(f[1] and f[2] and f[3] == probe.env.names.owner for f in flags)
