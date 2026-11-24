@@ -1,7 +1,7 @@
 # AT-01 — Temelj sustava i infrastruktura
 
-- Verzija: 1.0, 2026-11-24
-- Status: PROPOSED — završni prijedlog za pregled vlasnika
+- Verzija: 1.1, 2026-11-24
+- Status: PROPOSED — cjelovita specifikacija čeka završno odobrenje; O01/O02/O03/O18/O19 ACCEPTED
 - Prihvaćene odluke ostaju Accepted; ovaj dokument ne autorizira F1, kod, migracije, provisioning ili deployment.
 
 ## 1. Izvori i prvenstvo
@@ -70,9 +70,6 @@ Nijedan kriterij nije trenutno potvrđen izvršenjem. G6 stop: neriješena odluk
 ## 10. Otvorene odluke — PROPOSED, ne odobrene
 | ID | Prijedlog | Gate |
 |---|---|---|
-| O01 | Pinati konkretne kompatibilne verzije u lockfileu, bez proizvoljnog odabira zastarjelih verzija | F1.1 |
-| O02 | Redis nedostupan: fail closed za ograničene zahtjeve uz 503; health izuzet, bez tihog lokalnog fallbacka | F1.6a |
-| O03 | Idempotency scope actor/tenant/operation/key; fingerprint zahtjeva, konflikt za drukčiji payload, atomski zapis poslovnog rezultata u kasnijim modulima; bez stvarnih financijskih tablica u F1 | F1.6 |
 | O04 | Zasebni Keycloak web/native klijenti, strogi redirect URI i recovery provjere | F2 |
 | O05 | 30 min idle/12 h web kao početni prijedlog; obvezan MFA centralnih i profesionalnih uloga, mobilni lifetime zasebno | F2 |
 | O06 | Inventar PUBLIC grants svih shared DB, minimalne ovlasti i testovi bez izmjena drugih stackova bez odobrenja | Prije live |
@@ -87,14 +84,34 @@ Nijedan kriterij nije trenutno potvrđen izvršenjem. G6 stop: neriješena odluk
 | O15 | Odabir transakcijskog SMTP providera prema EU privatnosti, cijeni, isporučivosti i bounce webhookovima; uskladiti Compose placeholder | AT-16 |
 | O16 | DNSSEC koordinacija s registrarom, provjera Full(strict), WAF i TLS prije izlaganja | Prije PROD |
 | O17 | Spriječiti neovlašteni direct-origin pristup PROD routerima uz očuvanje DEV i postojećih stackova; ne oslanjati se na DNS | Prije PROD |
-| O18 | Odrediti algoritam limitera i trusted proxy/IP pravila, kombiniranje limita i Retry-After; testirati spoofing forwarded headers | F1.6a |
-| O19 | Razjasniti F1 idempotency test fixture/persistence i točan error/cursor contract prije kodiranja; bez poslovnih tablica | F1.6 |
 | O20 | Odvojiti liveness od readiness prije live; health javno ne otkriva ovisnosti | Prije live |
-Oznake i preporuke su novi prijedlozi za pregled, ne izmjene ADR-ova. O01–03/O18–19 razriješiti najkasnije prije odgovarajućeg F1 koraka; ostalo ne blokira lokalni F1 ako se poštuju granice G6.
+Preostalih 15 odluka ostaje PROPOSED; ne blokiraju lokalni F1 ako se poštuju granice G6. Potvrđene odluke izdvojene su u §10a.
+
+## 10a. Potvrđene F1 odluke — ACCEPTED (2026-11-24)
+
+Vlasnik je izričito potvrdio O01, O02, O03, O18 i O19 u koraku AT-01.03. Ovo nije autorizacija implementacije.
+
+### O01 — Ovisnosti
+Python 3.12.x, PostgreSQL 16.x, Redis 7.x, Pydantic 2.x, SQLAlchemy 2.x, psycopg 3.x; stabilne kompatibilne verzije FastAPI, Alembic, OpenTelemetry; točno zaključani uv, Ruff, mypy, pytest i HTTPX. Konkretne patch verzije odabrati u F1.1 nakon provjere kompatibilnosti i ranjivosti. pyproject.toml, uv.lock, .python-version; odvojene dev/runtime ovisnosti; CI uv sync --locked. Dependabot prijedlozi kroz PR bez auto-mergea; konfiguracija izvan G6 dopuštenih putanja zahtijeva zasebno odobrenje.
+
+### O02 — Redis fail closed
+Connect timeout 500 ms, operation timeout 500 ms, bez automatskog retryja prema limiteru i bez lokalnog fallbacka. Nedostupnost: HTTP 503, RATE_LIMIT_UNAVAILABLE, Retry-After: 5 sekundi; redigirani log i monitoring. Interni health izuzet. Kvar Redisa zaustavlja ograničene zahtjeve; svjesni kompromis dostupnosti i sigurnosti.
+
+### O03 — Idempotencija
+Idempotency-Key, preporučeni UUID v4, najviše 128 znakova, retencija 24 h; scope actor + tenant + operation + key, SHA-256 fingerprint zahtjeva. Nedostaje obvezni ključ: 400; različit payload ili konkurentni zahtjev u obradi: 409; identičan završeni zahtjev vraća prethodni rezultat bez ponovnog izvršenja, uz ponovnu autorizaciju. PostgreSQL izvor istine za poslovne transakcije, atomski zapis rezultata s poslovnom promjenom; Redis nije jedina zaštita. Istek ključa ne ukida trajnu poslovnu deduplikaciju. Vanjska plaćanja zahtijevaju provider idempotenciju i webhook deduplikaciju u kasnijim modulima. F1 samo zajednički ugovor, mehanizam i testne strukture; bez poslovnih/financijskih tablica.
+
+### O18 — Rate limiting
+Približni Sliding Window Counter, atomska Redis Lua obrada, vrijeme Redis servera. Svi primjenjivi G6 limiti moraju istodobno biti zadovoljeni; ključevi environment + scope + identifier, uz tenant izolaciju gdje je primjenjiva. HTTP 429, RATE_LIMIT_EXCEEDED, Retry-After prema blokirajućim limitima. Konfiguracija iz okoline. IP samo preko provjerenih proxyja, ne vjerovati proizvoljnom X-Forwarded-For; konkretne pouzdane adrese prije deploymenta. Testirati spoofing, granice prozora, kombinirane limite i atomsku konkurentnu obradu. Keycloak limiti ostaju F2.
+
+### O19 — API ugovor
+HTTP: 200 uspjeh, 201 kreiranje, 202 prihvaćena obrada, 204 bez sadržaja, 400 neispravan zahtjev, 401 neautentificiran, 403 nedovoljne ovlasti, 404 nepostojeći ili nevidljivi resurs, 409 konflikt, 412 zastarjela verzija, 413 prevelika datoteka, 415 nepodržani format, 422 validacija, 428 nedostaje obvezni preduvjet, 429 limit, 500 interna greška, 503 nedostupnost.
+RFC 9457 application/problem+json: type, title, status, detail, stabilni code i request_id; primjer type https://docs.autotramita.es/errors/rate-limit (planirani dokumentacijski URI, ne tvrdnja o dostupnosti). Tehnički kodovi engleski, UI lokalizacija španjolski.
+Cursor pagination: default 25, min 1, max 100; neproziran cursor zaštićen od izmjena, vezan uz tenant, filtere i sort; stabilan sort s jedinstvenim sekundarnim ključem; bez automatskog totals. Optimistic locking ETag/If-Match/verzija. /api/v1/, snake_case, UUID, ISO 8601 datumi, UTC timestamp, ISO 4217, Decimal kao JSON string, UUID request ID, OpenAPI i generirani TS/Dart klijenti.
+F1 testovi na fixture strukturama: replay, payload konflikt, konkurencija, rollback, izolacija i ponovna autorizacija kroz testni kontekst; problem+json, cursor integritet, granice paginacije, 412/428, limiter kvar 503 i Retry-After, 429, health izuzeće. Stvarna autentifikacija i poslovna perzistencija ostaju kasnijim fazama. Točan format fingerprint canonicalizacije, cursor kodiranje i detalji testne perzistencije nisu zasebno odobreni; ako zahtijevaju novu arhitektonsku odluku, stati prema G6.
 
 ## 11. Operativni rizici i gate
 Shared host/DB/Nextcloud/Traefik predstavljaju zajednički blast radius; odvojene mreže nisu potpuna izolacija. Cloudflare tokeni prema inventaru dijele istu vjerodajnicu; ne rotirati bez procjene. DEV izravno dostupan bez Cloudflare proxy zaštite; PROD origin javno sluša. Backup mora konzistentno obuhvatiti aplikacijsku DB, Nextcloud sadržaj/DB/konfiguraciju, Keycloak, konfiguraciju i tajne; testirati obnovu u izoliranom okruženju. Ne koristiti stvarne klijentske podatke u DEV/CI. Prije live: potvrditi kapacitet, izolaciju, TLS, egress, tajne, monitoring, backup/restore i rollback; prije PROD dodatno pravne/retention i poslovne gateove.
 Financijski utjecaj: reuse smanjuje dodatne servise, ali offsite backup, SMTP, monitoring i kapacitet mogu imati trošak; nema odobrenog budžeta ili procjene. AT-01 ne autorizira plaćanja.
 
 ## 12. Sljedeći korak
-Vlasnik pregledava ovaj prijedlog; zasebno potvrđuje otvorene F1 odluke i eksplicitno autorizira F1 prema G6. Nema automatskog deploymenta. Dokumentacijska revizija nije live audit niti provjera koda/testova. Postojeći ADR-ovi i G6 nisu izmijenjeni.
+Vlasnik pregledava i zasebno odobrava cjelovitu specifikaciju; pet F1 odluka je potvrđeno. F1 zahtijeva zasebnu eksplicitnu autorizaciju prema G6. Nema automatskog deploymenta. Dokumentacijska revizija nije live audit niti provjera koda/testova. Postojeći ADR-ovi nisu izmijenjeni; G6 se usklađuje s §10a bez proširenja opsega.
