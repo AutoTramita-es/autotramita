@@ -34,6 +34,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - Case wireframes: [table](assets/wireframes/case-table.svg), [Kanban](assets/wireframes/case-kanban.svg), [detail](assets/wireframes/case-detail.svg), [wizard](assets/wireframes/case-wizard.svg).
 - [DEALER-CRM-VEHICLES.md](DEALER-CRM-VEHICLES.md) — customer and vehicle registry UX, representation and ownership evidence.
 - CRM wireframes: [customers](assets/wireframes/crm-customers.svg), [customer detail](assets/wireframes/crm-customer-detail.svg), [vehicles](assets/wireframes/crm-vehicles.svg), [vehicle detail](assets/wireframes/crm-vehicle-detail.svg).
+- [DOCUMENTS-DIGITAL-SIGNATURES.md](DOCUMENTS-DIGITAL-SIGNATURES.md) — document register, capture, OCR, review, templates, mandates, signatures and CSV verification.
+- Document wireframes: [register](assets/wireframes/documents-register.svg), [viewer](assets/wireframes/documents-viewer.svg), [capture](assets/wireframes/documents-capture.svg), [signature](assets/wireframes/documents-signature.svg), [CSV](assets/wireframes/documents-csv.svg).
 - UI-COMPONENTS.md — forms, tables, navigation, status, dialogs and states.
 - IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
 - RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
