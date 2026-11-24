@@ -15,6 +15,9 @@ realm import are live prerequisites needing separate authorization).
 2. `uv run pytest tests/identity` runs the policy linter (`tests/identity/realm_lint.py`) and drift check; no Keycloak needed.
 3. Keycloak tests (`-m keycloak`) run in the CI job `identity`; locally only against the disposable compose file on a developer machine, never against shared services or real data.
 
+## Required actions
+The realm file lists every required action. Passkey registration (`webauthn-register`, `webauthn-register-passwordless`) is **off** until the step-up flow accepts a passkey as a second level (decision F-1 b). The file applies only when a realm is first imported: in a realm that already exists, switch both off by hand and check that no account holds a passkey.
+
 ## Secrets
 Realm files contain no secret. Confidential clients use `${AT_WEB_CLIENT_SECRET}` and `${AT_ADMIN_SVC_CLIENT_SECRET}`, resolved by Keycloak from its environment at import (verified in spike S7). Per environment, secrets differ and live outside the repository.
 

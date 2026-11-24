@@ -304,7 +304,7 @@ Okvir nepromijenjen: samo dev; bez T10–T13, mergea, deploymenta, zajedničke i
 | F2-CP06 | T06 | **PRIHVAĆEN 2026-11-24**: web tok, kolačić, CSRF | CI run 45467370715 (kod e2736d6) |
 | F2-CP07 | T07 | **PRIHVAĆEN 2026-11-24**: mobilni tok | CI run 45469542994 (kod 850316b) |
 | F2-CP08 | T08 | **PRIHVAĆEN 2026-11-24**: pipeline konteksta, port AT-03, cross-tenant | CI run 45472663659 (kod dd7f492) |
-| F2-CP09 | T09-REC | **NIJE PRIHVAĆEN**; implementacija dovršena, dvije P1 stavke (F-0, F-1) čekaju odluku vlasnika | [Izvještaj CP09](F2-CP09-RECONCILIATION-REPORT.md); kod 6ca14ad, CI run 45504609210 (1.163 + 54 testa) |
+| F2-CP09 | T09-REC | **NIJE PRIHVAĆEN**; F-0 (a) i F-1 (b) izvedeni, jedna P1 stavka (F-1R) čeka odluku vlasnika | [Izvještaj CP09](F2-CP09-RECONCILIATION-REPORT.md); kod 822a4e7, CI run 45509883690 (1.183 + 58 testova) |
 | F2-CP10 | T10 | `platform_grants`, eskalacije, bootstrap | CI run, pregled migracije (sljedeći slobodan broj, od 0009) |
 | F2-CP11 | T11 | Admin korisnika, outbox, KC događaji | CI run, pregled migracije (sljedeći slobodan broj) |
 | F2-CP12 | T12 | Zamrznuti API ugovor | CI run, OpenAPI diff, klijenti |
@@ -315,4 +315,4 @@ Prihvaćanje je **zasebno** od merge-a u `main`, release-a i deploymenta; svaki 
 
 D37 koristi 0007; 0008 zatvara nalaze konteksta/audita. Sve migracije dodjeljuju prava isključivo eksplicitno imenovanim DB rolama, što `migrations/env.py` provjerava prije prve naredbe. T10 i T11 koriste sljedeće slobodne brojeve (od 0009); brojevi 0006/0007 u opisu paketa T10/T11 više ne vrijede. `app/api/app.py`, `app/api/middleware.py` i `migrations/env.py` potrebne su promjene za odobreni worker, no-store i R07; izvan su izvornog D35 popisa i evidentiraju se za pregled vlasnika, bez zaključka da je širi opseg prihvaćen. Nema T10–T13, deploymenta ili trajnih migracija.
 
-**Stanje 2026-11-24:** implementacijski SHA `6ca14ad7f12702cda8defa132104bdac76cb3c14`, CI run [45504609210](https://github.com/AutoTramita-es/autotramita/actions/runs/45504609210) zelen. F2-CP09 se **ne** predlaže za prihvaćanje dok vlasnik ne odluči o F-0 i F-1 (izvještaj §2).
+**Stanje 2026-11-24:** implementacijski SHA `822a4e7e098baa38750499be06fe082e906ef215`, CI run [45509883690](https://github.com/AutoTramita-es/autotramita/actions/runs/45509883690) zelen. F-0 (a) i F-1 (b) su izvedeni. F2-CP09 se **ne** predlaže za prihvaćanje dok vlasnik ne odluči o F-1R (izvještaj §2).
