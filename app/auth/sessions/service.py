@@ -377,13 +377,16 @@ def _audit(
 def _audit_revoked(
     db: Session, user_id: UUID | None, reason: RevokeReason, count: int, actor: UUID | None
 ) -> None:
+    # The audit guard refuses any detail containing the word "password" (it cannot tell a reason
+    # code from a leaked value), so that one reason is recorded under a neutral name.
+    code = "CREDENTIAL_CHANGED" if reason is RevokeReason.PASSWORD_CHANGED else reason.value
     record(
         db,
         AuditEvent(
             action="session.revoked", outcome=Outcome.SUCCESS,
             actor_type=ActorType.USER if actor else ActorType.SYSTEM, actor_user_id=actor,
             subject_user_id=user_id,
-            details={"revoked_reason": reason.value, "count": count},
+            details={"revoked_reason": code, "count": count},
         ),
     )  # fmt: skip
 

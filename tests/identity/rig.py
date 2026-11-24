@@ -7,6 +7,7 @@ from typing import Any
 
 import httpx
 from app.api.app import create_app
+from app.auth.idp_admin import KeycloakAdmin
 from app.auth.runtime import AuthRuntime
 from app.auth.settings import AuthSettings
 from app.core.config import RateLimitSettings
@@ -49,6 +50,8 @@ class Rig:
         self.extra: list[TestClient] = []
 
     def close(self) -> None:
+        if isinstance(self.runtime.admin, KeycloakAdmin):
+            self.runtime.admin.close()
         for client in self.extra:
             client.close()
         self.api.close()
@@ -58,26 +61,31 @@ class Rig:
         with self.role_env.admin_engine().connect() as c:
             return [tuple(r) for r in c.execute(text(sql))]
 
-    def at_keycloak(self, url: str, user: TestUser | None) -> str:
+    def at_keycloak(self, url: str, user: TestUser | None, browser: Browser | None = None) -> str:
         """Follow the authorization URL in the scripted browser; sign in when asked. Returns
         the callback URL Keycloak redirects to."""
-        self.browser._last = f"{ORIGIN}{API}/callback"
-        page = self.browser._settle(self.browser.http.get(url), self.browser._last)
+        use = browser or self.browser
+        use._last = f"{ORIGIN}{API}/callback"
+        page = use._settle(use.http.get(url), use._last)
         if page.location is None:
             assert user is not None
-            page = self.browser.submit(
+            page = use.submit(
                 page, {"username": user.email, "password": user.password, "credentialId": ""}
             )
         assert page.location and page.location.startswith(f"{ORIGIN}{API}/callback"), page.summary
         return page.location
 
     def sign_in(
-        self, user: TestUser, return_to: str = "/app", client: TestClient | None = None
+        self,
+        user: TestUser,
+        return_to: str = "/app",
+        client: TestClient | None = None,
+        browser: Browser | None = None,
     ) -> httpx.Response:
         api = client or self.api
         start = api.get(f"{API}/login", params={"return_to": return_to})
         assert start.status_code == 302, start.text
-        callback = self.at_keycloak(start.headers["location"], user)
+        callback = self.at_keycloak(start.headers["location"], user, browser)
         done: httpx.Response = api.get(callback)
         return done
 

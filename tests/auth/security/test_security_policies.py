@@ -226,6 +226,9 @@ def test_a_completed_reset_ends_other_sessions_at_the_next_sign_in_and_says_so(r
         "SELECT revoked_reason, count(*) FROM user_sessions WHERE revoked_at IS NOT NULL GROUP BY 1"
     )
     assert ("PASSWORD_CHANGED", 2) in revoked
+    assert rig.web.rows(
+        "SELECT details->>'revoked_reason' FROM audit_events WHERE action = 'session.revoked'"
+    ) == [("CREDENTIAL_CHANGED",)]
     rig.login(sid="s4")  # the marker is consumed: a later sign-in revokes nothing more
     assert third.get(f"{API}/auth/session").status_code == 200
 
@@ -329,7 +332,9 @@ def test_a_cancelled_action_changes_nothing(rig: Rig) -> None:
 
 def test_second_factor_enrolment_is_proven_by_the_provider_and_noticed(rig: Rig) -> None:
     client = rig.login(sid="s-action")
-    started = start(client, "mfa-enrollment-requests", {"factor": "RECOVERY_CODES"})
+    started = start(
+        client, "mfa-enrollment-requests", {"factor": "RECOVERY_CODES", "return_to": "/me"}
+    )
     assert parse_qs(urlparse(started.json()["redirect_url"]).query)["kc_action"] == [
         "CONFIGURE_RECOVERY_AUTHN_CODES"
     ]

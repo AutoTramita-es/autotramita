@@ -130,7 +130,8 @@ def test_recovery_through_keycloak_sends_one_mail_to_real_accounts_only_and_ends
     still = rig.api.get(f"{AUTH_API}/session")
     assert still.status_code == 200  # requesting recovery ends nothing
     set_new_password(env, mail_link(smtp, user.email))
-    assert rig.sign_in(user).status_code == 302  # SSO still alive in the scripted browser
+    fresh = rig.another_client()  # a new device signs in with the new password
+    assert rig.sign_in(user, client=fresh, browser=Browser(env)).status_code == 302
     stale = rig.api.get(f"{AUTH_API}/session", headers={"Cookie": f"{SESSION}={old_cookie}"})
     assert stale.status_code == 401
     assert NoticeKind.PASSWORD_RESET_COMPLETED in [n.kind for n in rig.notices.notices]
@@ -171,12 +172,13 @@ def test_the_fourth_recovery_request_in_an_hour_sends_no_fourth_mail(
 
 # --- password change through kc_action (AC-POL-06) ----------------------------------------------
 def test_password_change_through_keycloak_ends_other_sessions_and_rotates_this_one(
-    rig: Rig, admin: Admin
+    rig: Rig, env: Env, admin: Admin
 ) -> None:
     user = admin.create_user()
     assert rig.sign_in(user).status_code == 302
     second = rig.another_client()
-    assert rig.sign_in(user, client=second).status_code == 302
+    elsewhere = Browser(env)  # another device: its own Keycloak session
+    assert rig.sign_in(user, client=second, browser=elsewhere).status_code == 302
     old = rig.api.cookies[SESSION]
     started = rig.api.post(
         f"{API}/me/security/password-change-requests",
