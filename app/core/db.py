@@ -15,6 +15,7 @@ transaction. Do not commit inside the block; ``session_scope`` commits at exit.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -30,6 +31,9 @@ from sqlalchemy.orm import Session, sessionmaker
 Role = Literal["runtime", "owner", "app", "worker", "platform"]
 
 
+_SUBJECT = re.compile(r"[A-Za-z0-9._:-]{1,128}")
+
+
 @dataclass(frozen=True, slots=True)
 class RequestContext:
     """Server-validated context for one transaction. All fields are optional."""
@@ -37,6 +41,10 @@ class RequestContext:
     user_id: UUID | None = None
     tenant_id: UUID | None = None
     branch_ids: Sequence[UUID] = field(default_factory=tuple)
+    # Authentication bootstrap (F2, D17): set only by app.auth, before the user is known. They
+    # let a policy recognise the one row whose secret/subject the caller proves; see 0002.
+    auth_subject: str | None = None
+    session_hash: bytes | None = None
 
     def __post_init__(self) -> None:
         """Only real UUIDs are accepted; strings and other raw input are rejected."""
@@ -49,6 +57,16 @@ class RequestContext:
         ):
             raise TypeError("branch_ids must be a sequence of UUIDs")
         object.__setattr__(self, "branch_ids", tuple(self.branch_ids))
+        if self.auth_subject is not None:
+            if not isinstance(self.auth_subject, str):
+                raise TypeError("auth_subject must be a string or None")
+            if not _SUBJECT.fullmatch(self.auth_subject):
+                raise ValueError("auth_subject has an invalid format")
+        if self.session_hash is not None:
+            if not isinstance(self.session_hash, bytes):
+                raise TypeError("session_hash must be bytes or None")
+            if len(self.session_hash) != 32:
+                raise ValueError("session_hash must be a 32-byte SHA-256 digest")
 
 
 def build_url(settings: Settings, credentials: DatabaseCredentials) -> URL:
@@ -92,6 +110,8 @@ def apply_context(session: Session, context: RequestContext) -> None:
         "app.user_id": str(context.user_id) if context.user_id else "",
         "app.tenant_id": str(context.tenant_id) if context.tenant_id else "",
         "app.branch_ids": ",".join(str(b) for b in context.branch_ids),
+        "app.auth_subject": context.auth_subject or "",
+        "app.session_hash": context.session_hash.hex() if context.session_hash else "",
     }
     for name, value in values.items():
         session.execute(
