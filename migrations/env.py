@@ -23,6 +23,42 @@ FROM pg_roles r WHERE r.rolname = current_user
 """
 
 
+_RUNTIME_KINDS = ("app", "worker", "platform")
+_ROLE_STATE = """
+SELECT has_database_privilege(r.oid, current_database(), 'CONNECT'),
+       r.rolsuper OR r.rolbypassrls OR r.rolcreaterole OR r.rolcreatedb OR r.rolreplication
+       OR EXISTS (SELECT 1 FROM pg_roles g WHERE g.oid <> r.oid
+                  AND pg_has_role(r.oid, g.oid, 'MEMBER'))
+FROM pg_roles r WHERE r.rolname = %s
+"""
+_SUFFIXED = """
+SELECT rolname FROM pg_roles WHERE rolname ~ '_(app|worker|platform)$'
+    AND has_database_privilege(rolname, current_database(), 'CONNECT')
+"""
+
+
+def _require_runtime_roles(connection: Connection, expected_owner: str) -> None:
+    """Migrations grant privileges only to the explicitly configured runtime roles (R07): the
+    caller names the app, worker and platform role; each must exist, be able to connect, hold
+    no elevated attribute or membership, and no further role of that naming scheme may be able
+    to connect to this database. Read-only; refuses before anything is executed."""
+    names = context.config.attributes.get("expected_runtime_roles")
+    if not isinstance(names, dict) or set(names) != set(_RUNTIME_KINDS):
+        raise RuntimeError("migration requires explicitly configured runtime role names")
+    values = [names[kind] for kind in _RUNTIME_KINDS]
+    if (
+        any(not isinstance(name, str) or not name for name in values)
+        or len({*values, expected_owner}) != len(values) + 1
+    ):
+        raise RuntimeError("migration requires three distinct runtime role names")
+    for kind in _RUNTIME_KINDS:
+        state = connection.exec_driver_sql(_ROLE_STATE, (names[kind],)).one_or_none()
+        if not names[kind].endswith("_" + kind) or state is None or not state[0] or state[1]:
+            raise RuntimeError("configured runtime role is missing or not least-privileged")
+    if set(connection.exec_driver_sql(_SUFFIXED).scalars().all()) != set(values):
+        raise RuntimeError("configured runtime role names do not match the database roles")
+
+
 def _require_owner(connection: Connection, expected: str | None) -> None:
     """Refuse to migrate unless the connection is the least-privileged owner role (R02, R03).
 
@@ -66,6 +102,9 @@ def _require_owner(connection: Connection, expected: str | None) -> None:
 
 def _run(connection: Connection, expected_owner: str | None) -> None:
     _require_owner(connection, expected_owner)
+    assert expected_owner is not None  # noqa: S101 - rejected above otherwise
+    _require_runtime_roles(connection, expected_owner)
+    connection.rollback()  # only our own read-only checks ran in this transaction
     context.configure(
         connection=connection,
         target_metadata=target_metadata,

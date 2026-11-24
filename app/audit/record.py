@@ -20,6 +20,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
 _CODE = re.compile(r"^[A-Za-z0-9_.:-]{1,64}$")
+# A detail "code" is a constant of ours (UPPER_SNAKE_CASE) or a short lower-case identifier such
+# as a client id or platform. Mixed-case or long opaque strings, the shape of tokens and secrets
+# too short for the token check below, are not codes.
+_DETAIL_CODE = re.compile(r"^(?:[A-Z][A-Z0-9_]{0,59}|[a-z][a-z0-9_.-]{0,31})$")
 _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 # Words and shapes that must never reach an audit record (also enforced by a CHECK in 0003).
 _FORBIDDEN = re.compile(
@@ -83,7 +87,7 @@ def _check_value(kind: Kind, value: Any) -> None:
     elif kind == "uuid":
         ok = isinstance(value, uuid.UUID | str) and bool(_UUID.fullmatch(str(value).lower()))
     else:
-        ok = isinstance(value, str) and bool(_CODE.fullmatch(value))
+        ok = isinstance(value, str) and bool(_DETAIL_CODE.fullmatch(value))
     if not ok:
         raise AuditValidationError("a detail value has an invalid type or format")
 

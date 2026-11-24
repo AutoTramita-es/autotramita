@@ -4,7 +4,7 @@ Revision ID: 0007
 Revises: 0006
 """
 
-from alembic import op
+from alembic import context, op
 
 revision = "0007"
 down_revision = "0006"
@@ -13,14 +13,8 @@ depends_on = None
 
 
 def _roles(suffix: str) -> list[str]:
-    return [
-        row[0]
-        for row in op.get_bind().exec_driver_sql(
-            "SELECT rolname FROM pg_roles WHERE rolname ~ %s "
-            "AND has_database_privilege(rolname, current_database(), 'CONNECT')",
-            (f"_{suffix}$",),
-        )
-    ]
+    """The explicitly configured runtime role of this kind (R07), verified by ``env.py``."""
+    return [context.config.attributes["expected_runtime_roles"][suffix]]
 
 
 def _quote(role: str) -> str:
@@ -220,11 +214,22 @@ def upgrade() -> None:
             f"lease_id, lease_until) ON email_change_notifications TO {quoted}"
         )
         for table in ("email_change_operations", "email_change_notifications"):
-            for action in ("SELECT", "UPDATE"):
-                op.execute(
-                    f"CREATE POLICY {table}_{action.lower()}_{number} ON {table} "
-                    f"FOR {action} TO {quoted} USING (true)"
-                )
+            op.execute(
+                f"CREATE POLICY {table}_select_{number} ON {table} "
+                f"FOR SELECT TO {quoted} USING (true)"
+            )
+            # Only the person's own request can create or confirm an intent: the worker can
+            # never write PENDING or CONFIRMED, so it cannot confirm on somebody's behalf.
+            check = (
+                " WITH CHECK (status IN "
+                "('APPLYING','COMPLETED','CANCELLED','EXPIRED','MANUAL_REVIEW'))"
+                if table == "email_change_operations"
+                else ""
+            )
+            op.execute(
+                f"CREATE POLICY {table}_update_{number} ON {table} "
+                f"FOR UPDATE TO {quoted} USING (true){check}"
+            )
             if table == "email_change_notifications":
                 op.execute(
                     f"CREATE POLICY email_change_notifications_insert_{number} ON {table} "  # noqa: S608

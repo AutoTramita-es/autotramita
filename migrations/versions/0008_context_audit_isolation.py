@@ -52,54 +52,60 @@ _AUDIT_INSERT = (
     "source = 'APP' AND (actor_user_id IS NULL OR actor_user_id = app_user_id()) "
     "AND (tenant_id IS NULL OR tenant_id = app_tenant_id())"
 )
+# Anonymous events are written without a user; a user context never carries a bootstrap proof.
+_UNMIXED = "(app_user_id() IS NULL OR (app_auth_subject() IS NULL AND app_session_hash() IS NULL))"
+_SESSION_INSERT = (
+    "user_id = app_user_id() AND EXISTS (SELECT 1 FROM users u WHERE u.id = user_id "
+    "AND u.status IN ('ACTIVE','PENDING_VERIFICATION'))"
+)
+_D37_INSERT = (
+    "user_id = app_user_id() AND EXISTS (SELECT 1 FROM user_sessions s "
+    "WHERE s.id = session_id AND s.user_id = app_user_id() AND s.revoked_at IS NULL)"
+)
 
 
-def _verify_runtime_roles() -> None:
-    expected = context.config.attributes.get("expected_runtime_roles")
-    if not isinstance(expected, dict) or set(expected) != {"app", "worker", "platform"}:
-        raise RuntimeError("migration requires explicitly configured runtime role names")
-    names = list(expected.values())
-    if any(not isinstance(name, str) or not name for name in names) or len(set(names)) != 3:
-        raise RuntimeError("migration requires three distinct runtime role names")
-    actual = {
-        str(row[0])
-        for row in op.get_bind().exec_driver_sql(
-            "SELECT rolname FROM pg_roles WHERE rolname ~ '_(app|worker|platform)$' "
-            "AND has_database_privilege(rolname, current_database(), 'CONNECT')"
-        )
-    }
-    if actual != set(names) or any(not expected[role].endswith("_" + role) for role in expected):
-        raise RuntimeError("configured runtime roles do not match database roles")
-    # Historical migrations granted roles by suffix. Reject any stale direct grant to an
-    # unconfigured role, even if that role currently lacks CONNECT on this database.
-    grants = (
-        op.get_bind()
-        .exec_driver_sql("""
-        SELECT DISTINCT r.rolname FROM pg_class c
-        JOIN pg_namespace n ON n.oid=c.relnamespace
-        CROSS JOIN LATERAL aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a
-        JOIN pg_roles r ON r.oid=a.grantee
-        WHERE n.nspname='public'
-          AND c.relowner=(SELECT oid FROM pg_roles WHERE rolname=current_user)
-          AND r.rolname <> current_user
-        UNION
-        SELECT DISTINCT r.rolname FROM pg_proc p
-        JOIN pg_namespace n ON n.oid=p.pronamespace
-        CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
-        JOIN pg_roles r ON r.oid=a.grantee
-        WHERE n.nspname='public'
-          AND p.proowner=(SELECT oid FROM pg_roles WHERE rolname=current_user)
-          AND r.rolname <> current_user
-    """)
-        .scalars()
-        .all()
-    )
-    if set(grants) - set(names):
+# Direct privileges and policies on application objects: tables, columns, sequences, functions,
+# the schema itself and row-level security. grantee 0 is PUBLIC.
+_GRANTEES = """
+WITH mine AS (SELECT oid FROM pg_roles WHERE rolname = current_user),
+grantees AS (
+    SELECT a.grantee FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    CROSS JOIN LATERAL aclexplode(c.relacl) a
+    WHERE n.nspname = 'public' AND c.relowner = (SELECT oid FROM mine)
+    UNION
+    SELECT a.grantee FROM pg_attribute col JOIN pg_class c ON c.oid = col.attrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    CROSS JOIN LATERAL aclexplode(col.attacl) a
+    WHERE n.nspname = 'public' AND c.relowner = (SELECT oid FROM mine)
+    UNION
+    SELECT a.grantee FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    CROSS JOIN LATERAL aclexplode(p.proacl) a
+    WHERE n.nspname = 'public' AND p.proowner = (SELECT oid FROM mine) AND a.grantee <> 0
+    UNION
+    SELECT a.grantee FROM pg_namespace n CROSS JOIN LATERAL aclexplode(n.nspacl) a
+    WHERE n.nspname = 'public'
+    UNION
+    SELECT g.role FROM pg_policy p JOIN pg_class c ON c.oid = p.polrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    CROSS JOIN LATERAL unnest(p.polroles) AS g(role)
+    WHERE n.nspname = 'public' AND c.relowner = (SELECT oid FROM mine)
+)
+SELECT coalesce(r.rolname, 'PUBLIC') FROM grantees g LEFT JOIN pg_roles r ON r.oid = g.grantee
+WHERE r.rolname IS DISTINCT FROM current_user
+"""
+
+
+def _reject_historical_grants() -> None:
+    """Earlier migrations and operators may have granted something to a role that is not one of
+    the configured ones, even one that cannot connect today, or to PUBLIC: refuse (R07)."""
+    names = set(context.config.attributes["expected_runtime_roles"].values())
+    found = {str(row[0]) for row in op.get_bind().exec_driver_sql(_GRANTEES)}
+    if found - names:
         raise RuntimeError("unconfigured role has historical database privileges")
 
 
 def upgrade() -> None:
-    _verify_runtime_roles()
+    _reject_historical_grants()
     user_visibility = f"({_USER} AND id = app_user_id()) OR {_AUTH_BOOT}"
     session_visibility = f"({_USER} AND user_id = app_user_id()) OR {_SESS_BOOT}"
     _alter("users", "users_select_own_", user_visibility, None)
@@ -114,17 +120,29 @@ def upgrade() -> None:
     )
     _alter("user_sessions", "sessions_select_", session_visibility, None)
     _alter("user_sessions", "sessions_update_", session_visibility, session_visibility)
+    _alter("user_sessions", "sessions_insert_", None, f"{_USER} AND {_SESSION_INSERT}")
+    own = f"{_USER} AND user_id = app_user_id()"
+    _alter("email_change_operations", "email_change_app_read_", own, None)
+    _alter(
+        "email_change_operations", "email_change_app_insert_", None, f"{_USER} AND {_D37_INSERT}"
+    )
+    _alter(
+        "email_change_operations",
+        "email_change_app_update_",
+        f"{own} AND status = 'PENDING'",
+        f"{own} AND status IN ('PENDING', 'CONFIRMED', 'CANCELLED', 'EXPIRED')",
+    )
     _alter(
         "audit_events",
         "audit_read_own_",
-        f"{_AUDIT_READ} AND (tenant_id IS NULL OR tenant_id = app_tenant_id())",
+        f"{_USER} AND {_AUDIT_READ} AND (tenant_id IS NULL OR tenant_id = app_tenant_id())",
         None,
     )
     _alter(
         "audit_events",
         "audit_insert_app_",
         None,
-        f"{_AUDIT_INSERT} AND "
+        f"{_UNMIXED} AND {_AUDIT_INSERT} AND "
         "(branch_id IS NULL OR (tenant_id IS NOT NULL AND branch_id = ANY(app_branch_ids())))",
     )
     # Restrict every function owned by this application migration owner, including trigger
@@ -143,11 +161,14 @@ def upgrade() -> None:
     )
     for function in functions:
         op.execute(f"REVOKE EXECUTE ON FUNCTION {function} FROM PUBLIC")
+    # A worker writes system and identity-provider events only, never in a person's name.
     _alter(
         "audit_events",
         "audit_insert_worker_",
         None,
-        "(actor_type='SYSTEM' AND source='APP') OR (actor_type='IDP' AND source='KEYCLOAK')",
+        "((actor_type='SYSTEM' AND source='APP') OR (actor_type='IDP' AND source='KEYCLOAK')) "
+        "AND actor_user_id IS NULL AND actor_session_id IS NULL "
+        "AND (branch_id IS NULL OR tenant_id IS NOT NULL)",
     )
     # Existing audit rows are deliberately validated: unsafe legacy data blocks migration and
     # must be assessed separately; the append-only table is never silently rewritten.
@@ -178,6 +199,16 @@ def downgrade() -> None:
     )
     _alter("user_sessions", "sessions_select_", sessions, None)
     _alter("user_sessions", "sessions_update_", sessions, sessions)
+    _alter("user_sessions", "sessions_insert_", None, _SESSION_INSERT)
+    own = "user_id = app_user_id()"
+    _alter("email_change_operations", "email_change_app_read_", own, None)
+    _alter("email_change_operations", "email_change_app_insert_", None, _D37_INSERT)
+    _alter(
+        "email_change_operations",
+        "email_change_app_update_",
+        f"{own} AND status = 'PENDING'",
+        f"{own} AND status IN ('PENDING', 'CONFIRMED', 'CANCELLED', 'EXPIRED')",
+    )
     _alter("audit_events", "audit_read_own_", _AUDIT_READ, None)
     _alter("audit_events", "audit_insert_app_", None, _AUDIT_INSERT)
     # PUBLIC did not have EXECUTE under the required harden.sql default privileges.

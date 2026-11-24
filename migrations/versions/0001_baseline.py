@@ -4,7 +4,7 @@ Revision ID: 0001
 Revises:
 """
 
-from alembic import op
+from alembic import context, op
 
 revision = "0001"
 down_revision = None
@@ -28,16 +28,9 @@ def upgrade() -> None:
         "',')::uuid[], '{}'::uuid[]) $$"
     )
     # Default privileges (harden.sql) withhold EXECUTE from PUBLIC; grant it to the other
-    # roles of this database explicitly. Role names end in _app, _worker or _platform.
-    bind = op.get_bind()
-    roles = [
-        row[0]
-        for row in bind.exec_driver_sql(
-            "SELECT rolname FROM pg_roles WHERE rolname ~ '_(app|worker|platform)$' "
-            "AND has_database_privilege(rolname, current_database(), 'CONNECT')"
-        )
-    ]
-    for role in roles:
+    # roles of this database explicitly: the configured names (R07), verified by ``env.py``.
+    names = context.config.attributes["expected_runtime_roles"]
+    for role in (names["app"], names["worker"], names["platform"]):
         quoted = '"' + role.replace('"', '""') + '"'
         op.execute(
             "GRANT EXECUTE ON FUNCTION app_user_id(), app_tenant_id(), "

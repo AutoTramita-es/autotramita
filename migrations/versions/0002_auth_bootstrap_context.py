@@ -10,7 +10,7 @@ Revision ID: 0002
 Revises: 0001
 """
 
-from alembic import op
+from alembic import context, op
 
 revision = "0002"
 down_revision = "0001"
@@ -28,15 +28,9 @@ def upgrade() -> None:
         "CREATE FUNCTION app_session_hash() RETURNS bytea LANGUAGE sql STABLE AS "
         "$$ SELECT decode(nullif(current_setting('app.session_hash', true), ''), 'hex') $$"
     )
-    bind = op.get_bind()
-    roles = [
-        row[0]
-        for row in bind.exec_driver_sql(
-            "SELECT rolname FROM pg_roles WHERE rolname ~ '_(app|worker|platform)$' "
-            "AND has_database_privilege(rolname, current_database(), 'CONNECT')"
-        )
-    ]
-    for role in roles:
+    # The explicitly configured runtime roles (R07), verified by ``env.py``.
+    names = context.config.attributes["expected_runtime_roles"]
+    for role in (names["app"], names["worker"], names["platform"]):
         quoted = '"' + role.replace('"', '""') + '"'
         op.execute(f"GRANT EXECUTE ON FUNCTION app_auth_subject(), app_session_hash() TO {quoted}")
 

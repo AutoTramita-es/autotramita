@@ -17,7 +17,7 @@ Revision ID: 0005
 Revises: 0004
 """
 
-from alembic import op
+from alembic import context, op
 
 revision = "0005"
 down_revision = "0004"
@@ -42,15 +42,8 @@ def _quote(role: str) -> str:
 
 
 def _roles(suffix: str) -> list[str]:
-    bind = op.get_bind()
-    return [
-        row[0]
-        for row in bind.exec_driver_sql(
-            "SELECT rolname FROM pg_roles WHERE rolname ~ %s "
-            "AND has_database_privilege(rolname, current_database(), 'CONNECT')",
-            (f"_{suffix}$",),
-        )
-    ]
+    """The explicitly configured runtime role of this kind (R07), verified by ``env.py``."""
+    return [context.config.attributes["expected_runtime_roles"][suffix]]
 
 
 def upgrade() -> None:

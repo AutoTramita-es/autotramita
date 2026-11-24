@@ -380,3 +380,123 @@ def test_f2_migration_rejects_orphaned_historical_grant(role_env: RoleEnv) -> No
             db.exec_driver_sql(f'REVOKE ALL ON users FROM "{stranger}"')
         with role_env.admin_engine().connect() as db:
             db.exec_driver_sql(f'DROP ROLE "{stranger}"')
+
+
+# --- REC / R07: runtime roles are named explicitly and checked before anything runs ------------
+@pytest.mark.parametrize(
+    "case", ["unknown", "owner_reused", "no_connect", "elevated", "member", "extra_role"]
+)
+def test_migrations_check_the_named_runtime_roles_before_the_first_statement(
+    role_env: RoleEnv, case: str
+) -> None:
+    names = role_env.names
+    base = names.owner.removesuffix("_owner")
+    extra = f"{base}_second_worker"
+    admin = role_env.admin_engine()
+    cfg, conn = alembic_config(role_env.engine("owner"))
+    configured = cfg.attributes["expected_runtime_roles"]
+    with admin.connect() as db:
+        if case == "unknown":
+            configured["worker"] = f"{base}_absent_worker"
+        elif case == "owner_reused":
+            configured["platform"] = names.owner
+        elif case == "no_connect":
+            db.exec_driver_sql(
+                f'REVOKE CONNECT ON DATABASE "{role_env.database}" FROM "{names.worker}"'
+            )
+        elif case == "elevated":
+            db.exec_driver_sql(f'ALTER ROLE "{names.app}" BYPASSRLS')
+        else:
+            db.exec_driver_sql(f'CREATE ROLE "{extra}"')
+            if case == "member":
+                db.exec_driver_sql(f'GRANT "{extra}" TO "{names.app}"')
+            else:
+                db.exec_driver_sql(f'GRANT CONNECT ON DATABASE "{role_env.database}" TO "{extra}"')
+    try:
+        with pytest.raises(RuntimeError, match="runtime role"):
+            command.upgrade(cfg, "head")
+    finally:
+        conn.close()  # type: ignore[attr-defined]
+        with admin.connect() as db:
+            if case == "elevated":
+                db.exec_driver_sql(f'ALTER ROLE "{names.app}" NOBYPASSRLS')
+            if case in ("member", "extra_role"):
+                db.exec_driver_sql(
+                    f'REVOKE CONNECT ON DATABASE "{role_env.database}" FROM "{extra}"'
+                )
+                db.exec_driver_sql(f'DROP ROLE "{extra}"')
+    assert_nothing_migrated(role_env)
+
+
+@pytest.mark.parametrize(
+    "grant",
+    [
+        "GRANT UPDATE (display_name) ON users TO {role}",
+        "GRANT EXECUTE ON FUNCTION app_user_id() TO {role}",
+        "GRANT USAGE ON SCHEMA public TO {role}",
+        "CREATE POLICY leftover ON users FOR SELECT TO {role} USING (true)",
+        "GRANT SELECT ON users TO PUBLIC",
+    ],
+)
+def test_f2_migration_rejects_any_leftover_privilege_or_policy(
+    role_env: RoleEnv, grant: str
+) -> None:
+    owner = role_env.engine("owner")
+    migrate(owner, "upgrade", "0007")
+    stranger = role_env.names.owner.removesuffix("_owner") + "_orphan"
+    admin = role_env.admin_engine()
+    with admin.connect() as db:
+        db.exec_driver_sql(f'CREATE ROLE "{stranger}"')
+    try:
+        with owner.begin() as db:
+            db.exec_driver_sql(grant.format(role=f'"{stranger}"'))
+        with pytest.raises(RuntimeError, match="unconfigured role"):
+            migrate(owner, "upgrade", "head")
+        with admin.connect() as db:
+            assert (
+                db.execute(
+                    text("SELECT version_num FROM schema_migrations.alembic_version")
+                ).scalar_one()
+                == "0007"
+            )
+    finally:
+        with admin.connect() as db:
+            db.exec_driver_sql(f'DROP OWNED BY "{stranger}"')
+            db.exec_driver_sql("REVOKE SELECT ON users FROM PUBLIC")
+            db.exec_driver_sql(f'DROP ROLE "{stranger}"')
+
+
+def _security_catalog(env: RoleEnv) -> list[tuple[object, ...]]:
+    query = """
+        SELECT 'policy', tablename, policyname, cmd, roles::text, qual, with_check
+        FROM pg_policies WHERE schemaname = 'public'
+        UNION ALL
+        SELECT 'check', conrelid::regclass::text, conname, '', '', pg_get_constraintdef(oid), ''
+        FROM pg_constraint WHERE connamespace = 'public'::regnamespace
+        UNION ALL
+        SELECT 'acl', c.relname, '', '', '', c.relacl::text, ''
+        FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
+        UNION ALL
+        SELECT 'columns', c.relname, a.attname, '', '', a.attacl::text, ''
+        FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid
+        WHERE c.relnamespace = 'public'::regnamespace AND a.attacl IS NOT NULL
+        ORDER BY 1, 2, 3
+    """
+    with env.admin_engine().connect() as db:
+        return [tuple(row) for row in db.execute(text(query))]
+
+
+@pytest.mark.parametrize("target", ["0006", "0007"])
+def test_rec_migrations_downgrade_to_exactly_what_was_there_and_back(
+    role_env: RoleEnv, target: str
+) -> None:
+    owner = role_env.engine("owner")
+    migrate(owner, "upgrade", target)
+    before = _security_catalog(role_env)
+    migrate(owner, "upgrade", "head")
+    head = _security_catalog(role_env)
+    assert head != before
+    migrate(owner, "downgrade", target)
+    assert _security_catalog(role_env) == before
+    migrate(owner, "upgrade", "head")
+    assert _security_catalog(role_env) == head
