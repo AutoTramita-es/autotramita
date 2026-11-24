@@ -56,7 +56,7 @@ def test_no_route_is_constant_unmatched() -> None:
 
 
 def test_template_is_the_registered_one_and_never_reads_the_request_path() -> None:
-    cases = [
+    cases: list[tuple[FakeRoute, str, dict[str, object]]] = [
         (FakeRoute("/health"), "/api/v1/health", {}),
         (FakeRoute("/cases/{cid}"), f"/api/v1/cases/{SECRET}", {"cid": SECRET}),
         (FakeRoute("/a/{x}/b/{y}"), f"/p/a/{SECRET}/b/{SECRET}", {"x": SECRET, "y": SECRET}),
