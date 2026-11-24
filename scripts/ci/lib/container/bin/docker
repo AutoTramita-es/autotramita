@@ -1,0 +1,51 @@
+#!/usr/bin/python3
+"""Stand-in for the docker CLI inside a Local CI step container. It has no access to Docker: it
+hands the arguments to the broker on the host (scripts/ci/lib/broker.py), which checks them
+against a narrow policy before running anything, and prints the answer."""
+
+import json
+import os
+import sys
+import time
+import uuid
+
+
+def main() -> int:
+    directory = os.environ.get("ATCI_BROKER_DIR")
+    if not directory:
+        print("docker is not available in this Local CI step", file=sys.stderr)
+        return 125
+    argv = sys.argv[1:]
+    resolved = []
+    index = 0
+    while index < len(argv):
+        # `-e NAME` takes the value from the caller's environment, as the real CLI does.
+        if argv[index] in ("-e", "--env") and index + 1 < len(argv):
+            value = argv[index + 1]
+            if "=" not in value:
+                if value not in os.environ:
+                    index += 2
+                    continue
+                value = f"{value}={os.environ[value]}"
+            resolved += ["-e", value]
+            index += 2
+            continue
+        resolved.append(argv[index])
+        index += 1
+    name = uuid.uuid4().hex
+    temporary = os.path.join(directory, f"{name}.tmp")
+    with open(temporary, "w", encoding="utf-8") as handle:
+        json.dump({"argv": resolved}, handle)
+    os.rename(temporary, os.path.join(directory, f"{name}.req"))
+    response = os.path.join(directory, f"{name}.res")
+    while not os.path.exists(response):
+        time.sleep(0.1)
+    with open(response, encoding="utf-8") as handle:
+        result = json.load(handle)
+    sys.stdout.write(result["stdout"])
+    sys.stderr.write(result["stderr"])
+    return int(result["code"])
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,58 @@
+# Disposable infrastructure of ONE Local CI job. Started only by scripts/ci (see
+# docs/infrastructure/LOCAL-CI.md); every value is passed in from .github/workflows/ci.yml, so
+# images, credentials and health checks are defined once, there.
+#
+# Isolation: `netns` has no network at all (only its own loopback). PostgreSQL, Redis, the test
+# step containers and Keycloak all join that namespace, so they reach each other on 127.0.0.1
+# exactly as on GitHub, nothing is published on the host, and nothing outside is reachable.
+# Data lives in tmpfs and disappears with the containers.
+#
+# Keycloak is not declared here: the workflow's own step starts it (`docker run`, pinned by
+# digest) and that same step runs locally. There is no Mailpit: the tests run their own SMTP
+# sink on 127.0.0.1:18025.
+name: ${ATCI_PROJECT:?run this through scripts/ci}
+
+x-labels: &labels
+  com.autotramita.ci: "1"
+  com.autotramita.ci.run: ${ATCI_RUN_ID:?run this through scripts/ci}
+
+services:
+  netns:
+    image: ${ATCI_RUNNER_IMAGE:?run this through scripts/ci}
+    command: ["sleep", "infinity"]
+    init: true
+    network_mode: none
+    hostname: atci
+    extra_hosts: ["atci:127.0.0.1"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    labels: *labels
+
+  postgres:
+    profiles: [postgres]
+    image: ${ATCI_POSTGRES_IMAGE:-unused}
+    network_mode: "service:netns"
+    depends_on: [netns]
+    environment:
+      POSTGRES_PASSWORD: ${ATCI_POSTGRES_PASSWORD:-unused}
+    tmpfs: ["/var/lib/postgresql/data"]
+    shm_size: 64m # the Docker default, as for a GitHub service container
+    healthcheck:
+      test: ["CMD-SHELL", "${ATCI_POSTGRES_HEALTH_CMD:-false}"]
+      interval: ${ATCI_POSTGRES_HEALTH_INTERVAL:-5s}
+      timeout: ${ATCI_POSTGRES_HEALTH_TIMEOUT:-5s}
+      retries: ${ATCI_POSTGRES_HEALTH_RETRIES:-10}
+    labels: *labels
+
+  redis:
+    profiles: [redis]
+    image: ${ATCI_REDIS_IMAGE:-unused}
+    network_mode: "service:netns"
+    depends_on: [netns]
+    tmpfs: ["/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "${ATCI_REDIS_HEALTH_CMD:-false}"]
+      interval: ${ATCI_REDIS_HEALTH_INTERVAL:-5s}
+      timeout: ${ATCI_REDIS_HEALTH_TIMEOUT:-5s}
+      retries: ${ATCI_REDIS_HEALTH_RETRIES:-10}
+    labels: *labels

@@ -1,0 +1,6 @@
+{
+  "_comment": "Digests of the base images of the Local CI runner image. The tags are derived from the versions in .github/workflows/ci.yml; a version without a digest here stops the run. Service and tool images are not listed: they come from ci.yml and openapi/check-clients.sh.",
+  "ubuntu:24.04": "sha256:562111b88caa79c71391c0c4d3c2114a7d5c35915c20561fd893cb1e07929e6b",
+  "node:20.20.0-bookworm-slim": "sha256:d8a35d586fad3af7abb6fdb9ba972388395405f4d462da9e4a4ddcde67b5e0fb",
+  "ghcr.io/astral-sh/uv:0.13.9": "sha256:d3b601f0c7b118bc1753febf7c41cc80981df678445e0254284eecf84db79a7d"
+}

@@ -1,3 +1,4 @@
 .secrets/
 .temp/
 __pycache__/
+.ci-results/
