@@ -1,6 +1,6 @@
 # ADR-010: Keycloak as identity provider
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-24
 - **Project:** AutoTramita.es
 - **Depends on:** ADR-001, ADR-003, ADR-009
@@ -24,4 +24,4 @@ Keycloak outage blocks sign-in but not already validated sessions beyond their s
 Realm and client configuration, account recovery verification, MFA policy for central and professional roles, session lifetimes, Keycloak SSO for authorized staff access to Nextcloud, upgrade and backup procedure.
 
 ## Scope
-Architecture decision proposal only; nothing is deployed or implemented.
+Accepted architecture decision only; nothing is deployed or implemented.
