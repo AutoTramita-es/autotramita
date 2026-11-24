@@ -1,8 +1,10 @@
-"""The periodic D37 recovery worker (approved scope: 60 s, PostgreSQL leases).
+"""The periodic recovery worker (approved scope: 60 s, PostgreSQL leases).
 
-A daemon thread of the API process that runs one bounded sweep per interval under the
-dedicated worker database role. All state lives in PostgreSQL, so any instance, including a
-restarted one, continues where another stopped. It is not the general T11 outbox.
+A daemon thread of the API process that does two things per interval under the dedicated worker
+database role: the check for completed password resets (F-0), if one is given, and one bounded
+D37 sweep. D37 state lives in PostgreSQL and the pending password changes in Redis, so any
+instance, including a restarted one, continues where another stopped. A failure of one task
+does not stop the other. It is not the general T11 outbox.
 """
 
 from __future__ import annotations
@@ -30,16 +32,24 @@ class EmailChangeRecoveryWorker:
         notifier: SmtpNotifier | None,
         *,
         on_cycle: Callable[[bool], None],
+        password_check: Callable[[Callable[[], bool]], None] | None = None,
         interval_seconds: float = INTERVAL_SECONDS,
     ) -> None:
         self._factory, self._admin, self._notifier = factory, admin, notifier
         self._on_cycle = on_cycle
+        self._password_check = password_check
         self.interval_seconds = interval_seconds
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
     def run_cycle(self) -> bool:
-        """One sweep; reports whether it ran to the end (the D37 routes stay closed if not)."""
+        """One interval's work; reports whether the D37 sweep ran to the end (the D37 routes
+        stay closed if not)."""
+        if self._password_check is not None:  # first: it is what ends stolen sessions
+            try:
+                self._password_check(self._stop.is_set)
+            except Exception:
+                log.warning("password change sweep failed")
         try:
             run_once(self._factory, self._admin, self._notifier, should_stop=self._stop.is_set)
             ok = True

@@ -303,6 +303,26 @@ def revoke_others(
     return count
 
 
+def revoke_authenticated_before(
+    db: Session,
+    user_id: UUID,
+    before: datetime,
+    *,
+    reason: RevokeReason,
+    actor_user_id: UUID | None = None,
+    now: datetime | None = None,
+) -> int:
+    """End every live session of a person whose sign-in is older than ``before`` (for example
+    older than the person's new password). Sessions authenticated since then stay."""
+    count = repository.revoke_where(
+        db, "user_id = :u AND auth_time < :before", {"u": user_id, "before": before},
+        reason=reason.value, now=_now(now), revoked_by=actor_user_id,
+    )  # fmt: skip
+    if count:
+        _audit_revoked(db, user_id, reason, count, actor_user_id)
+    return count
+
+
 def revoke_by_kc_session(db: Session, kc_session_id: str, *, now: datetime | None = None) -> int:
     """Back-channel logout: every session of this Keycloak session (reason IDP_LOGOUT)."""
     return repository.revoke_where(
@@ -394,6 +414,6 @@ def _audit_revoked(
 
 __all__ = [
     "CreatedSession", "DatabaseSessionRevoker", "Resolved", "create_session", "record_step_up",
-    "resolve_mobile", "resolve_web", "revoke", "revoke_by_kc_session", "revoke_independent",
-    "revoke_others", "rotate_credential", "touch",
+    "resolve_mobile", "resolve_web", "revoke", "revoke_authenticated_before",
+    "revoke_by_kc_session", "revoke_independent", "revoke_others", "rotate_credential", "touch",
 ]  # fmt: skip

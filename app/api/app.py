@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
 from app.api.errors import install_error_handlers
@@ -12,7 +12,8 @@ from app.api.openapi import API_VERSION, install_openapi
 from app.api.telemetry import TelemetryMiddleware
 from app.api.v1.router import build_v1_router
 from app.auth.runtime import AuthRuntime
-from app.auth.security.notify import SmtpNotifier
+from app.auth.security import recovery
+from app.auth.security.notify import DisabledNotifier, SmtpNotifier
 from app.auth.security.recovery_worker import EmailChangeRecoveryWorker
 from app.auth.settings import AuthLimitSettings, AuthSettings
 from app.core.config import RateLimitSettings, Settings
@@ -75,6 +76,10 @@ def create_app_from_settings(settings: Settings) -> FastAPI:
         logging.getLogger(__name__).warning("authentication is not configured; sign-in disabled")
     app = create_app(limiter, engine, limits, auth)
     if auth is None or auth.admin is None or settings.worker_user is None:
+        if auth is not None:
+            logging.getLogger(__name__).warning(
+                "recovery worker not configured; password resets are acted on only at sign-in"
+            )
         return app
 
     # Dedicated least-privilege DB credentials; no fallback to the web or owner role.
@@ -90,8 +95,21 @@ def create_app_from_settings(settings: Settings) -> FastAPI:
             notifier and runtime.settings.web_origin and runtime.settings.security_hmac_key
         )
 
+    worker_factory = create_session_factory(worker_engine)
+
+    def password_check(should_stop: Callable[[], bool]) -> None:
+        # O15: sessions end in production too, but no mail is sent there.
+        notices = DisabledNotifier() if settings.environment == "prod" else runtime.notifier
+        recovery.check_pending_password_changes(
+            runtime, worker_factory, notices, should_stop=should_stop
+        )
+
     worker = EmailChangeRecoveryWorker(
-        create_session_factory(worker_engine), auth.admin, notifier, on_cycle=cycle_finished
+        worker_factory,
+        auth.admin,
+        notifier,
+        on_cycle=cycle_finished,
+        password_check=password_check,
     )
     app.state.email_change_worker = worker
 
