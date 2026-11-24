@@ -204,7 +204,7 @@ jobs:
       - name: Keycloak spike and OIDC tests (no skipped tests allowed)
         run: |
           export SPIKE_RESULTS_PATH="$RUNNER_TEMP/spike-results.json"
-          uv run --locked pytest -q -ra -m keycloak tests/identity --junitxml="$RUNNER_TEMP/junit-identity.xml" -W error
+          uv run --locked pytest -q -ra -m keycloak tests/identity --junitxml="$RUNNER_TEMP/junit-identity.xml" -W error -W 'ignore:Using `httpx` with `starlette.testclient` is deprecated:Warning'
       - name: Spike observations
         if: always()
         run: cat "$RUNNER_TEMP/spike-results.json" || true

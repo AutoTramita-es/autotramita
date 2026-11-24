@@ -107,9 +107,14 @@ def test_login_session_logout_and_the_old_cookie_is_dead(web: Web) -> None:
 # --- AC-WEB-02 cookie attributes -------------------------------------------------------------------
 def test_cookie_attributes_and_the_flow_cookie_is_cleared(web: Web) -> None:
     client = web.client()
-    query = web.start(client)
-    flow_set = [h for h in client.get(f"{API}/login").headers.get_list("set-cookie")]
-    assert any(h.startswith(f"{FLOW_COOKIE}=") for h in flow_set)
+    start = client.get(f"{API}/login")
+    flow_cookies = start.headers.get_list("set-cookie")
+    flow = next(h for h in flow_cookies if h.startswith(f"{FLOW_COOKIE}="))
+    for attribute in ("HttpOnly", "Secure", "SameSite=lax", "Path=/", "Max-Age=600"):
+        assert attribute in flow, attribute
+    from urllib.parse import parse_qs, urlparse
+
+    query = {k: v[0] for k, v in parse_qs(urlparse(start.headers["location"]).query).items()}
     response = client.get(
         f"{API}/callback", params={"code": web.code_for(query), "state": query["state"]}
     )
@@ -633,16 +638,11 @@ def test_the_admin_site_gets_admin_sessions_with_shorter_lifetimes(web: Web) -> 
     assert [str(v) for v in rows[0]] == ["0:15:00", "8:00:00"]
 
 
-def test_unknown_hosts_and_a_missing_configuration_do_not_serve_sign_in(
-    web: Web, role_env: RoleEnv, redis_url: str
-) -> None:
+def test_unknown_hosts_and_a_missing_configuration_do_not_serve_sign_in(web: Web) -> None:
     problem(web.client("evil.example").get(f"{API}/login"), 503, "UNKNOWN_ORIGIN")
-    from app.api.app import create_app
-
-    bare = TestClient(create_app(), base_url=f"https://{WEB_HOST}", follow_redirects=False)
-    problem(bare.get(f"{API}/login"), 503, "AUTH_NOT_CONFIGURED")
-    problem(bare.get(f"{API}/session"), 503, "AUTH_NOT_CONFIGURED")
-    bare.close()
+    web.app.state.auth = None  # the runtime is not configured
+    problem(web.client().get(f"{API}/login"), 503, "AUTH_NOT_CONFIGURED")
+    problem(web.client().get(f"{API}/session"), 503, "AUTH_NOT_CONFIGURED")
 
 
 # --- sessions: expiry and theft signals ------------------------------------------------------------
