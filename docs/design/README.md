@@ -36,6 +36,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - CRM wireframes: [customers](assets/wireframes/crm-customers.svg), [customer detail](assets/wireframes/crm-customer-detail.svg), [vehicles](assets/wireframes/crm-vehicles.svg), [vehicle detail](assets/wireframes/crm-vehicle-detail.svg).
 - [DOCUMENTS-DIGITAL-SIGNATURES.md](DOCUMENTS-DIGITAL-SIGNATURES.md) — document register, capture, OCR, review, templates, mandates, signatures and CSV verification.
 - Document wireframes: [register](assets/wireframes/documents-register.svg), [viewer](assets/wireframes/documents-viewer.svg), [capture](assets/wireframes/documents-capture.svg), [signature](assets/wireframes/documents-signature.svg), [CSV](assets/wireframes/documents-csv.svg).
+- [FINANCE-CREDIT-MANAGEMENT.md](FINANCE-CREDIT-MANAGEMENT.md) — tariffs, quotes, discounts, credit, invoices, payments, refunds and reports.
+- Finance wireframes: [dashboard](assets/wireframes/finance-dashboard.svg), [quote](assets/wireframes/finance-quote.svg), [credit](assets/wireframes/finance-credit.svg), [invoices](assets/wireframes/finance-invoices.svg), [payments](assets/wireframes/finance-payments.svg), [reports](assets/wireframes/finance-reports.svg).
 - UI-COMPONENTS.md — forms, tables, navigation, status, dialogs and states.
 - IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
 - RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
