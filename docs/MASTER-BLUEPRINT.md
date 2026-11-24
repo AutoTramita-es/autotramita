@@ -94,3 +94,6 @@ Next modules should be selected according to dependencies, not forced into a rig
 ## 8. Blueprint maintenance
 
 Update this file when a module is added, renamed, split, superseded or its verified status changes. Link to the approved decision/specification; do not replace them with an informal summary. Record substantive changes in Git commits. This document remains a **planning index**, not an executable specification or deployment plan.
+
+## 9. Design roadmap follow-up — 2026-11-24
+[Design Roadmap](design/DESIGN-ROADMAP.md) proposes dependency slices, limited prepaid commercial MVP, manual Tramisur and integrated Ficha procurement, and readiness/release gates. All five originally missing design documents drafted for review; no domain approval or implementation inferred. Next G5 foundation technical review (AT-01/02/03 plus minimal AT-09/17/20 contracts), then G6 bounded execution order. No deployment authorization.
