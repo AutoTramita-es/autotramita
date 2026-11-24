@@ -60,7 +60,7 @@ The existing ADRs and specifications take precedence over high-level summaries h
 
 - [AT-03 decision register](specifications/AT-03-decisions.md) — all 27 confirmed business decisions; implementation not authorized.
 
-- [ADR register](adr/ADR-REGISTER.md) — ADR-001 through ADR-009 Accepted as of 2026-11-23; ADR-010 and ADR-011 Proposed (2026-11-24).
+- [ADR register](adr/ADR-REGISTER.md) — ADR-001 through ADR-009 Accepted as of 2026-11-23; ADR-010 (Keycloak) and ADR-011 (shared Nextcloud) Accepted 2026-11-24.
 - [TenantBranch specification](specifications/tenant-branch.md) — approved business rules, no implementation.
 - [TenantMembership and workspace specification](specifications/tenant-membership.md) — draft containing confirmed decisions; no implementation.
 - [Case deadlines and priority specification](specifications/case-deadlines.md) — design approved in principle, no implementation.
@@ -109,4 +109,4 @@ Update this file when a module is added, renamed, split, superseded or its verif
 - DNSSEC, SMTP/domain setup, transactional mail provider, Nextcloud integration, authentication, malware scanning and backup/recovery remain incomplete. Cloudflare Zero Trust is not required by the current decision. See [DNS, Nextcloud and mail](DNS-NEXTCLOUD-MAIL.md) and [Docker Compose operations](DOCKER-COMPOSE.md) for details and current limitations.
 
 - **Design raster import — 2026-11-24:** 80 raster candidates imported into [design/assets](design/assets/MANIFEST.csv) via Git LFS (see [Master Design Blueprint §15](design/MASTER-DESIGN-BLUEPRINT.md)); not approved for release.
-- **G5 foundation review — 2026-11-24:** see [FOUNDATION-G5-REVIEW.md](design/FOUNDATION-G5-REVIEW.md); ADR-010 and ADR-011 Proposed; F1 not yet authorized.
+- **G5 foundation review — 2026-11-24:** see [FOUNDATION-G5-REVIEW.md](design/FOUNDATION-G5-REVIEW.md); ADR-010 and ADR-011 later Accepted; [G6 execution order](G6-EXECUTION-ORDER.md) Accepted; F1 not yet authorized.

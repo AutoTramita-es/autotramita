@@ -150,3 +150,6 @@ Owner approved the responsive and mobile specification ([RESPONSIVE-DESIGN.md](R
 
 ## 19. G5 foundation review — 2026-11-24
 [FOUNDATION-G5-REVIEW.md](FOUNDATION-G5-REVIEW.md): 11 findings (3 P0), proposed F1/F2/F3a boundaries, owner decisions H1–H6 approved. Database role model, context bootstrapping, sessions, platform path, audit, routing, API conventions and tooling defined as proposals; ADR-010 (Keycloak) and ADR-011 (Nextcloud storage) are Proposed. No implementation, migration or deployment authorized; next G6 execution order and explicit authorization for F1.
+
+## 20. G6 accepted — 2026-11-24
+[G6-EXECUTION-ORDER.md](../G6-EXECUTION-ORDER.md) accepted by the owner with technical decisions: synchronous SQLAlchemy 2.x with psycopg 3, Python 3.12 with uv, GitHub Actions, Redis rate limiting with configurable initial limits. ADR-010 and ADR-011 accepted. F1 is defined but **not authorized**; AT-03 reconciliation remains a prerequisite for F3a only. No implementation, migration, provisioning or deployment.
