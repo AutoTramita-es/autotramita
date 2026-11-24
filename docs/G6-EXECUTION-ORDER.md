@@ -7,7 +7,7 @@ Status: ACCEPTED (2026-11-24) — pravila izvršavanja i detaljni redoslijed F1 
 - [x] ADR-010 Accepted — Keycloak.
 - [x] ADR-011 Accepted — Nextcloud, bez MinIO/S3.
 - [x] G6 — detaljni redoslijed izvršavanja potvrđen (Accepted).
-- [ ] Izričita autorizacija F1 od vlasnika projekta.
+- [x] Izričita autorizacija F1 od vlasnika projekta (2026-11-24, "Autoriziram F1 prema G6-EXECUTION-ORDER.md").
 
 ## Pravila
 1. Svaka faza zahtijeva zasebnu autorizaciju.
@@ -25,7 +25,7 @@ Status: ACCEPTED (2026-11-24) — pravila izvršavanja i detaljni redoslijed F1 
 ## Izvor i sljedivost plana
 Izvorni plan faza pronađen je u design dokumentima, ne u zasebnom G6 dokumentu: [DESIGN-ROADMAP.md](design/DESIGN-ROADMAP.md) §5 (pakete F0–F13), §9 (definition of ready) i §10 (izvršavanje i definition of done) te [FOUNDATION-G5-REVIEW.md](design/FOUNDATION-G5-REVIEW.md) §3 (granice F1/F2/F3a). Detalji F1 u nastavku izvedeni su iz njih i iz odobrenih odluka H1–H6 te potvrđenih tehničkih odluka G6; F2 i F3a ostaju samo okvir. Ovaj zapis ne autorizira kod, migracije, infrastrukturu ni deployment.
 
-## F1 — AT-01 temelj sustava (ACCEPTED redoslijed; čeka izričitu autorizaciju)
+## F1 — AT-01 temelj sustava (ACCEPTED redoslijed; AUTORIZIRAN 2026-11-24; implementiran na grani `f1/foundation`, čeka prihvaćanje vlasnika)
 **Cilj:** reproducibilan lokalni i CI kostur s dokazano ispravnom RLS izolacijom i zajedničkim API konvencijama, bez ijedne poslovne tablice.
 
 **Dopuštene putanje:** `pyproject.toml`, `uv.lock`, `.python-version`, `alembic.ini`, `app/core/**`, `app/api/**`, `migrations/**`, `tests/**`, `scripts/db/**` (SQL rola), `openapi/**` (izvezeni ugovor), `.github/workflows/**`, `docs/DEVELOPMENT.md`.
@@ -51,3 +51,6 @@ Izvorni plan faza pronađen je u design dokumentima, ne u zasebnom G6 dokumentu:
 
 ## F2 i F3a — samo okvir
 F2 (AT-02 identitet/sesije, minimalni AT-17): `users`, `user_sessions`, validacija konteksta, opoziv, `audit_events`, `platform_grants`; prije toga zaseban detalj i autorizacija. F3a (AT-03 tenant/poslovnica/članstvo/pozivnica/verifikacija, minimalni AT-09): tek nakon AT-03 usklađivanja (pravilo 4). Detaljni redoslijed za F2 i F3a piše se kad F1 završi.
+
+## Status F1 — 2026-11-24
+Koraci 1–9 izvedeni na grani `f1/foundation` (nije spojena u `main`). CI na GitHubu zelen (lint, mypy, 93 testa na PostgreSQL 16 i Redisu, OpenAPI drift, generiranje TypeScript i Dart klijenata, gitleaks, pip-audit). Upute za pokretanje: [DEVELOPMENT.md](DEVELOPMENT.md). Prihvaćanje vlasnika, merge i bilo kakav deployment ostaju zasebne odluke; F2 i F3a zahtijevaju vlastitu autorizaciju.
