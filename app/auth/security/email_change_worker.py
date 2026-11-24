@@ -14,7 +14,7 @@ from app.auth.security.email_change import classify_identity_state, release_reco
 from app.auth.security.notify import SmtpNotifier
 from app.auth.sessions import service as sessions
 from app.auth.sessions.models import RevokeReason
-from app.auth.users.repository import update_email
+from app.auth.users.repository import lock_email, update_email
 from app.core.db import RequestContext, session_scope
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -57,6 +57,18 @@ def apply_claim(db: Session, admin: IdentityProviderAdmin, operation: UUID, leas
     if row is None:
         raise StaleLease()
     if row.user_status != "ACTIVE" or row.local_email != row.old_email:
+        _manual(db, operation, lease)
+        return
+    # The same transaction-scoped lock is used by first-login provisioning and provider sync.
+    # It closes the race between the uniqueness check and the external/local update.
+    lock_email(db, row.new_email_normalized)
+    taken = db.execute(
+        text("""
+        SELECT EXISTS (SELECT 1 FROM users WHERE email_normalized=:email AND id<>:user)
+    """),
+        {"email": row.new_email_normalized, "user": row.user_id},
+    ).scalar_one()
+    if taken:
         _manual(db, operation, lease)
         return
     actual = admin.get_email_state(row.auth_subject)

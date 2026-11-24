@@ -361,3 +361,57 @@ def test_real_smtp_sink_recovers_after_outage(env: RoleEnv) -> None:
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+
+
+def test_local_email_conflict_never_changes_keycloak(env: RoleEnv) -> None:
+    admin = FakeAdmin()
+    user, claim = prepare(env, admin)
+    other, _ = make_user(env)
+    with env.admin_engine().connect() as db:
+        db.execute(
+            text("""UPDATE users SET email='new@example.test',
+                        email_normalized='new@example.test' WHERE id=:id"""),
+            {"id": other},
+        )
+    assert process_claim(factory(env, "worker"), admin, *claim)
+    assert "set_email" not in admin.calls
+    with env.admin_engine().connect() as db:
+        assert (
+            db.execute(
+                text("SELECT status FROM email_change_operations WHERE id=:id"), {"id": claim[0]}
+            ).scalar_one()
+            == "MANUAL_REVIEW"
+        )
+        assert (
+            db.execute(text("SELECT email FROM users WHERE id=:id"), {"id": user}).scalar_one()
+            != "new@example.test"
+        )
+
+
+def test_provisioning_race_cannot_change_idp_onto_an_existing_local_email(env: RoleEnv) -> None:
+    import time
+    import uuid
+    from concurrent.futures import ThreadPoolExecutor
+
+    from app.auth.users.service import provision_or_link
+
+    admin = FakeAdmin()
+    _, claim = prepare(env, admin)
+    competing_subject = uuid.uuid4().hex
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        with session_scope(factory(env), RequestContext(auth_subject=competing_subject)) as session:
+            provision_or_link(
+                session, subject=competing_subject, email="new@example.test", email_verified=True
+            )
+            future = pool.submit(process_claim, factory(env, "worker"), admin, *claim)
+            time.sleep(0.2)
+            assert not future.done(), "recovery must wait for the competing address transaction"
+        assert future.result(timeout=10)
+    assert "set_email" not in admin.calls
+    with env.admin_engine().connect() as db:
+        assert (
+            db.execute(
+                text("SELECT status FROM email_change_operations WHERE id=:id"), {"id": claim[0]}
+            ).scalar_one()
+            == "MANUAL_REVIEW"
+        )

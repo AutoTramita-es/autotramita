@@ -20,6 +20,14 @@ COLUMNS = (
 )
 
 
+def lock_email(session: Session, normalized: str) -> None:
+    """Serialize provisioning and D37 changes that compete for the same address."""
+    session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:email, 824337))"),
+        {"email": normalized},
+    )
+
+
 def get_by_subject(session: Session, subject: str, *, lock: Lock = None) -> User | None:
     row = session.execute(
         # COLUMNS and the lock clause are module constants, never caller input

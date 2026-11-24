@@ -386,3 +386,52 @@ def test_d37_confirmation_and_recovery_against_keycloak_and_postgres(
     assert rig.rows(
         "SELECT recipient_kind FROM email_change_notifications ORDER BY recipient_kind"
     ) == [("NEW",), ("OLD",)]
+
+
+@pytest.mark.parametrize("failure", ["timeout", "before_commit"])
+def test_d37_recovers_real_keycloak_change_after_interruption(
+    rig: Rig, admin: Admin, monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    from datetime import UTC, datetime, timedelta
+    from uuid import UUID
+
+    from app.auth.security.email_change import claim_recovery, confirm_request, create_request
+    from app.auth.security.email_change_worker import apply_claim, process_claim
+    from app.core.db import RequestContext, create_session_factory, session_scope
+
+    user = admin.create_user()
+    assert rig.sign_in(user).status_code == 302
+    user_id, session_id = rig.rows("SELECT user_id, id FROM user_sessions")[0]
+    user_id, session_id = UUID(str(user_id)), UUID(str(session_id))
+    with session_scope(rig.runtime.factory, RequestContext(user_id=user_id)) as db:
+        operation, token = create_request(
+            db, user_id=user_id, session_id=session_id, new_email=f"recover-{user.email}"
+        )
+        assert confirm_request(db, user_id=user_id, operation_id=operation, token=token)
+    worker = create_session_factory(rig.role_env.engine("worker"))
+    with session_scope(worker, RequestContext()) as db:
+        claim = claim_recovery(db)
+    assert claim is not None
+    client = settings_admin(rig)
+    if failure == "timeout":
+        real_update = client.set_verified_email
+
+        def update_then_timeout(subject: str, email: str) -> None:
+            real_update(subject, email)
+            raise IdpAdminError("simulated response timeout")
+
+        monkeypatch.setattr(client, "set_verified_email", update_then_timeout)
+        assert not process_claim(worker, client, *claim)
+    else:
+        with pytest.raises(RuntimeError), session_scope(worker, RequestContext()) as db:
+            apply_claim(db, client, *claim)
+            raise RuntimeError("simulated interruption before database commit")
+    assert client.get_email_state(user.id).email == f"recover-{user.email}"
+    assert rig.rows("SELECT email FROM users") == [(user.email,)]
+    assert rig.rows("SELECT count(*) FROM email_change_notifications") == [(0,)]
+    with session_scope(worker, RequestContext()) as db:
+        retried = claim_recovery(db, now=datetime.now(UTC) + timedelta(hours=2))
+    assert retried is not None
+    assert process_claim(worker, client, *retried)
+    assert rig.rows("SELECT email FROM users") == [(f"recover-{user.email}",)]
+    assert rig.rows("SELECT count(*) FROM email_change_notifications") == [(2,)]

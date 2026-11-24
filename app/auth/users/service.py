@@ -106,6 +106,7 @@ def provision_or_link(
     user = repository.get_by_subject(session, subject, lock="share")
     created = False
     if user is None:
+        repository.lock_email(session, normalized)
         try:
             with session.begin_nested():
                 user = repository.insert(
@@ -179,6 +180,7 @@ def _sync(
             token_issued_at is None or token_issued_at <= completed.timestamp()
         ):
             raise IdentityProviderUnavailable()
+        repository.lock_email(session, normalized)
         try:
             with session.begin_nested():
                 repository.update_email(

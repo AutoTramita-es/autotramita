@@ -132,7 +132,7 @@ def create_session(
         "session.created",
         user_id,
         created.id,
-        {"client_type": client_type.value, "device_platform": _code(device_platform)},
+        {"client_type": client_type.value, "device_platform": _audit_platform(device_platform)},
     )
     if evicted:
         _audit(
@@ -356,9 +356,10 @@ def revoke_independent(
         return revoked
 
 
-def _code(value: str | None) -> str:
-    cleaned = "".join(ch for ch in (value or "") if ch.isalnum() or ch in "._:-")[:64]
-    return cleaned or "unknown"
+def _audit_platform(value: str | None) -> str:
+    """Never copy a client-supplied device string into the audit trail."""
+    platform = (value or "").lower()
+    return platform if platform in {"android", "ios"} else "unknown"
 
 
 def _audit(

@@ -610,3 +610,11 @@ def test_back_channel_logout_revokes_by_keycloak_session_id(env: RoleEnv) -> Non
 
 # --- AC-SES-12: the migration cycle is covered by tests/test_role_sql.py and
 # tests/audit/test_audit_db.py (upgrade head, downgrade, upgrade); see their updated expectations.
+
+
+def test_untrusted_device_platform_is_not_copied_to_audit(env: RoleEnv) -> None:
+    user, _ = make_user(env)
+    open_session(env, user, client=ClientType.MOBILE, device_platform="654321")
+    details = rows(env, "SELECT details FROM audit_events WHERE action='session.created'")
+    assert details[0][0]["device_platform"] == "unknown"
+    assert "654321" not in str(details)
