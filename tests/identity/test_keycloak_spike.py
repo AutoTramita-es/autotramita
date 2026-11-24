@@ -51,8 +51,8 @@ def _tokens_for(
         page = b.login(
             user_email, password, client_id=client, redirect_uri=redirect, challenge=challenge
         )
-        assert page.code, page.text[:300]
-        return {"browser": b, **b.token(client, page.code, redirect, verifier=verifier)}
+        page.require_code()
+        return {"browser": b, **b.token(client, page.require_code(), redirect, verifier=verifier)}
     except BaseException:
         b.close()
         raise
@@ -112,7 +112,8 @@ def test_s01_brute_force_five_failures_lock_and_do_not_disclose(env: Env, admin:
         assert INVALID.search(b.login(careful.email, BAD).text)
         b.close()
     b = Browser(env)
-    assert b.login(careful).code
+    careful_page = b.login(careful)
+    careful_page.require_code()
     b.close()
     # five failures lock: the correct password is then refused with the same message
     locked = admin.create_user()
@@ -189,8 +190,8 @@ def test_s03_step_up_loa2_requires_otp_and_loa1_does_not(env: Env, admin: Admin)
     first = b.login(
         user, client_id="at-web", redirect_uri=WEB_REDIRECT, challenge=challenge, acr_values="loa1"
     )
-    assert first.code, "password-only login (dealership user without MFA) must succeed"
-    tokens = b.token("at-web", first.code, WEB_REDIRECT, verifier=verifier)
+    first.require_code()  # password-only login (dealership user without MFA) must succeed
+    tokens = b.token("at-web", first.require_code(), WEB_REDIRECT, verifier=verifier)
     assert decode_jwt(tokens["id_token"]).get("acr") == "1", decode_jwt(tokens["id_token"])
     # step-up: same browser (SSO cookie), loa2 requested; user has no OTP yet -> setup prompt
     verifier2, challenge2 = pkce_pair()
@@ -207,8 +208,8 @@ def test_s03_step_up_loa2_requires_otp_and_loa1_does_not(env: Env, admin: Admin)
     fields = hidden_inputs(page.text)
     fields.update({"totp": totp(secret.group(1).strip()), "userLabel": "spike"})
     done = b.submit(page, fields, action=form_action(page.text))
-    assert done.code, done.text[:300]
-    second = b.token("at-web", done.code, WEB_REDIRECT, verifier=verifier2)
+    done.require_code()
+    second = b.token("at-web", done.require_code(), WEB_REDIRECT, verifier=verifier2)
     assert decode_jwt(second["id_token"]).get("acr") == "2", decode_jwt(second["id_token"])
     b.close()
     record_result("S3.step_up", "loa1 password-only; loa2 prompts OTP setup then acr=2")
@@ -291,7 +292,7 @@ def test_s08_events_have_ip_and_no_secrets_and_admin_events_have_no_representati
 def test_s09_kc_action_update_password_and_configure_totp(env: Env, admin: Admin) -> None:
     user = admin.create_user()
     b = Browser(env)
-    assert b.login(user).code
+    b.login(user).require_code()
     page = b.authorize("at-web", WEB_REDIRECT, kc_action="UPDATE_PASSWORD")
     assert page.code is None and "password-new" in page.text, page.text[:300]
     new_password = "Another-correct-horse-9"

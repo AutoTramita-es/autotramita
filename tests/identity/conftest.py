@@ -5,7 +5,7 @@ import os
 from collections.abc import Iterator
 
 import pytest
-from tests.identity.kc import Admin, BackchannelSink, Browser, Env, SmtpSink
+from tests.identity.kc import OPEN_BROWSERS, Admin, BackchannelSink, Browser, Env, SmtpSink
 
 
 def _require(name: str) -> str:
@@ -56,3 +56,11 @@ def browser(env: Env) -> Iterator[Browser]:
     b = Browser(env)
     yield b
     b.close()
+
+
+@pytest.fixture(autouse=True)
+def close_scripted_browsers() -> Iterator[None]:
+    """Every scripted browser is closed after its test, even when the test failed midway."""
+    yield
+    while OPEN_BROWSERS:
+        OPEN_BROWSERS.pop().close()

@@ -159,6 +159,19 @@ class Page:
         return parse_qs(urlparse(self.location or "").query).get("code", [None])[0]
 
     @property
+    def summary(self) -> str:
+        """Visible text of the page (tags, scripts and styles removed) for failure messages."""
+        body = re.sub(r"(?is)<(script|style|head).*?</\1>", " ", self.text)
+        return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", body))).strip()[
+            :400
+        ] or str(self.location)
+
+    def require_code(self) -> str:
+        if not self.code:
+            raise AssertionError(f"no authorization code: status={self.status} {self.summary}")
+        return str(self.code)
+
+    @property
     def query(self) -> dict[str, list[str]]:
         return parse_qs(urlparse(self.location or "").query)
 
@@ -185,6 +198,9 @@ def hidden_inputs(page_html: str) -> dict[str, str]:
     return fields
 
 
+OPEN_BROWSERS: list[Browser] = []
+
+
 class Browser:
     """A cookie-keeping client that follows Keycloak's own redirects but stops at the
     redirect URI of the application, so the authorization code can be inspected."""
@@ -199,6 +215,7 @@ class Browser:
             follow_redirects=False,
             event_hooks={"request": [self._send_cookies], "response": [self._store_cookies]},
         )
+        OPEN_BROWSERS.append(self)
         self._last = ""
         self.verifier: str | None = None
 
