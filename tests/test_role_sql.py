@@ -14,9 +14,10 @@ from tests.test_roles_and_migrations import migrate
 
 RUNTIME = ("app", "worker", "platform")
 # Technical (non-business) tables allowed to exist after upgrade head. F1 shipped none (the
-# idempotency table is a test fixture); F2 adds the append-only audit log (T03) and the global
-# users (T04). Any other table in public would be a business table and fail this test.
-NON_BUSINESS_TABLES: set[str] = {"audit_events", "users"}
+# idempotency table is a test fixture); F2 adds the append-only audit log (T03), the global
+# users (T04) and application sessions (T05). Any other table in public would be a business
+# table and fail this test.
+NON_BUSINESS_TABLES: set[str] = {"audit_events", "users", "user_sessions"}
 TABLE_PRIVS = "ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']"
 
 
@@ -242,6 +243,7 @@ def test_upgrade_downgrade_upgrade_and_schema_contents(role_env: RoleEnv) -> Non
     assert {"app_user_id", "app_tenant_id", "app_branch_ids"} <= functions_up
     assert {"app_auth_subject", "app_session_hash", "audit_events_append_only"} <= functions_up
     assert {"users_guard", "users_never_deleted"} <= functions_up
+    assert {"user_sessions_guard", "user_sessions_never_deleted"} <= functions_up
     assert (
         scalar(
             role_env,

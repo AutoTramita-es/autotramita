@@ -4,6 +4,7 @@ reason is kept on the exception for logs and tests and never echoed in the respo
 from __future__ import annotations
 
 from enum import StrEnum
+from uuid import UUID
 
 from app.core.errors import Conflict, Forbidden, ServiceUnavailable, Unauthenticated
 
@@ -68,3 +69,31 @@ class AccountDisabled(Forbidden):
 class EmailNotVerified(Forbidden):
     code = "EMAIL_NOT_VERIFIED"
     title = "E-mail address not verified"
+
+
+class SessionRequired(Unauthenticated):
+    """401 SESSION_REQUIRED: no application session matches the credential presented."""
+
+    code = "SESSION_REQUIRED"
+    title = "Session required"
+
+
+class SessionExpired(Unauthenticated):
+    code = "SESSION_EXPIRED"
+    title = "Session expired"
+
+
+class SessionRevoked(Unauthenticated):
+    code = "SESSION_REVOKED"
+    title = "Session revoked"
+
+
+class SessionSecurityViolation(SessionRevoked):
+    """The session must be revoked: the caller revokes it in its own transaction after the
+    failed request has rolled back (``revoke_independent``)."""
+
+    def __init__(self, session_id: UUID, user_id: UUID, signal: str) -> None:
+        super().__init__()
+        self.session_id = session_id
+        self.user_id = user_id
+        self.signal = signal
