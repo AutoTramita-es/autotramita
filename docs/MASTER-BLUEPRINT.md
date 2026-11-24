@@ -1,7 +1,7 @@
 # AutoTramita.es — MASTER BLUEPRINT
 
 **Status:** MASTER INDEX / WORKING BLUEPRINT (not implementation authorization)  
-**Version:** 1.5
+**Version:** 1.6
 **Date:** 2026-11-24  
 **Repository:** [AutoTramita-es/autotramita](https://github.com/AutoTramita-es/autotramita)  
 **Language:** Croatian for planning; existing technical ADRs remain authoritative.
@@ -106,7 +106,7 @@ Next modules should be selected according to dependencies, not forced into a rig
 Update this file when a module is added, renamed, split, superseded or its verified status changes. Link to the approved decision/specification; do not replace them with an informal summary. Record substantive changes in Git commits. This document remains a **planning index**, not an executable specification or deployment plan.
 
 ## 9. Design roadmap follow-up — 2026-11-24
-[Design Roadmap](design/DESIGN-ROADMAP.md) proposes dependency slices, limited prepaid commercial MVP, manual Tramisur and integrated Ficha procurement, and readiness/release gates. All five originally missing design documents drafted for review; no domain approval or implementation inferred. G5 foundation technical review completed and G6 bounded execution order accepted; AT-01 v1.1 approved. Execution brief v1.0 approved; next gate REC-03 after separate authorization. No deployment authorization.
+[Design Roadmap](design/DESIGN-ROADMAP.md) proposes dependency slices, limited prepaid commercial MVP, manual Tramisur and integrated Ficha procurement, and readiness/release gates. All five originally missing design documents drafted for review; no domain approval or implementation inferred. G5 foundation technical review completed and G6 bounded execution order accepted; AT-01 v1.1 approved. Execution brief v1.0 approved; REC-03 DEV consolidation preparation approved. No deployment authorization.
 
 ## 10. Infrastructure status — 2026-11-24
 
@@ -119,3 +119,7 @@ Update this file when a module is added, renamed, split, superseded or its verif
 - **G5 foundation review — 2026-11-24:** see [FOUNDATION-G5-REVIEW.md](design/FOUNDATION-G5-REVIEW.md); ADR-010 and ADR-011 later Accepted; [G6 execution order](G6-EXECUTION-ORDER.md) Accepted; F1 not yet authorized.
 
 - **AT-01.04 — 2026-11-24:** owner approved AT-01 v1.1; G6 prerequisites updated. Fifteen open decisions remain assigned to their respective gates. No F1 or deployment authorization.
+
+## REC-03 — Approved DEV/PROD Git policy (2026-11-24)
+Owner approved two active branches: dev for all development and integration, main for stable production releases. This supersedes the proposed feature/maintenance branches and the earlier main-only plan. dev maps to Docker project autotramita-dev; main maps to autotramita-prod. Mapping is a policy, not an active deployment connection. No automatic deployment or CI/CD deployment configuration is authorized. Future DEV automation is a separate decision; PROD release and deployment require explicit approval. No production data or secrets in DEV.
+REC-03 preparation: create dev from updated main, then integrate f1/foundation into dev with a history-preserving merge after checking conflicts and automation. Preserve newer approved documentation, existing code, maintenance assets and historical records; retain original and archive branches. Review .gitleaksignore and disputed migration 0002 in later authorized work. Do not merge unfinished F1 into main. No new features, live changes or F1 acceptance. REC-04–07 remain unauthorized. Stop if external deployment triggers or loss of content cannot be ruled out. Prior REC-02 status is historical; this section supersedes its branch/merge restrictions only for the approved DEV consolidation preparation. Actual merge remains pending verification.
