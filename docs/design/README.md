@@ -26,6 +26,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - [B2B wireframe](assets/wireframes/b2b-desktop.svg) — shared layout concept.
 - [PUBLIC-AUTH-SUPPORT-LEGAL.md](PUBLIC-AUTH-SUPPORT-LEGAL.md) — authentication, recovery, support and legal UX.
 - [Authentication wireframe](assets/wireframes/auth-desktop.svg) — desktop layout concept.
+- [SAAS-APPLICATION-SHELL.md](SAAS-APPLICATION-SHELL.md) — shared workspace navigation, context, roles, themes and responsive UX.
+- [Light shell](assets/wireframes/saas-shell-light.svg) / [Dark shell](assets/wireframes/saas-shell-dark.svg) — editable concepts.
 - UI-COMPONENTS.md — forms, tables, navigation, status, dialogs and states.
 - IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
 - RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
