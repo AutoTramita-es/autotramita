@@ -1,5 +1,7 @@
 # AutoTramita.es — Development guide (phase F1)
 
+**Status (2026-11-24): F1 COMPLETED / ACCEPTED FOR DEVELOPMENT AND CI; REC process CLOSED; F2 READY FOR PLANNING.** Release option 3: F1 stays on `dev`. Production prerequisites deferred until real infrastructure preparation: R05 (persistent-database migration state), R11 (align `scripts/provision-postgres.py` with `scripts/db/harden.sql` before the first real provisioning), R12 (readiness and monitoring), real `TRUSTED_PROXY_CIDRS`, and the 15 PROPOSED decisions in AT-01 §10. See [the plan](design/F1-RECONCILIATION-PLAN.md).
+
 Scope: the F1 foundation only (toolchain, configuration, database layer, migrations, RLS tests, API conventions, rate limiting, health, OpenAPI, CI). There are no business tables, no authentication and no deployment. See [G6-EXECUTION-ORDER.md](G6-EXECUTION-ORDER.md) for what F1 may and may not touch.
 
 ## Prerequisites

@@ -1,5 +1,5 @@
 # REC-07 — F1 final validation plan
-2026-11-24 | v1.0 | PLAN v1.0 APPROVED / REC-07.1 (R01–R04) AUTHORIZED ONLY, other corrections not authorized / F1 NOT YET ACCEPTED
+2026-11-24 | v1.0 | EXECUTED (REC-07.0–07.5) / F1 COMPLETED, ACCEPTED FOR DEVELOPMENT AND CI / REC CLOSED
 
 ## Owner decision and evidence baseline
 Owner explicitly states: “Prihvaćam CP10 i završetak implementacije T01–T10. Autoriziram REC-07. Prvo pregledaj sve postojeće specifikacije, kod, CI rezultate i otvorene nalaze. Izradi detaljan plan konačne validacije F1 s prioritetima i kriterijima prihvata te ga spremi na GitHub na granu dev. Evidentiraj CP10. Bez implementacije ispravaka u ovom koraku, bez merga u main, bez F2 i bez deploymenta.”
@@ -65,3 +65,6 @@ All packets dev only, separate explicit authorization, scoped commit and full is
 
 ## Final decision rule
 All P0 closed with evidence, P1 closed or explicitly accepted by owner with rationale, P2 assigned phase/live gate and owner acknowledgment. No unconditional PASS for unverified persistent migration state. Record final candidate SHA and CI run, AC01–15 disposition (PASS / bounded scope / blocked), all findings, no deployment implication. Merge/release and live infrastructure require separate approvals; F2 requires separate brief and authorization. Documentation commits may trigger CI; final evidence must identify the actual tested candidate, not assume later runs passed.
+
+## Final status (2026-11-24)
+All packets REC-07.0–07.5 executed and accepted. Final dispositions: R01–R04, R06–R09, R14, R15 closed; R10 closed except owner-deferred Dart analysis; R13 closed by release option 3 (F1 stays on `dev`); R02 and R08 received final corrections (mandatory expected owner; registered-template-only route). R05, R11, R12 and real trusted proxy networks are deferred production prerequisites. F1 COMPLETED / ACCEPTED FOR DEVELOPMENT AND CI; REC CLOSED; F2 READY FOR PLANNING. Evidence: [F1-FINAL-ACCEPTANCE-EVIDENCE.md](F1-FINAL-ACCEPTANCE-EVIDENCE.md), run 45447273879.

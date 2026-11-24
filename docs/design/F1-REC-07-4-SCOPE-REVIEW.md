@@ -1,5 +1,5 @@
 # REC-07.4 — scope, authorization and live-gate review (documentation only)
-2026-11-24 | STOP V4 | no code, no live reads, no merge | F1 NOT YET ACCEPTED
+2026-11-24 | CLOSED | documentation only | F1 COMPLETED / ACCEPTED FOR DEVELOPMENT AND CI
 [Final validation plan](F1-FINAL-VALIDATION-PLAN.md) | [Reconciliation plan](F1-RECONCILIATION-PLAN.md) | [AT-01](../specifications/AT-01-foundation-infrastructure.md)
 
 Method: git history and file contents of `main..dev` (candidate 76b8bd5 plus this commit), GitHub API ref listing, repository documents. No database, host, Docker, DNS or Traefik state was queried or changed by this review; statements about live state repeat what the documents say and are **unverified**.
@@ -87,3 +87,9 @@ Recommendation: option 2 or 3, because the maintenance assets are a separate liv
 
 ## 9. Closure of R13 / R14 and what remains
 R13: inventory, origin, authorization class, maintenance review and fingerprint review are complete; the **release selection (§7) and the archive decision (finding A) are owner decisions**. R14: status pointers, AC matrix, decision register and release boundary are recorded. R05/R11/R12 stay open as live gates (P2) with the evidence listed in §4. No code or configuration was changed in REC-07.4.
+
+## Final decisions (2026-11-24)
+- Release selection (§7): **option 3, F1 stays on `dev`**; `main` unchanged. R13 and the AC15 scope condition are CLOSED; the maintenance, DNS-doc and AT-05 group remains on `dev` and is not released.
+- Finding A: closed by owner decision: only `dev` and `main` exist, no archive branch; Git history preserves e22ae3b.
+- Finding B / R11, R05, R12, real proxy networks, 15 proposed decisions: deferred production prerequisites (see the plan's Final closure).
+- §2 note: the R08 description of prefix recovery is superseded: the span route is now the registered template only.

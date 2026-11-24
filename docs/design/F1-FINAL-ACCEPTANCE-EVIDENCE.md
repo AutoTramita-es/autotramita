@@ -1,5 +1,5 @@
 # REC-07.5 — F1 final validation evidence
-2026-11-24 | STOP V5 | validation only: no code change, no merge, no deployment | **F1 ACCEPTED by owner 2026-11-24 (CP16)**; release selection, archive ref and live gates still open
+2026-11-24 | **F1 COMPLETED / ACCEPTED FOR DEVELOPMENT AND CI | REC CLOSED | F2 READY FOR PLANNING** | validation only
 [Validation plan](F1-FINAL-VALIDATION-PLAN.md) | [Reconciliation plan](F1-RECONCILIATION-PLAN.md) | [Scope review](F1-REC-07-4-SCOPE-REVIEW.md)
 
 ## 1. Candidate and evidence
@@ -72,3 +72,12 @@
 3. Decide **finding A** (recreate the archive ref at e22ae3b, or accept dev history).
 4. Acknowledge the **P2 live gates** R05, R11, R12 (and the live proxy networks) as prerequisites for any live step, and decide when finding B is fixed.
 5. Merge to `main`, release, deployment and F2 each need a separate authorization.
+
+## Final closure addendum (2026-11-24) — owner package: F1 COMPLETED / ACCEPTED FOR DEVELOPMENT AND CI; REC CLOSED; F2 READY FOR PLANNING
+Owner decisions in one package (no further confirmations): work only on `dev`; only two branches (`dev`, `main`), no archive or other branches (Git history is the archive, so scope-review finding A is closed by decision); **release option 3: F1 stays on `dev`** (this supersedes the earlier option-2 note; `main` unchanged at 1e8be38a40aac63f5c58d6dbb01daaa051326e6b); R13 and the AC15 scope condition CLOSED; AC09 bounded F1 scope and the Dart-analysis deferral accepted.
+Final security corrections (verified against the code first; both were still open): **R02** `expected_owner` is now mandatory also for a caller-supplied connection (missing, empty, non-string or different name is rejected before any statement; regression tests added); **R08** span route is only the registered template or `unmatched`, no prefix reconstruction from the request path (routes registered relative to their router are reported relatively, e.g. `/health`; tests prove URL values never reach spans).
+Final CI: tested code candidate `10490611d87815e7696c87edab2c271681d0aa42`, run [45447273879](https://github.com/AutoTramita-es/autotramita/actions/runs/45447273879): all three jobs passed, 421 passed, 0 skipped, Ruff/mypy clean, PostgreSQL 16 and Redis 7 integration passed, OpenAPI validation and client generation passed, secret scan (456 commits) no leaks, dependency audit no known vulnerabilities. Documentation-only commits follow this candidate.
+Deferred production prerequisites (do not block F1 for development and CI; they block the matching production operation): R05 persistent-database migration state check; R11 align `scripts/provision-postgres.py` with `scripts/db/harden.sql` before the first real provisioning; R12 readiness and monitoring; real trusted proxy networks (`TRUSTED_PROXY_CIDRS`); the 15 PROPOSED decisions (AT-01 §10).
+Final statuses: **F1: COMPLETED / ACCEPTED FOR DEVELOPMENT AND CI. REC process: CLOSED. F2: READY FOR PLANNING** (no F2 implementation, merge to `main`, deployment or shared-infrastructure access is authorized by this entry).
+
+This addendum supersedes the earlier statements above that the expected owner was optional on the supplied-connection path (R02) and that a literal path prefix was recovered from the request path (R08), the 'decisions requested' list in §7, and the 'open' dispositions of R13, AC15 and finding A.
