@@ -17,7 +17,7 @@ from app.auth.errors import AuthCallbackRejected
 from app.auth.runtime import AuthRuntime
 from app.auth.sessions.models import SessionPolicy
 from app.auth.settings import AuthLimitSettings, AuthSettings
-from app.auth.tokens import IdTokenValidator, JwksCache, LogoutTokenValidator
+from app.auth.tokens import IdTokenValidator, JwksCache, LogoutTokenValidator, TokenValidator
 from app.auth.web.oidc_flow import FlowStore, JtiStore, OidcEndpoints
 from app.core.config import RateLimitSettings
 from app.core.db import create_session_factory
@@ -29,6 +29,7 @@ from tests.auth.fake_idp import ISSUER, NOW, Clock, FakeIdp
 from tests.conftest import RoleEnv
 
 WEB_HOST = "autotramita.example"
+ORIGIN_WEB = f"https://{WEB_HOST}"
 ADMIN_HOST = "admin.autotramita.example"
 CHROME = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36"
 FIREFOX = "Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0"
@@ -72,12 +73,18 @@ class Web:
     clock: Clock
     clients: list[TestClient] = field(default_factory=list)
 
-    def client(self, host: str = WEB_HOST, user_agent: str = CHROME, **kw: Any) -> TestClient:
+    def client(
+        self,
+        host: str = WEB_HOST,
+        user_agent: str = CHROME,
+        headers: dict[str, str] | None = None,
+        **kw: Any,
+    ) -> TestClient:
         c = TestClient(
             self.app,
             base_url=f"https://{host}",
             follow_redirects=False,
-            headers={"user-agent": user_agent},
+            headers={"user-agent": user_agent, **(headers or {})},
             **kw,
         )
         self.clients.append(c)
@@ -127,6 +134,21 @@ class Web:
         )
         return callback
 
+    def access(
+        self,
+        *,
+        sub: str = SUBJECT,
+        sid: str = SID,
+        email: str | None = "person@example.test",
+        verified: bool = True,
+        **claims: Any,
+    ) -> str:
+        """A Keycloak-shaped access token of the mobile client (valid at the fixed test time)."""
+        return self.idp.token(sub=sub, sid=sid, email=email, email_verified=verified, **claims)
+
+    def bearer(self, token: str, user_agent: str = "Dart/3.2 (dart:io)") -> TestClient:
+        return self.client(user_agent=user_agent, headers={"authorization": f"Bearer {token}"})
+
     def rows(self, sql: str, **params: Any) -> list[tuple[Any, ...]]:
         with self.env.admin_engine().connect() as c:
             return [tuple(r) for r in c.execute(text(sql), params)]
@@ -158,6 +180,7 @@ def build_web(
     client = create_redis(redis_url)
     runtime = AuthRuntime(
         settings=settings,
+        access_validator=TokenValidator(settings, cache, clock=clock),
         id_validator=IdTokenValidator(settings, cache, clock=clock),
         logout_validator=LogoutTokenValidator(settings, cache, clock=clock),
         flows=FlowStore(client, namespace=namespace, ttl_seconds=settings.flow_ttl_seconds),

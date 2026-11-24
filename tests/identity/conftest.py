@@ -5,7 +5,10 @@ import os
 from collections.abc import Iterator
 
 import pytest
+from tests.conftest import RoleEnv
 from tests.identity.kc import OPEN_BROWSERS, Admin, BackchannelSink, Browser, Env, SmtpSink
+from tests.identity.rig import Rig
+from tests.test_roles_and_migrations import migrate
 
 
 def _require(name: str) -> str:
@@ -64,3 +67,11 @@ def close_scripted_browsers() -> Iterator[None]:
     yield
     while OPEN_BROWSERS:
         OPEN_BROWSERS.pop().close()
+
+
+@pytest.fixture
+def rig(env: Env, role_env: RoleEnv, redis_url: str) -> Iterator[Rig]:
+    migrate(role_env.engine("owner"), "upgrade", "head")
+    harness = Rig(env, role_env, redis_url)
+    yield harness
+    harness.close()

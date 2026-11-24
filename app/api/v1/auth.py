@@ -7,24 +7,19 @@ one generic error (``AUTH_CALLBACK_REJECTED``); the cause is recorded in the aud
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator, Sequence
-from contextlib import contextmanager
-from datetime import UTC, datetime, timedelta
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import Any, NoReturn
 from urllib.parse import parse_qs
-from uuid import UUID
 
+from app.api.v1.authn import SessionInfo, authenticated, request_facts, session_info
 from app.audit.models import ActorType, AuditEvent, Outcome
-from app.audit.record import ip_prefix, record, record_independent, ua_family
+from app.audit.record import record, record_independent
 from app.auth import credentials
 from app.auth.errors import (
     AccountDisabled,
-    AmbiguousCredentials,
     AuthCallbackRejected,
-    AuthRequired,
-    CsrfInvalid,
     LogoutTokenInvalid,
-    SessionSecurityViolation,
     TokenInvalid,
 )
 from app.auth.runtime import AuthRuntime, runtime_of
@@ -34,7 +29,6 @@ from app.auth.settings import AuthLimitSettings
 from app.auth.tokens import VerifiedIdToken
 from app.auth.web import cookies
 from app.auth.web import service as web_service
-from app.auth.web.csrf import SAFE_METHODS, csrf_token, verify_csrf
 from app.auth.web.oidc_flow import (
     binder_digest,
     new_binder,
@@ -46,46 +40,16 @@ from app.auth.web.redirects import safe_return_to
 from app.auth.web.stepup import StepUpPurpose, authorization_params, level_from_acr
 from app.core.db import RequestContext, session_scope
 from app.core.errors import TooManyRequests
-from app.core.ratelimit import IPNetwork, Policy, by_ip, client_ip, rate_limit
+from app.core.ratelimit import IPNetwork, Policy, by_ip, rate_limit
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
 from starlette.responses import RedirectResponse
 
 logger = logging.getLogger(__name__)
 INTERNAL = {"x-internal": True}  # browser redirects: kept out of the generated API clients
 MAX_LOGOUT_BODY = 16_384
 MAX_CODE_LENGTH = 2048
-
-
-class UserSummary(BaseModel):
-    id: UUID
-    email: str
-    email_verified: bool
-    status: str
-    display_name: str | None
-    preferred_language: str
-
-
-class WorkspaceInfo(BaseModel):
-    tenant_id: UUID | None
-    branch_id: UUID | None
-    context_version: int
-
-
-class SessionInfo(BaseModel):
-    session_id: UUID
-    client_type: str
-    user: UserSummary
-    auth_level: str
-    step_up_expires_at: datetime | None = Field(
-        description="When the last step-up stops counting as fresh (null: none recorded)"
-    )
-    expires_at: datetime = Field(description="Absolute end of the session")
-    idle_expires_at: datetime
-    workspace: WorkspaceInfo | None
-    csrf_token: str = Field(description="Send as X-CSRF-Token on every unsafe request")
 
 
 class LogoutResult(BaseModel):
@@ -101,13 +65,8 @@ class StepUpResult(BaseModel):
     redirect_url: str
 
 
-def _request_facts(request: Request, rt: AuthRuntime) -> tuple[str | None, str | None]:
-    peer = client_ip(request, rt.trusted_proxies)
-    return ip_prefix(peer), ua_family(request.headers.get("user-agent"))
-
-
 def _reject(request: Request, rt: AuthRuntime, reason: str) -> NoReturn:
-    prefix, family = _request_facts(request, rt)
+    prefix, family = request_facts(request, rt)
     record_independent(
         rt.factory,
         AuditEvent(
@@ -121,89 +80,6 @@ def _reject(request: Request, rt: AuthRuntime, reason: str) -> NoReturn:
         RequestContext(),
     )
     raise AuthCallbackRejected()
-
-
-def _credential(request: Request, rt: AuthRuntime) -> str:
-    cookie = request.cookies.get(rt.settings.cookie_name)
-    if cookie and request.headers.get("authorization"):
-        raise AmbiguousCredentials()
-    if not cookie:
-        raise AuthRequired()
-    return cookie
-
-
-@contextmanager
-def authenticated(
-    request: Request, rt: AuthRuntime, *, lock: bool, touch: bool = True
-) -> Iterator[tuple[Session, sessions.Resolved, str]]:
-    """One transaction in which the cookie session is validated (and, for unsafe methods, the
-    CSRF token) and the handler works. A theft signal revokes the session in its own
-    transaction after this one has rolled back."""
-    credential = _credential(request, rt)
-    if request.method not in SAFE_METHODS:
-        try:
-            verify_csrf(request, credential, rt.origins)
-        except CsrfInvalid:
-            prefix, family = _request_facts(request, rt)
-            record_independent(
-                rt.factory,
-                AuditEvent(
-                    action="authz.denied",
-                    outcome=Outcome.DENIED,
-                    actor_type=ActorType.ANONYMOUS,
-                    ip_prefix=prefix,
-                    ua_family=family,
-                    details={"reason": "CSRF", "resource_type": "session"},
-                ),
-                RequestContext(),
-            )
-            raise
-    resolved: sessions.Resolved | None = None
-    try:
-        with session_scope(rt.factory, RequestContext()) as db:
-            resolved = sessions.resolve_web(
-                db,
-                credential,
-                lock=lock,
-                ua_family=ua_family(request.headers.get("user-agent")),
-            )
-            yield db, resolved, credential
-    except SessionSecurityViolation as violation:
-        sessions.revoke_independent(rt.factory, violation)
-        raise
-    if touch and resolved is not None:
-        sessions.touch(rt.factory, resolved, rt.policy)
-
-
-def _session_info(rt: AuthRuntime, resolved: sessions.Resolved, credential: str) -> SessionInfo:
-    s, u = resolved.session, resolved.user
-    window = timedelta(minutes=rt.settings.step_up_window_minutes)
-    return SessionInfo(
-        session_id=s.id,
-        client_type=s.client_type.value,
-        user=UserSummary(
-            id=u.id,
-            email=u.email,
-            email_verified=u.email_verified_at is not None,
-            status=u.status.value,
-            display_name=u.display_name,
-            preferred_language=u.preferred_language,
-        ),
-        auth_level=s.auth_level.value,
-        step_up_expires_at=(s.step_up_at + window) if s.step_up_at else None,
-        expires_at=s.absolute_expires_at,
-        idle_expires_at=s.idle_expires_at,
-        workspace=(
-            WorkspaceInfo(
-                tenant_id=s.active_tenant_id,
-                branch_id=s.active_branch_id,
-                context_version=s.context_version,
-            )
-            if s.active_tenant_id
-            else None
-        ),
-        csrf_token=csrf_token(credential),
-    )
 
 
 def _new_flow(
@@ -313,7 +189,7 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
     ) -> Response:
         if not identity.email:
             _reject(request, rt, "TOKEN_EMAIL")
-        prefix, family = _request_facts(request, rt)
+        prefix, family = request_facts(request, rt)
         outcome = web_service.complete_login(
             rt, identity, client_type, email=identity.email, ip_prefix=prefix, ua_family=family
         )
@@ -403,7 +279,8 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
     )
     def logout(request: Request, response: Response) -> LogoutResult:
         rt = runtime_of(request)
-        with authenticated(request, rt, lock=True, touch=False) as (db, resolved, _):
+        with authenticated(request, rt, lock=True, touch=False) as ctx:
+            db, resolved = ctx.db, ctx.resolved
             sessions.revoke(
                 db,
                 resolved.session.id,
@@ -430,8 +307,8 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
     @router.get("/session", summary="State of the current session", response_model=SessionInfo)
     def session_state(request: Request, response: Response) -> SessionInfo:
         rt = runtime_of(request)
-        with authenticated(request, rt, lock=False) as (_db, resolved, credential):
-            info = _session_info(rt, resolved, credential)
+        with authenticated(request, rt, lock=False) as ctx:
+            info = session_info(rt, ctx.resolved, ctx.credential)
         cookies.no_store(response)
         return info
 
@@ -442,9 +319,9 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
     )
     def step_up(request: Request, body: StepUpRequest, response: Response) -> StepUpResult:
         rt = runtime_of(request)
-        with authenticated(request, rt, lock=False) as (_db, resolved, _):
-            session: UserSession = resolved.session
-            subject = resolved.user.auth_subject
+        with authenticated(request, rt, lock=False) as ctx:
+            session: UserSession = ctx.resolved.session
+            subject = ctx.resolved.user.auth_subject
         limiter = request.app.state.rate_limiter
         if limiter is not None:
             decision = limiter.check(
@@ -521,7 +398,7 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
         return response
 
     def _process_logout(request: Request, rt: AuthRuntime, token: str) -> None:
-        prefix, family = _request_facts(request, rt)
+        prefix, family = request_facts(request, rt)
         try:
             verified = rt.logout_validator.validate(token, client_id=rt.settings.web_client_id)
         except TokenInvalid:

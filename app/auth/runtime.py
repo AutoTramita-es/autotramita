@@ -14,7 +14,13 @@ import redis
 from app.auth.errors import AuthNotConfigured
 from app.auth.sessions.models import ClientType, SessionPolicy
 from app.auth.settings import AuthSettings
-from app.auth.tokens import IdTokenValidator, JwksCache, LogoutTokenValidator, http_jwks_fetcher
+from app.auth.tokens import (
+    IdTokenValidator,
+    JwksCache,
+    LogoutTokenValidator,
+    TokenValidator,
+    http_jwks_fetcher,
+)
 from app.auth.web.oidc_flow import (
     FlowStore,
     JtiStore,
@@ -33,6 +39,7 @@ IPNetwork = IPv4Network | IPv6Network
 @dataclass
 class AuthRuntime:
     settings: AuthSettings
+    access_validator: TokenValidator
     id_validator: IdTokenValidator
     logout_validator: LogoutTokenValidator
     flows: FlowStore
@@ -61,6 +68,7 @@ class AuthRuntime:
         )
         return cls(
             settings=settings,
+            access_validator=TokenValidator(settings, jwks),
             id_validator=IdTokenValidator(settings, jwks),
             logout_validator=LogoutTokenValidator(settings, jwks),
             flows=FlowStore(

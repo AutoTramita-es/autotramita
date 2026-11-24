@@ -9,6 +9,7 @@ from enum import StrEnum
 
 from app.auth.errors import StepUpRequired
 from app.auth.sessions.models import AuthLevel, UserSession
+from app.auth.tokens import VerifiedToken
 
 
 class StepUpPurpose(StrEnum):
@@ -44,4 +45,19 @@ def require_step_up(
     ):
         raise StepUpRequired(acr_values="loa2", max_age=max_age_seconds)
     if now - reference > timedelta(seconds=max_age_seconds):
+        raise StepUpRequired(acr_values=level.value.lower(), max_age=max_age_seconds)
+
+
+def require_token_step_up(
+    token: VerifiedToken, *, level: AuthLevel, max_age_seconds: int, now: datetime
+) -> None:
+    """Step-up for bearer (mobile) callers: the access token of the latest authentication
+    carries ``auth_time`` and ``acr``. A client that needs more re-authenticates with the
+    identity provider and presents the new token."""
+    authenticated_at = token.auth_time
+    if authenticated_at is None or level_from_acr(token.acr) < level:
+        raise StepUpRequired(acr_values=level.value.lower(), max_age=max_age_seconds)
+    if now - datetime.fromtimestamp(authenticated_at, tz=now.tzinfo) > timedelta(
+        seconds=max_age_seconds
+    ):
         raise StepUpRequired(acr_values=level.value.lower(), max_age=max_age_seconds)

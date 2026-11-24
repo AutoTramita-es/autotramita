@@ -45,6 +45,17 @@ def by_kc_session(
     )
 
 
+def list_live(db: Session, user_id: UUID, now: datetime) -> list[UserSession]:
+    rows = db.execute(
+        text(
+            f"SELECT {COLUMNS} FROM user_sessions WHERE user_id = :u AND revoked_at IS NULL "  # noqa: S608
+            "AND idle_expires_at > :n AND absolute_expires_at > :n ORDER BY created_at DESC, id"
+        ),
+        {"u": user_id, "n": now},
+    ).all()
+    return [UserSession.from_row(row) for row in rows]
+
+
 def by_id(db: Session, session_id: UUID) -> UserSession | None:
     return _one(
         db,
