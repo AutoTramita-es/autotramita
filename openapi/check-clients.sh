@@ -20,7 +20,7 @@ grep -q "Problem" "$work/schema.d.ts"
 
 echo "Dart: generating with $DART_GENERATOR_IMAGE"
 mkdir -p "$work/dart"
-docker run --rm -v "$spec:/spec/openapi.json:ro" -v "$work/dart:/out" "$DART_GENERATOR_IMAGE" \
+docker run --rm --user "$(id -u):$(id -g)" -v "$spec:/spec/openapi.json:ro" -v "$work/dart:/out" "$DART_GENERATOR_IMAGE" \
   generate -g dart -i /spec/openapi.json -o /out --skip-validate-spec >/dev/null
 test -s "$work/dart/pubspec.yaml"
 grep -rq "class Problem" "$work/dart/lib"
