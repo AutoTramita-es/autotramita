@@ -20,7 +20,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 
 ## Planned documents
 - [BRAND-IDENTITY.md](BRAND-IDENTITY.md) — logo variants, color tokens, typography, usage rules.
-- [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) — shared tokens, themes, typography, geometry, motion and accessibility; G0 drafted, approval pending.
+- [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) — shared tokens, themes, typography, geometry, motion and accessibility; G0 approved 2026-11-24 (tokens and themes only).
+- [DESIGN-SYSTEM-G0-REVIEW.md](DESIGN-SYSTEM-G0-REVIEW.md) — G0 review: contrast recalculation, 7 findings, 6 owner decisions.
 - [WEBSITE-STRUCTURE.md](WEBSITE-STRUCTURE.md) — homepage UX, public routes, Spanish copy and responsive rules.
 - [Homepage desktop wireframe](assets/wireframes/homepage-desktop.svg) — editable layout concept; raster placeholders pending.
 - [SERVICE-PAGES.md](SERVICE-PAGES.md) — dynamic service details, pricing, documents and guest request UX.

@@ -19,7 +19,7 @@ Three layers: primitive (literal values), semantic (purpose and theme), componen
 | accent.success | #16A34A |
 | accent.warning | #D97706 |
 | accent.error | #DC2626 |
-Brand midnight/darkSurface reserved for marketing/brand artwork; operational dark canvas/surface follow Shell. Accent colors not default normal text. Preserve approved logo direction, final vector/raster approval pending.
+Neutral and tint primitives used by semantic tokens (so semantic values reference primitives, not literals): neutral.50 #F5F7FA, neutral.100 #F1F5F9, neutral.200 #E2E8F0, neutral.300 #CBD5E1, neutral.400 #94A3B8, neutral.500 #64748B, neutral.550 #586377, neutral.600 #475569, neutral.300d #B8C7DA, blue.900d #0B1728, blue.850d #12243A, blue.800d #203C60, blue.300d #93C5FD, blue.700 #004AA6, blue.800 #003C87, red.700 #B91C1C, red.800 #991B1B. Status pair values in §3 are primitives of the same kind. Brand midnight/darkSurface reserved for marketing/brand artwork; operational dark canvas/surface follow Shell. Accent colors not default normal text. Preserve approved logo direction, final vector/raster approval pending.
 
 ## 3. Semantic colors
 | Token suffix (color.) | Light | Dark |
@@ -30,7 +30,7 @@ Brand midnight/darkSurface reserved for marketing/brand artwork; operational dar
 | surface.subtle | #EFF5FC | #203C60 |
 | text.primary | #082344 | #F1F5F9 |
 | text.secondary | #475569 | #B8C7DA |
-| text.muted | #475569 | #94A3B8 |
+| text.muted | #586377 | #94A3B8 |
 | text.inverse | #FFFFFF | #FFFFFF |
 | border.decorative | #CBD5E1 | #40536B |
 | border.control | #64748B | #94A3B8 |
@@ -39,6 +39,7 @@ Brand midnight/darkSurface reserved for marketing/brand artwork; operational dar
 | action.primary.hover | #004AA6 | #004AA6 |
 | action.primary.pressed | #003C87 | #003C87 |
 | action.link | #005BCB | #60A5FA |
+| action.link.onSubtle | #005BCB | #93C5FD |
 | action.selected | #EFF5FC | #203C60 |
 | action.secondary.bg | #FFFFFF | #12243A |
 | action.secondary.fg | #082344 | #F1F5F9 |
@@ -55,12 +56,14 @@ Brand midnight/darkSurface reserved for marketing/brand artwork; operational dar
 | status.error.fg/bg | #B91C1C / #FEE2E2 | #FCA5A5 / #422025 |
 | status.info.fg/bg | #1E40AF / #DBEAFE | #93C5FD / #203C60 |
 | status.neutral.fg/bg | #475569 / #F1F5F9 | #B8C7DA / #203044 |
-Use text+icon, not color alone. Primary button in dark needs contrasting control outline when boundary necessary (border.control); focus ring 2px plus 2px contrasting offset, never clipped. Links in prose underlined. Disabled controls not a substitute for authorization; explain permitted unavailable actions separately. Status examples: Finalizado success only authoritative completion; Pendiente warning; En revisión info; Rechazado error; Borrador neutral. Payment pending never success, credit restriction not tenant suspension, OCR received not verified. Canonical state mappings remain AT-07/09/13/14. Charts use labeled series, patterns/markers and accessible data table, no red-green-only distinctions; categorical colors candidate #005BCB/#0F766E/#7C3AED/#B45309 light and #60A5FA/#5EEAD4/#C4B5FD/#FCD34D dark, test actual marks and adjacent backgrounds.
+Use text+icon, not color alone. Dark primary button fill #005BCB is only 2.51–2.88:1 against dark surfaces, so it always carries a 1px border.control or lighter outline (mandatory); no white text on accent.success #16A34A (3.30:1), use the status pairs; focus ring 2px plus 2px contrasting offset, never clipped. Links in prose underlined. Disabled controls not a substitute for authorization; explain permitted unavailable actions separately. Status examples: Finalizado success only authoritative completion; Pendiente warning; En revisión info; Rechazado error; Borrador neutral. Payment pending never success, credit restriction not tenant suspension, OCR received not verified. Canonical state mappings remain AT-07/09/13/14. Charts use labeled series, patterns/markers and accessible data table, no red-green-only distinctions; categorical colors candidate #005BCB/#0F766E/#7C3AED/#B45309 light and #60A5FA/#5EEAD4/#C4B5FD/#FCD34D dark, test actual marks and adjacent backgrounds.
 
 ## 4. Contrast verification (calculated sRGB WCAG relative luminance)
 | Foreground/background | Ratio |
 |---|---:|
 | #FFFFFF / #005BCB | 6.25 |
+| #586377 (text.muted) / #FFFFFF, #F5F7FA, #EFF5FC | 6.06 / 5.65 / 5.52 |
+| #93C5FD / #203C60 (link on subtle, dark) | 6.21 |
 | #082344 / #FFFFFF | 15.74 |
 | #475569 / #F5F7FA | 7.06 |
 | #F1F5F9 / #12243A | 14.31 |
@@ -121,4 +124,4 @@ Target all applicable A/AA criteria, not only contrast. Normal text >=4.5:1, lar
 ## 12. Platform mapping and approval
 Next.js: CSS variables semantic aliases, Tailwind/shadcn proposed adapters, next/font Inter, Lucide, CSS motion or Motion if approved. Flutter: ColorScheme plus ThemeExtension for extra semantic colors, TextTheme, component themes, spacing/radius constants, ThemeMode, MediaQuery accessibility settings. No dependencies selected/installed by this document. Shared token version and parity test fixtures; native conventions for system controls preserved. Server authorization, tenant isolation, financial truth and domain states unchanged; no private offline cache by default.
 Acceptance: DS01 primitive/semantic/component hierarchy; DS02 brand reconciliation; DS03 light/dark/system; DS04 no flash; DS05 preference privacy; DS06 contrast pairs; DS07 control borders; DS08 focus; DS09 semantic status; DS10 no false success; DS11 typography/locale; DS12 text scaling; DS13 spacing; DS14 responsive grid; DS15 shell geometry; DS16 touch targets; DS17 safe areas; DS18 elevation; DS19 modal layering; DS20 icon mapping; DS21 reduced motion; DS22 keyboard; DS23 screen reader; DS24 accessible authentication; DS25 financial error prevention; DS26 chart alternatives; DS27 forced colors; DS28 native parity; DS29 version governance; DS30 no implementation authorization. All criteria proposed, runtime verification pending.
-G0 specification drafted; owner approval pending. R02 proposed resolution; R19 partially addressed by standards, runtime evidence pending. Next G1 UI-COMPONENTS.md. Do not mark all design or implementation ready.
+G0 approved by the product owner on 2026-11-24 after [G0 review](DESIGN-SYSTEM-G0-REVIEW.md): default theme Sistema (D1), brand midnight marketing-only (D2), 48 px default controls (D3), Inter self-hosted (D4), fixes G0-01/G0-02 applied (D5), theme preference device-only until AT-02 decides sync (D6). Approval covers this token and theme specification only; rendered/runtime accessibility evidence, component anatomy (G1) and responsive behavior (G2) remain open. R02 proposed resolution; R19 partially addressed by standards, runtime evidence pending. Next G1 UI-COMPONENTS.md. Do not mark all design or implementation ready.
