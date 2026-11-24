@@ -28,6 +28,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - [Authentication wireframe](assets/wireframes/auth-desktop.svg) — desktop layout concept.
 - [SAAS-APPLICATION-SHELL.md](SAAS-APPLICATION-SHELL.md) — shared workspace navigation, context, roles, themes and responsive UX.
 - [Light shell](assets/wireframes/saas-shell-light.svg) / [Dark shell](assets/wireframes/saas-shell-dark.svg) — editable concepts.
+- [DEALER-DASHBOARD.md](DEALER-DASHBOARD.md) — dealer dashboard metrics, tasks, credit and responsive UX.
+- [Dealer dashboard wireframe](assets/wireframes/dealer-dashboard.svg) — fictional data concept.
 - UI-COMPONENTS.md — forms, tables, navigation, status, dialogs and states.
 - IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
 - RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
