@@ -122,37 +122,6 @@
           "health"
         ]
       }
-    },
-    "/api/v1/health/ready": {
-      "get": {
-        "operationId": "readiness_api_v1_health_ready_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Health"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "503": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            },
-            "description": "A dependency is not ready"
-          }
-        },
-        "summary": "Readiness: configured dependencies answer",
-        "tags": [
-          "health"
-        ]
-      }
     }
   }
 }

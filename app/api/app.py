@@ -5,6 +5,7 @@ from __future__ import annotations
 from app.api.errors import install_error_handlers
 from app.api.middleware import RequestIdMiddleware
 from app.api.openapi import install_openapi
+from app.api.telemetry import TelemetryMiddleware
 from app.api.v1.router import build_v1_router
 from app.core.config import RateLimitSettings, Settings
 from app.core.db import create_db_engine
@@ -17,8 +18,9 @@ from starlette.types import ASGIApp
 class AutoTramitaApp(FastAPI):
     def build_middleware_stack(self) -> ASGIApp:
         # Outermost layer: the request id must also reach responses produced by the
-        # server error handler for unhandled exceptions.
-        return RequestIdMiddleware(super().build_middleware_stack())
+        # server error handler for unhandled exceptions. The telemetry span sits just inside
+        # it, so it sees the final status of those responses and can carry the request id.
+        return RequestIdMiddleware(TelemetryMiddleware(super().build_middleware_stack()))
 
 
 def create_app(
