@@ -1,6 +1,6 @@
 # AT-01.05 — Claude Code Execution Brief: F1
-Version 1.0 | 2026-11-24 | PREPARED FOR REVIEW — NOT AUTHORIZED
-Owner approval of AT-01 v1.1 is not authorization to execute this brief. Do not run commands, create implementation branches, install packages, or change code until separately authorized.
+Version 1.0 | 2026-11-24 | APPROVED — F1-T01 ONLY AUTHORIZED
+Owner explicitly approved this brief v1.0 on 2026-11-24 and authorized F1-T01 only. T02–T10, merge and deployment remain unauthorized. Mandatory STOP at CP01.
 
 ## 1. Normative sources
 - [AT-01 v1.1 APPROVED](AT-01-foundation-infrastructure.md), especially §§5–10a, AC01–AC15 and O01/O02/O03/O18/O19.
@@ -17,7 +17,7 @@ Allowed write paths only: pyproject.toml, uv.lock, .python-version, alembic.ini,
 Forbidden: app/auth, app/tenants, app/customers, app/cases, app/documents, app/billing, app/credit and all business modules; frontend/Flutter app; Keycloak, Nextcloud, Celery, external integrations, real webhooks, SMTP; Compose, secrets, Traefik, Cloudflare, server config; scripts/provision-postgres.py execution against shared DB; real data or credentials. Redis only rate limiting. Local disposable PostgreSQL/Redis or CI service containers only. No production or shared host connections. Verify disposable target before any DDL or destructive test; if uncertain STOP. Never print DSNs, passwords, tokens, raw PII or secret values. Use synthetic fixtures. Do not weaken tests or skip failing checks to obtain green CI.
 
 ## 3. Task sequence
-All tasks are NOT STARTED. Task IDs and checkpoints are organizational labels, not new ADRs. Paths below are permitted subsets, not mandatory filenames. Commands are future examples, not executed here. Run relevant regression tests from previous tasks; record actual commands, exit codes and counts. Missing prerequisites or security failures block progression.
+All tasks are NOT STARTED; T01 alone is AUTHORIZED. Task IDs and checkpoints are organizational labels, not new ADRs. Paths below are permitted subsets, not mandatory filenames. Commands are future examples, not executed here. Run relevant regression tests from previous tasks; record actual commands, exit codes and counts. Missing prerequisites or security failures block progression.
 
 ### F1-T01 — Toolchain (G6.1)
 Depends: authorization and preflight. Paths: pyproject.toml, uv.lock, .python-version, tests/**, docs/DEVELOPMENT.md.
@@ -107,7 +107,7 @@ No PASS if required tests not run or fail. Report partial evidence honestly. Do 
 
 ## 7. Future handoff prompt (do not execute now)
 After separate owner authorization: "Read docs/specifications/AT-01-F1-CLAUDE-CODE-EXECUTION-BRIEF.md, approved AT-01 v1.1, G6, G5 and relevant accepted ADRs from the current repository. Verify authorization and preflight. Execute only F1-T01, within its allowed paths and local/CI scope. Run tests, create scoped commit on feature branch, report CP01 and STOP. No next task, merge, shared infrastructure, or deployment."
-This is a prepared prompt, not authorization. Owner must explicitly authorize before use.
+Authorization granted for T01 only on 2026-11-24; all subsequent tasks require separate owner authorization.
 
 ## 8. Document preparation limitations
 Task IDs, checkpoint labels, proposed branch name and example commands are organizational choices. No new architectural decisions approved. No code inspection beyond normative documentation in this preparation, no test execution, no live infrastructure verification. Exact package versions, generator choice and implementation details subject to G6 stop rules. This brief cannot override approved AT-01 or G6.
