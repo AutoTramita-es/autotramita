@@ -53,7 +53,7 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - Admin wireframes: [dashboard](assets/wireframes/admin-dashboard.svg), [tenants](assets/wireframes/admin-tenants.svg), [operations](assets/wireframes/admin-operations.svg), [staff](assets/wireframes/admin-staff.svg), [partners](assets/wireframes/admin-partners.svg), [catalog](assets/wireframes/admin-catalog.svg), [credit](assets/wireframes/admin-credit.svg), [finance](assets/wireframes/admin-finance.svg), [quality](assets/wireframes/admin-quality.svg), [reports](assets/wireframes/admin-reports.svg), [integrations](assets/wireframes/admin-integrations.svg), [audit](assets/wireframes/admin-audit.svg).
 - SaaS design phases 09.1–09.11: specification coverage complete for review; domain approvals and implementation remain pending.
 - [UI-COMPONENTS.md](UI-COMPONENTS.md) — 82 shared component contracts and 40 acceptance criteria; G1 drafted, approval pending.
-- IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
+- [IMAGE-ASSETS.md](IMAGE-ASSETS.md) — 85 indexed SVGs, 28 raster briefs, export/rights/QA requirements; G3 documentation drafted, raster recovery pending.
 - [RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md) — responsive web and Flutter, capture, security, lifecycle and 80 acceptance criteria; G2 drafted.
 - DESIGN-ROADMAP.md — review gates and acceptance criteria.
 
@@ -70,4 +70,4 @@ Proposed public/images/{brand,hero,services,business,process,product,patterns,so
 Design specification coverage complete for review; legal approval, raster upload, identity details and final visual approval pending. All 11 SaaS UX phases now documented for review.
 
 ## Next gate
-G0–G2 drafted for approval; next G3 asset manifest and visual review, then roadmap; resolve relevant domain gates before implementation. Link design index from master blueprint when updating it. No application code, dependencies, migrations or deployment in this step.
+G0–G3 documentation drafted for approval; G3 asset recovery and rendered review pending; next G4 roadmap; resolve relevant domain gates before implementation. Link design index from master blueprint when updating it. No application code, dependencies, migrations or deployment in this step.
