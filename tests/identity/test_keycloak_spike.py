@@ -82,9 +82,13 @@ def test_s07_realm_import_resolves_env_secrets_and_service_account_is_least_priv
     assert wrong.status_code == 401
     assert admin.service("GET", "/users", params={"max": 1}).status_code == 200  # view-users
     assert admin.service("GET", "/events", params={"max": 1}).status_code == 200  # view-events
-    assert admin.service("GET", "").status_code == 403  # no view-realm
+    # reading the realm is implied by any realm-management role; writing is not
     assert admin.service("PUT", "", json={"realm": REALM}).status_code == 403  # no manage-realm
     assert admin.service("POST", "/clients", json={"clientId": "x"}).status_code == 403
+    b = Browser(env)
+    no_pkce = b.authorize("at-web", WEB_REDIRECT, no_pkce=True)
+    b.close()
+    assert no_pkce.location and "error=invalid_request" in no_pkce.location, "PKCE not enforced"
     imported = admin.realm()
     assert imported["resetPasswordAllowed"] is False and imported["verifyEmail"] is True
     clients = {c["clientId"]: c for c in admin.master("GET", "/clients").json()}

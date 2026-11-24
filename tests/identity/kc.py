@@ -193,6 +193,7 @@ class Browser:
         self.env = env
         self.http = httpx.Client(timeout=20, follow_redirects=False)
         self._last = ""
+        self.verifier: str | None = None
 
     def close(self) -> None:
         self.http.close()
@@ -214,6 +215,7 @@ class Browser:
         redirect_uri: str,
         *,
         challenge: str | None = None,
+        no_pkce: bool = False,
         **extra: str,
     ) -> Page:
         params = {
@@ -225,6 +227,8 @@ class Browser:
             "nonce": secrets.token_urlsafe(8),
             **extra,
         }
+        if challenge is None and "code_challenge" not in extra and not no_pkce:
+            self.verifier, challenge = pkce_pair()
         if challenge:
             params["code_challenge"] = challenge
             params["code_challenge_method"] = "S256"
@@ -263,6 +267,7 @@ class Browser:
             "code": code,
             "redirect_uri": redirect_uri,
         }
+        verifier = verifier or self.verifier
         if verifier:
             data["code_verifier"] = verifier
         if client_id == "at-web":
