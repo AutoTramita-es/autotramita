@@ -1,6 +1,6 @@
 # F2 — Redoslijed izvršavanja (execution order)
 
-Datum: 2026-11-24 | Status: **CP00–CP06 prihvaćeni 2026-11-24; autoriziran samo F2-T07** | T08–T13 nisu autorizirani
+Datum: 2026-11-24 | Status: **CP00–CP07 prihvaćeni 2026-11-24; autoriziran samo F2-T08** | T09–T13 nisu autorizirani
 [Plan](F2-IMPLEMENTATION-PLAN.md) · [Specifikacija AT-02](../specifications/AT-02-identity-security.md) · [Registar odluka](F2-DECISION-REGISTER.md) · [Kriteriji](F2-ACCEPTANCE-CRITERIA.md) · [G6 (F1 obrazac)](../G6-EXECUTION-ORDER.md)
 
 **Sažetak:** 13 paketa (F2-T01…T13), 14 checkpointova (F2-CP00 planiranje, CP01…CP12 po paketu, CP13 završno prihvaćanje).
@@ -251,6 +251,14 @@ Prihvaćene odluke: D01–D41 (D37 izmijenjen), D43; D42 OPEN | Preduvjet: F2-CP
 Zabranjeno izričito: T08–T13, merge u main, deployment, zajednička infrastruktura, izmjena Compose/Traefik
 ```
 
+```
+Paket: F2-T08 | Datum: 2026-11-24
+Tekst autorizacije vlasnika (doslovno): "Prihvaćam CP07; autoriziram samo F2-T08"
+Prihvaćene odluke: D01–D41 (D37 izmijenjen), D43; D42 OPEN | Preduvjet: F2-CP07 prihvaćen 2026-11-24 (kod 850316b, CI run 45469542994)
+Prihvaćena odstupanja uz CP07: bez Idempotency-Key (jedinstveni indeks), GET /sessions bez cursora (max 10), mobilne sesije bez UA veze, migracija 0006
+Zabranjeno izričito: T09–T13, merge u main, deployment, zajednička infrastruktura, implementacija AT-03 (članstva, tenanti, poslovnice)
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
@@ -261,7 +269,7 @@ Zabranjeno izričito: T08–T13, merge u main, deployment, zajednička infrastru
 | F2-CP04 | T04 | **PRIHVAĆEN 2026-11-24**: `users` i životni ciklus | CI run 45460844674 (kod bfbda04) |
 | F2-CP05 | T05 | **PRIHVAĆEN 2026-11-24**: `user_sessions`, opoziv, konkurentnost | CI run 45463940778 (kod 3f64cfd) |
 | F2-CP06 | T06 | **PRIHVAĆEN 2026-11-24**: web tok, kolačić, CSRF | CI run 45467370715 (kod e2736d6) |
-| F2-CP07 | T07 | Mobilni tok | CI run + KC integracija |
+| F2-CP07 | T07 | **PRIHVAĆEN 2026-11-24**: mobilni tok | CI run 45469542994 (kod 850316b) |
 | F2-CP08 | T08 | Pipeline konteksta, port AT-03, cross-tenant | CI run, cross-tenant izvještaj |
 | F2-CP09 | T09 | Sigurnosne politike i anti-enumeracija | CI run, rezultati spika naspram implementacije |
 | F2-CP10 | T10 | `platform_grants`, eskalacije, bootstrap | CI run, pregled migracije 0006 |
