@@ -1,5 +1,42 @@
 {
   "components": {
+    "headers": {
+      "RateLimitLimit": {
+        "description": "Limit of the most restrictive applicable rate limit.",
+        "schema": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "RateLimitRemaining": {
+        "description": "Requests left in the most restrictive applicable rate limit.",
+        "schema": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "RateLimitReset": {
+        "description": "Seconds until the rate limit window allows requests again.",
+        "schema": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "RequestId": {
+        "description": "UUID of the request; problem responses repeat it as request_id.",
+        "schema": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "RetryAfter": {
+        "description": "Seconds to wait before retrying (whole seconds, at least 1).",
+        "schema": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      }
+    },
     "schemas": {
       "Health": {
         "properties": {
@@ -104,7 +141,12 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           },
           "500": {
             "content": {
@@ -114,7 +156,12 @@
                 }
               }
             },
-            "description": "Internal error"
+            "description": "Internal error",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
           }
         },
         "summary": "Liveness: the process is running",

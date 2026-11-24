@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from app.api.errors import install_error_handlers
 from app.api.middleware import RequestIdMiddleware
-from app.api.openapi import install_openapi
+from app.api.openapi import API_VERSION, install_openapi
 from app.api.telemetry import TelemetryMiddleware
 from app.api.v1.router import build_v1_router
 from app.core.config import RateLimitSettings, Settings
@@ -31,7 +31,7 @@ def create_app(
     """Build the app. Dependencies are injected so tests and workers control them."""
     app = AutoTramitaApp(
         title="AutoTramita API",
-        version="0.0.0",
+        version=API_VERSION,
         docs_url=None,
         redoc_url=None,
     )
