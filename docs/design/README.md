@@ -22,6 +22,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - [Homepage desktop wireframe](assets/wireframes/homepage-desktop.svg) — editable layout concept; raster placeholders pending.
 - [SERVICE-PAGES.md](SERVICE-PAGES.md) — dynamic service details, pricing, documents and guest request UX.
 - [Service detail wireframe](assets/wireframes/service-detail-desktop.svg) — editable layout concept.
+- [B2B-PAGES.md](B2B-PAGES.md) — professional pages and verified onboarding.
+- [B2B wireframe](assets/wireframes/b2b-desktop.svg) — shared layout concept.
 - UI-COMPONENTS.md — forms, tables, navigation, status, dialogs and states.
 - IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
 - RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
