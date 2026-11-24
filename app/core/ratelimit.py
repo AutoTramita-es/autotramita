@@ -70,6 +70,9 @@ class RateLimiter:
         self._fail_open = fail_open
         self._script = client.register_script(_SCRIPT)
 
+    def ping(self) -> None:
+        self._client.ping()
+
     def _key(self, policy: Policy, identity: str) -> str:
         digest = hashlib.sha256(identity.encode()).hexdigest()[:32]
         return f"rl:{self._namespace}:{policy.name}:{digest}"
