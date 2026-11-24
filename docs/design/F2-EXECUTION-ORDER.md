@@ -1,6 +1,6 @@
 # F2 — Redoslijed izvršavanja (execution order)
 
-Datum: 2026-11-24 | Status: **CP00–CP03 prihvaćeni 2026-11-24; autoriziran samo F2-T04** | T05–T13 nisu autorizirani
+Datum: 2026-11-24 | Status: **CP00–CP04 prihvaćeni 2026-11-24; autoriziran samo F2-T05** | T06–T13 nisu autorizirani
 [Plan](F2-IMPLEMENTATION-PLAN.md) · [Specifikacija AT-02](../specifications/AT-02-identity-security.md) · [Registar odluka](F2-DECISION-REGISTER.md) · [Kriteriji](F2-ACCEPTANCE-CRITERIA.md) · [G6 (F1 obrazac)](../G6-EXECUTION-ORDER.md)
 
 **Sažetak:** 13 paketa (F2-T01…T13), 14 checkpointova (F2-CP00 planiranje, CP01…CP12 po paketu, CP13 završno prihvaćanje).
@@ -229,6 +229,13 @@ Prihvaćene odluke: D01–D41 (D37 izmijenjen), D43; D42 OPEN | Preduvjet: F2-CP
 Zabranjeno izričito: T05–T13, merge u main, deployment, zajednička infrastruktura, primjena migracija na trajnu bazu
 ```
 
+```
+Paket: F2-T05 | Datum: 2026-11-24
+Tekst autorizacije vlasnika (doslovno): "Prihvaćam CP04; autoriziram samo F2-T05"
+Prihvaćene odluke: D01–D41 (D37 izmijenjen), D43; D42 OPEN | Preduvjet: F2-CP04 prihvaćen 2026-11-24 (kod bfbda04, CI run 45460844674)
+Zabranjeno izričito: T06–T13, merge u main, deployment, zajednička infrastruktura, primjena migracija na trajnu bazu
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
@@ -236,7 +243,7 @@ Zabranjeno izričito: T05–T13, merge u main, deployment, zajednička infrastru
 | F2-CP01 | T01 | **PRIHVAĆEN 2026-11-24** (D37 izmijenjen): ishodi spika S1–S10, realm, CI Keycloak | CI run 45454710907 + `F2-KEYCLOAK-SPIKE-REPORT.md` |
 | F2-CP02 | T02 | **PRIHVAĆEN 2026-11-24**: validacija tokena, lažni IdP | CI run 45456078051 (kod 6431679) |
 | F2-CP03 | T03 | **PRIHVAĆEN 2026-11-24**: audit shema + D17 | CI run 45458303174 (kod 8fb61e5) |
-| F2-CP04 | T04 | `users` i životni ciklus | CI run, pregled migracije 0004 |
+| F2-CP04 | T04 | **PRIHVAĆEN 2026-11-24**: `users` i životni ciklus | CI run 45460844674 (kod bfbda04) |
 | F2-CP05 | T05 | `user_sessions`, opoziv, konkurentnost | CI run, pregled migracije 0005 |
 | F2-CP06 | T06 | Web tok, kolačić, CSRF | CI run + KC integracija |
 | F2-CP07 | T07 | Mobilni tok | CI run + KC integracija |
