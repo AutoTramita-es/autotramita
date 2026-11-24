@@ -182,10 +182,11 @@ def test_touch_is_throttled_extends_idle_and_never_passes_the_absolute_deadline(
     assert sessions.touch(f, resolved, short, now=T0 + timedelta(seconds=61)) is True
     stored = rows(env, "SELECT last_activity_at, idle_expires_at FROM user_sessions")[0]
     assert stored == (T0 + timedelta(seconds=61), T0 + timedelta(seconds=61, minutes=30))
-    later = resolve(env, created.credential, now=T0 + timedelta(minutes=50))
-    assert sessions.touch(f, later, short, now=T0 + timedelta(minutes=50)) is True
+    for minute in (25, 40):  # keep the session busy; the second touch would pass 1 h
+        at = T0 + timedelta(minutes=minute)
+        assert sessions.touch(f, resolve(env, created.credential, now=at), short, now=at) is True
     capped = rows(env, "SELECT idle_expires_at = absolute_expires_at FROM user_sessions")[0][0]
-    assert capped is True  # 50 min + 30 min idle would pass the 1 h absolute deadline
+    assert capped is True  # 40 min + 30 min idle would pass the 1 h absolute deadline
 
 
 def test_touch_skips_a_row_that_is_locked_instead_of_waiting(env: RoleEnv) -> None:
