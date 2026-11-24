@@ -45,11 +45,13 @@ The existing ADRs and specifications take precedence over high-level summaries h
 | **AT-15** | Integracije sa španjolskim institucijama | DGT, AEAT, ITV, registri, službeni obrasci, identifikacija i statusi. | [ADR-004](adr/ADR-004-api-contracts.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | Za pravnu i tehničku provjeru |
 | **AT-16** | Obavijesti i komunikacija | E-mail, in-app, dopune, predlošci i praćenje isporuke. | [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | Djelomično definirano |
 | **AT-17** | Centralna administracija AutoTramite | Odobravanje autokuća, nadzor, partneri, cjenici, financije, sporovi. | [ADR-007](adr/ADR-007-pricing-credit-payments.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | Za razradu |
-| **AT-18** | Portali i mobilne aplikacije | Javni web, klijentski portal, autokuće, backoffice i Flutter Android/iOS. | [ADR-001](adr/ADR-001-technology-stack.md), [ADR-004](adr/ADR-004-api-contracts.md) | Tehnologija odabrana; UX za razradu |
+| **AT-18** | Portali i mobilne aplikacije | Javni web, klijentski portal, autokuće, backoffice i Flutter Android/iOS. | [ADR-001](adr/ADR-001-technology-stack.md), [ADR-004](adr/ADR-004-api-contracts.md) | Tehnologija odabrana; javni web i 11 SaaS UX faza dokumentirani za pregled; zajednički dizajn i odobrenja otvoreni |
 | **AT-19** | Izvještaji i poslovna analitika | Naplata, marže, broj predmeta, trajanje obrade, poslovnice, produktivnost. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-007](adr/ADR-007-pricing-credit-payments.md) | Za razradu |
 | **AT-20** | Pravna usklađenost i operacije | GDPR, ovlasti, audit, backup, monitoring, incidenti i ugovori. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-005](adr/ADR-005-document-storage.md), [ADR-008](adr/ADR-008-delivery-governance.md) | Djelomično definirano |
 
 ## 4. Existing source documentation
+
+- [Master Design Blueprint](design/MASTER-DESIGN-BLUEPRINT.md) — consolidated design review, verified indexed assets, gaps and approval gates; not implementation authorization.
 
 - [AT-04 customer and vehicle owner specification](specifications/AT-04-customers-vehicle-owners.md) — 25 proposed decisions and 40 acceptance criteria; pending product-owner review.
 
