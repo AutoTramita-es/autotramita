@@ -1,5 +1,5 @@
 # F1 reconciliation plan — 2026-11-24
-REC-01–03 COMPLETE; REC-04–06 IMPLEMENTATION COMPLETE; CP10 ACCEPTED; REC-07.0 PLANNING AUTHORIZED; F1 FINAL ACCEPTANCE PENDING.
+REC-01–03 COMPLETE; REC-04–06 IMPLEMENTATION COMPLETE; CP10 ACCEPTED; REC-07.0 COMPLETE (plan v1.0 approved); REC-07.1 AUTHORIZED (R01–R04 only, STOP V1); F1 FINAL ACCEPTANCE PENDING.
 [Audit findings](F1-RECONCILIATION-AUDIT.md) | [AT-01](../specifications/AT-01-foundation-infrastructure.md) | [Execution brief](../specifications/AT-01-F1-CLAUDE-CODE-EXECUTION-BRIEF.md) | [G6](../G6-EXECUTION-ORDER.md)
 
 | Gate | Scope | Exit evidence |
@@ -34,3 +34,6 @@ Owner explicitly ACCEPTED CP01 / F1-T01. Implementation commit 8e1de017e0dcf2ab1
 
 ## REC-07.0 — CP10 accepted; final validation planning (2026-11-24)
 Owner explicitly accepted CP10 and completion of T01–T10 collectively and authorized REC-07 planning only. Baseline dev 5d46c234f75ada37fe7121543fb3236d9d3cdb1f; verified CI run 45430813346 all three jobs passed, 336 passed, zero skipped, one warning, mypy 46 files, no leaks or known vulnerabilities. See [final validation plan](F1-FINAL-VALIDATION-PLAN.md) for R01–R15, AC01–15 and proposed packets. CP01 previously accepted; individual historical CP02–09 approvals not inferred. REC-04–06 implementation complete; F1 final acceptance pending. This entry supersedes stale execution status/authorization text only; normative requirements unchanged. STOP V0: no corrections, merge, F2, deployment or shared infrastructure access authorized. Main remains 1e8be38a40aac63f5c58d6dbb01daaa051326e6b.
+
+## REC-07.1 — Database & RLS Security authorized (2026-11-24)
+Owner approved F1-FINAL-VALIDATION-PLAN.md v1.0 and its priorities and authorizes ONLY REC-07.1, closing findings R01–R04: R01 explicit SQLAlchemy transactions (autobegin, session_scope); R02 Alembic migration-owner identity and privilege verification; R03 protection of caller-owned transactions in Alembic; R04 additional RLS isolation and connection-reuse security tests. Order: review existing code and tests, record this authorization, then implement within scope. Conditions: dev branch only; real isolated PostgreSQL 16 only; full integration may run through GitHub Actions; all existing and new tests must pass with zero skips; closure evidence recorded per finding; any new architectural decision or scope extension stops for owner approval; mandatory STOP V1 with a final report. Not authorized: REC-07.2 and later packets, F2, merge to main, deployment, shared infrastructure access. Allowed paths per plan: app/core/db.py, migrations/env.py, relevant tests, docs/DEVELOPMENT.md and these status documents.

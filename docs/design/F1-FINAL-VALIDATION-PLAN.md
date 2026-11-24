@@ -1,5 +1,5 @@
 # REC-07 — F1 final validation plan
-2026-11-24 | v1.0 | PLANNING AUTHORIZED / CORRECTIONS NOT AUTHORIZED / F1 NOT YET ACCEPTED
+2026-11-24 | v1.0 | PLAN v1.0 APPROVED / REC-07.1 (R01–R04) AUTHORIZED ONLY, other corrections not authorized / F1 NOT YET ACCEPTED
 
 ## Owner decision and evidence baseline
 Owner explicitly states: “Prihvaćam CP10 i završetak implementacije T01–T10. Autoriziram REC-07. Prvo pregledaj sve postojeće specifikacije, kod, CI rezultate i otvorene nalaze. Izradi detaljan plan konačne validacije F1 s prioritetima i kriterijima prihvata te ga spremi na GitHub na granu dev. Evidentiraj CP10. Bez implementacije ispravaka u ovom koraku, bez merga u main, bez F2 i bez deploymenta.”
