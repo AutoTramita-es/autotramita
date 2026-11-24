@@ -24,6 +24,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - [Service detail wireframe](assets/wireframes/service-detail-desktop.svg) — editable layout concept.
 - [B2B-PAGES.md](B2B-PAGES.md) — professional pages and verified onboarding.
 - [B2B wireframe](assets/wireframes/b2b-desktop.svg) — shared layout concept.
+- [PUBLIC-AUTH-SUPPORT-LEGAL.md](PUBLIC-AUTH-SUPPORT-LEGAL.md) — authentication, recovery, support and legal UX.
+- [Authentication wireframe](assets/wireframes/auth-desktop.svg) — desktop layout concept.
 - UI-COMPONENTS.md — forms, tables, navigation, status, dialogs and states.
 - IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
 - RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
@@ -37,6 +39,9 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 5 logo variants (SVG/PNG); 5 hero banners (AVIF/WebP); 12 service illustrations; 6 business photographs; 5 process illustrations; 30–50 SVG icons (prefer Lucide); 5 product screenshots after implementation; 3 background patterns; favicon SVG/ICO; 3 PWA PNG icons including maskable variant; 5 social and 5 Open Graph PNG images. Counts are planning targets, not completed assets. Generated concept images are not yet production assets.
 First asset: homepage hero, target 2560×1440, text-free and logo-free, light background with left-side negative space, car and digital administration visual on right. Generate mobile crop separately if necessary. No official agency marks or misleading real interface claims.
 Proposed public/images/{brand,hero,services,business,process,product,patterns,social}/ relative to the eventual Next.js app root; actual app path must follow repository architecture. Keep originals separate from optimized derivatives; use descriptive filenames, alt text, explicit dimensions and responsive sizes. Never embed headings or buttons in raster artwork.
+
+## Public web status
+Design specification coverage complete for review; legal approval, raster upload, identity details and final visual approval pending. Next workstream: SaaS portal design.
 
 ## Next gate
 Review brand identity and primary hero first, then create individual production assets and detailed specifications. Link design index from master blueprint when updating it. No application code, dependencies, migrations or deployment in this step.
