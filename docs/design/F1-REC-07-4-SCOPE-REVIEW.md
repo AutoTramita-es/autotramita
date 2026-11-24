@@ -34,7 +34,7 @@ History note: three commits are authored by Copilot (8e1de01 T01 toolchain recon
 - Risks to record: image not pinned by digest; no security-header middleware defined here; the routing definition would live in `main` after a merge and any later change to it changes the public site; F2+ application routing for `autotramita.es` must replace or coexist with this router.
 
 ## 3. R13 — Gitleaks fingerprints (`.gitleaksignore`, 3 exact entries)
-**Open issue:** the first version of this review (commit 40933f6) quoted two of the synthetic strings literally; the CI secret scan over full history therefore fails (run 45441256794, 2 findings, both in this file at lines 39 and 40). The text is now reworded, but the scan covers history, so the run stays red until the owner decides: add two exact commit-and-line fingerprints for 40933f6 to `.gitleaksignore` (same mechanism as the three below), or another approach. No ignore entry was added without that decision.
+**Open issue:** the first version of this review (commit 40933f6) quoted two of the synthetic strings literally; the CI secret scan over full history therefore fails (run 45441256794, 2 findings, both in this file at lines 39 and 40). The text is now reworded, but the scan covers history, so the run stays red until the owner decides: add two exact commit-and-line fingerprints for 40933f6 to `.gitleaksignore` (same mechanism as the three below), or another approach. The owner approved the two exact fingerprints (CP14) and they were added.
 | Fingerprint | Commit (in dev history) | Content (reviewed, redacted here) | Assessment |
 |---|---|---|---|
 | `dcc2640…:tests/test_idempotency.py:generic-api-key:25` | F1 step 6b | a short synthetic string constant used as a fake key in a test | false positive |
