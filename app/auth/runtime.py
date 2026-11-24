@@ -64,6 +64,8 @@ class AuthRuntime:
     admin: IdentityProviderAdmin | None = None
     notifier: SecurityNotifier = field(default_factory=DisabledNotifier)
     markers: RecoveryMarkers | None = None
+    # D37 is fail-closed until its recovery and durable delivery worker is wired.
+    email_change_ready: bool = False
 
     def record_anonymous(
         self,

@@ -149,6 +149,9 @@ F2_AUTH_PATHS = [
     "/api/v1/me",
     "/api/v1/me/workspaces",
     "/api/v1/auth/password-recovery",
+    "/api/v1/auth/email-change-verification",
+    "/api/v1/me/security/email-change-requests",
+    "/api/v1/me/security/email-change-confirmations",
     "/api/v1/me/email-verification",
     "/api/v1/me/security",
     "/api/v1/me/security/mfa-enrollment-requests",
@@ -176,6 +179,7 @@ def test_common_response_models(spec: dict[str, Any]) -> None:
         "ProfilePatch", "UserProfile", "WorkspaceOption", "WorkspaceSwitch",
         "Accepted", "ActionStart", "MfaEnrollment", "PasswordChange", "RecoveryAccepted",
         "RecoveryRequest", "SecondFactor", "SecurityOverview",
+        "EmailChangeRequest", "EmailChangeConfirmation",
     }  # fmt: skip
     assert set(schemas["Problem"]["required"]) == {"type", "title", "status", "code"}
     assert set(schemas["Problem"]["properties"]) == {

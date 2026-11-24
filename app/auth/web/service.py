@@ -51,6 +51,7 @@ def complete_login(
             email=email,
             email_verified=bool(identity.email_verified),
             audit_factory=rt.factory,
+            token_issued_at=identity.issued_at,
         ).user
         if user.status not in (UserStatus.ACTIVE, UserStatus.PENDING_VERIFICATION):
             return LoginOutcome("", datetime.now(UTC), disabled_user_id=user.id)

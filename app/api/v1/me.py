@@ -6,6 +6,7 @@ are never writable here: they belong to the identity provider and to platform ad
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Annotated, Literal
@@ -15,10 +16,11 @@ from app.api.v1.auth import new_flow
 from app.api.v1.authn import UserSummary
 from app.api.v1.guards import Principal, request_scope, require_step_up, require_user
 from app.auth import errors as auth_errors
+from app.auth.email import normalize_email
 from app.auth.errors import AuthorizationUnavailable
 from app.auth.idp import SECOND_FACTOR_TYPES, IdpAdminError
 from app.auth.runtime import AuthRuntime, runtime_of
-from app.auth.security import actions, recovery
+from app.auth.security import actions, email_change, recovery
 from app.auth.security.notify import Notice, NoticeKind, send_quietly
 from app.auth.sessions.models import AuthLevel
 from app.auth.settings import AuthLimitSettings
@@ -29,7 +31,8 @@ from app.core.pagination import CursorPage
 from app.core.ratelimit import IPNetwork, Policy
 from app.core.versioning import check_version, ensure_updated, format_etag, if_match_version
 from fastapi import APIRouter, BackgroundTasks, Depends, Path, Request, Response
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, StringConstraints
+from sqlalchemy.exc import IntegrityError
 
 # A person whose e-mail is not verified yet may still read and fix their profile.
 ANYONE = require_user(allow_unverified=True)
@@ -90,8 +93,31 @@ class PasswordChange(BaseModel):
     return_to: str | None = Field(default=None, max_length=512)
 
 
+class EmailChangeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    new_email: str = Field(min_length=3, max_length=320)
+
+
+class EmailChangeConfirmation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    operation_id: UUID
+    token: SecretStr
+
+
 class ActionStart(BaseModel):
     redirect_url: str = Field(description="Send the browser here; it returns to the callback")
+
+
+def _send_email_change_verification(
+    send: object, email: str, origin: str, operation_id: UUID, token: str
+) -> None:
+    """Mail is best effort here; the owner can reissue after an interruption."""
+    try:
+        if callable(send):
+            send(to=email, origin=origin, operation_id=operation_id, token=token)
+    except Exception:
+        # No recipient, link, token or provider exception is written to logs.
+        logging.getLogger(__name__).warning("email change verification delivery failed")
 
 
 def _at(milliseconds: int | None) -> datetime | None:
@@ -323,6 +349,105 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
             else actions.SecurityAction.MFA_RECOVERY_CODES
         )
         return _start_action(request, response, principal, action, body.return_to)
+
+    def _d37_runtime(request: Request) -> AuthRuntime:
+        rt = runtime_of(request)
+        if not rt.email_change_ready or rt.admin is None:
+            raise auth_errors.AuthNotConfigured("Email change is not configured.")
+        if not callable(getattr(rt.notifier, "send_email_change_verification", None)):
+            raise auth_errors.AuthNotConfigured("Email change is not configured.")
+        return rt
+
+    @router.post(
+        "/me/security/email-change-requests",
+        status_code=202,
+        summary="Request verification of a new email",
+        response_model=Accepted,
+    )
+    def request_email_change(
+        request: Request,
+        response: Response,
+        background: BackgroundTasks,
+        body: EmailChangeRequest,
+        principal: Annotated[Principal, Depends(FRESH)],
+    ) -> Accepted:
+        rt = _d37_runtime(request)
+        try:
+            address = normalize_email(body.new_email)
+        except ValueError:
+            raise UnprocessableEntity("Invalid email address.") from None
+        allowed = recovery.account_allowed(
+            rt,
+            recovery.limiter_of(request),
+            "email_change",
+            limits.verification_resend_per_hour,
+            str(principal.user.id),
+        )
+        try:
+            assert rt.admin is not None  # noqa: S101
+            found = rt.admin.find_user_by_email(address) if allowed else None
+        except IdpAdminError:
+            raise auth_errors.IdentityProviderUnavailable() from None
+        origin, _ = rt.site_for(request)
+        pending: tuple[UUID, str] | None = None
+        if allowed and (found is None or found.subject == principal.user.auth_subject):
+            with request_scope(request, principal, lock=True) as scope:
+                try:
+                    with scope.db.begin_nested():
+                        pending = email_change.create_request(
+                            scope.db,
+                            user_id=scope.user.id,
+                            session_id=scope.session.id,
+                            new_email=body.new_email,
+                        )
+                except (IntegrityError, ValueError):
+                    pending = None
+        if pending is not None:
+            operation_id, token = pending
+            send = getattr(rt.notifier, "send_email_change_verification", None)
+            background.add_task(
+                _send_email_change_verification,
+                send,
+                body.new_email.strip(),
+                origin,
+                operation_id,
+                token,
+            )
+        response.headers["Cache-Control"] = "no-store"
+        return Accepted()
+
+    @router.post(
+        "/me/security/email-change-confirmations",
+        status_code=202,
+        summary="Confirm a new email",
+        response_model=Accepted,
+    )
+    def confirm_email_change(
+        request: Request,
+        response: Response,
+        body: EmailChangeConfirmation,
+        principal: Annotated[Principal, Depends(FRESH)],
+    ) -> Accepted:
+        _d37_runtime(request)
+        limiter = recovery.limiter_of(request)
+        decision = limiter.check(
+            Policy("email_change_confirm", limits.step_up_per_hour_session, 3600),
+            f"user:{principal.user.id}",
+        )
+        if not decision.allowed:
+            raise TooManyRequests(
+                "Too many security requests.",
+                headers={"Retry-After": str(decision.retry_after_seconds)},
+            )
+        with request_scope(request, principal, lock=True) as scope:
+            email_change.confirm_request(
+                scope.db,
+                user_id=scope.user.id,
+                operation_id=body.operation_id,
+                token=body.token.get_secret_value(),
+            )
+        response.headers["Cache-Control"] = "no-store"
+        return Accepted()
 
     @router.delete(
         "/me/security/second-factors/{credential_id}",

@@ -88,6 +88,7 @@ def provision_or_link(
     email: str,
     email_verified: bool,
     audit_factory: sessionmaker[Session] | None = None,
+    token_issued_at: int | None = None,
     now: datetime | None = None,
 ) -> Provisioned:
     """Find the user of this Keycloak subject or create it on first sign-in.
@@ -134,7 +135,9 @@ def provision_or_link(
     if created:
         _audit(session, "identity.user.provisioned", user, {"status": user.status.value})
         return Provisioned(user, True)
-    synced = _sync(session, user, email, normalized, email_verified, moment, audit_factory)
+    synced = _sync(
+        session, user, email, normalized, email_verified, moment, audit_factory, token_issued_at
+    )
     return Provisioned(synced, False)
 
 
@@ -146,6 +149,7 @@ def _sync(
     email_verified: bool,
     moment: datetime,
     audit_factory: sessionmaker[Session] | None,
+    token_issued_at: int | None,
 ) -> User:
     """Apply what the identity provider vouches for. An unverified change is ignored: the
     verified address stays until the new one is verified."""
@@ -162,6 +166,18 @@ def _sync(
             {"u": user.id},
         ).scalar_one()
         if pending:
+            raise IdentityProviderUnavailable()
+        completed = session.execute(
+            text(
+                "SELECT max(completed_at) FROM email_change_operations "
+                "WHERE user_id=:u AND status='COMPLETED'"
+            ),
+            {"u": user.id},
+        ).scalar_one()
+        # An old token can still carry the previous verified address after D37 completes.
+        if completed is not None and (
+            token_issued_at is None or token_issued_at <= completed.timestamp()
+        ):
             raise IdentityProviderUnavailable()
         try:
             with session.begin_nested():

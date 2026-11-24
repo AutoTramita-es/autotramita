@@ -67,6 +67,7 @@ def open_session(
                 email=token.email,
                 email_verified=bool(token.email_verified),
                 audit_factory=rt.factory,
+                token_issued_at=token.issued_at,
                 now=moment,
             ).user
         else:

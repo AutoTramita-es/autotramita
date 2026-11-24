@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import logging
+import threading
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from app.api.errors import install_error_handlers
 from app.api.middleware import NoStoreAuthMiddleware, RequestIdMiddleware
@@ -10,9 +13,11 @@ from app.api.openapi import API_VERSION, install_openapi
 from app.api.telemetry import TelemetryMiddleware
 from app.api.v1.router import build_v1_router
 from app.auth.runtime import AuthRuntime
+from app.auth.security.email_change_worker import run_once
+from app.auth.security.notify import SmtpNotifier
 from app.auth.settings import AuthLimitSettings, AuthSettings
 from app.core.config import RateLimitSettings, Settings
-from app.core.db import create_db_engine
+from app.core.db import create_db_engine, create_session_factory
 from app.core.ratelimit import RateLimiter, create_redis
 from fastapi import FastAPI
 from pydantic import ValidationError
@@ -69,4 +74,44 @@ def create_app_from_settings(settings: Settings) -> FastAPI:
         )
     except ValidationError:
         logging.getLogger(__name__).warning("authentication is not configured; sign-in disabled")
-    return create_app(limiter, engine, limits, auth)
+    app = create_app(limiter, engine, limits, auth)
+    if auth is None or auth.admin is None or settings.worker_user is None:
+        return app
+
+    # Dedicated least-privilege DB credentials; no fallback to the web or owner role.
+    worker_engine = create_db_engine(settings, role="worker")
+    worker_factory = create_session_factory(worker_engine)
+    stop = threading.Event()
+    notifier = auth.notifier if isinstance(auth.notifier, SmtpNotifier) else None
+    # O15: real production email and the D37 initiation route remain disabled.
+    if settings.environment == "prod":
+        notifier = None
+
+    def recover() -> None:
+        while not stop.is_set():
+            try:
+                assert auth is not None and auth.admin is not None  # noqa: S101
+                run_once(worker_factory, auth.admin, notifier)
+                auth.email_change_ready = bool(
+                    notifier and auth.settings.web_origin and auth.settings.security_hmac_key
+                )
+            except Exception:
+                if auth is not None:
+                    auth.email_change_ready = False
+                logging.getLogger(__name__).warning("email change recovery cycle failed")
+            stop.wait(60)
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        thread = threading.Thread(target=recover, name="d37-recovery", daemon=True)
+        thread.start()
+        try:
+            yield
+        finally:
+            stop.set()
+            thread.join(timeout=25)
+            if not thread.is_alive():
+                worker_engine.dispose()
+
+    app.router.lifespan_context = lifespan
+    return app

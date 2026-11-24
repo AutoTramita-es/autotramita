@@ -329,3 +329,55 @@ def test_d37_admin_reads_and_changes_only_the_target_subject(rig: Rig, admin: Ad
         True,
     )
     assert client.get_email_state(other.id).email == other.email
+
+
+def test_d37_confirmation_and_recovery_against_keycloak_and_postgres(
+    rig: Rig, admin: Admin
+) -> None:
+    from uuid import UUID
+
+    from app.auth.security.email_change import claim_recovery
+    from app.auth.security.email_change_worker import process_claim
+    from app.core.db import RequestContext, create_session_factory, session_scope
+    from tests.auth.fake_admin import RecordingNotifier
+
+    class VerificationSink(RecordingNotifier):
+        def __init__(self) -> None:
+            super().__init__()
+            self.sent_verifications: list[tuple[UUID, str]] = []
+
+        def send_email_change_verification(
+            self, *, to: str, origin: str, operation_id: UUID, token: str
+        ) -> None:
+            self.sent_verifications.append((operation_id, token))
+
+    user = admin.create_user()
+    sink = VerificationSink()
+    rig.runtime.notifier = sink
+    rig.runtime.email_change_ready = True
+    assert rig.sign_in(user).status_code == 302
+    new_email = f"new-{user.email}"
+    response = rig.api.post(
+        f"{API}/me/security/email-change-requests",
+        headers=secure(rig),
+        json={"new_email": new_email},
+    )
+    assert response.status_code == 202 and len(sink.sent_verifications) == 1
+    operation, token = sink.sent_verifications[0]
+    assert settings_admin(rig).get_email_state(user.id).email == user.email
+    confirmation = rig.api.post(
+        f"{API}/me/security/email-change-confirmations",
+        headers=secure(rig),
+        json={"operation_id": str(operation), "token": token},
+    )
+    assert confirmation.status_code == 202
+    worker = create_session_factory(rig.role_env.engine("worker"))
+    with session_scope(worker, RequestContext()) as db:
+        claim = claim_recovery(db)
+    assert claim is not None and process_claim(worker, settings_admin(rig), *claim)
+    assert settings_admin(rig).get_email_state(user.id).email == new_email
+    assert rig.rows("SELECT email FROM users") == [(new_email,)]
+    assert rig.rows("SELECT status FROM email_change_operations") == [("COMPLETED",)]
+    assert rig.rows(
+        "SELECT recipient_kind FROM email_change_notifications ORDER BY recipient_kind"
+    ) == [("NEW",), ("OLD",)]

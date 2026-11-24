@@ -170,8 +170,40 @@ def upgrade() -> None:
             "WITH CHECK (user_id = app_user_id() AND "
             "status IN ('PENDING', 'CONFIRMED', 'CANCELLED', 'EXPIRED'))"
         )
+    workers = _roles("worker")
+    literals = ", ".join("'" + role.replace("'", "''") + "'" for role in workers)
+    op.execute(
+        f"""
+        CREATE FUNCTION email_change_user_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+            IF current_user = ANY(ARRAY[{literals}]::text[]) AND (
+                NEW.email IS DISTINCT FROM OLD.email OR
+                NEW.email_normalized IS DISTINCT FROM OLD.email_normalized OR
+                NEW.email_verified_at IS DISTINCT FROM OLD.email_verified_at
+            ) AND NOT EXISTS (
+                SELECT 1 FROM email_change_operations o
+                WHERE o.user_id = OLD.id AND o.status = 'APPLYING'
+                  AND o.lease_id::text = current_setting('app.email_change_lease', true)
+                  AND o.lease_until > clock_timestamp()
+                  AND o.old_email = OLD.email AND o.new_email = NEW.email
+                  AND o.new_email_normalized = NEW.email_normalized
+                  AND NEW.email_verified_at IS NOT NULL
+            ) THEN
+                RAISE EXCEPTION 'email update requires a live D37 lease' USING ERRCODE = '42501';
+            END IF;
+            RETURN NEW;
+        END $$
+        """  # noqa: S608
+    )
+    op.execute(
+        "CREATE TRIGGER email_change_user_guard BEFORE UPDATE ON users "
+        "FOR EACH ROW EXECUTE FUNCTION email_change_user_guard()"
+    )
     for number, role in enumerate(_roles("worker")):
         quoted = _quote(role)
+        op.execute(
+            f"GRANT UPDATE (email, email_normalized, email_verified_at) ON users TO {quoted}"
+        )
         op.execute(f"GRANT SELECT, DELETE ON email_change_operations TO {quoted}")
         op.execute(
             "GRANT UPDATE (status, old_email, new_email, new_email_normalized, token_hash, "
@@ -213,6 +245,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    for role in _roles("worker"):
+        op.execute(
+            "REVOKE UPDATE (email, email_normalized, email_verified_at) "
+            f"ON users FROM {_quote(role)}"
+        )
+    op.execute("DROP TRIGGER IF EXISTS email_change_user_guard ON users")
+    op.execute("DROP FUNCTION IF EXISTS email_change_user_guard()")
     op.execute("DROP TABLE IF EXISTS email_change_notifications")
     op.execute("DROP TABLE IF EXISTS email_change_operations")
     op.execute("DROP FUNCTION IF EXISTS email_change_guard()")

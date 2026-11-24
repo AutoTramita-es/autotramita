@@ -6,6 +6,8 @@ one generic error (``AUTH_CALLBACK_REJECTED``); the cause is recorded in the aud
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import logging
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -48,12 +50,54 @@ from app.core.versioning import format_etag
 from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
-from starlette.responses import RedirectResponse
+from starlette.responses import HTMLResponse, RedirectResponse
 
 logger = logging.getLogger(__name__)
 INTERNAL = {"x-internal": True}  # browser redirects: kept out of the generated API clients
 MAX_LOGOUT_BODY = 16_384
 MAX_CODE_LENGTH = 2048
+
+
+_EMAIL_CONFIRM_SCRIPT = """
+const button = document.getElementById('confirm');
+const status = document.getElementById('status');
+button.addEventListener('click', async () => {
+  const p = new URLSearchParams(location.hash.slice(1));
+  const id = p.get('id'), token = p.get('token');
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id) || !token || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+    status.textContent = 'El enlace no es válido.'; return;
+  }
+  button.disabled = true;
+  try {
+    const session = await fetch('/api/v1/auth/session',
+      {credentials:'same-origin', cache:'no-store'});
+    if (!session.ok) { status.textContent = 'Inicia sesión y vuelve a abrir el enlace.'; return; }
+    const info = await session.json();
+    const response = await fetch('/api/v1/me/security/email-change-confirmations', {
+      method:'POST', credentials:'same-origin', cache:'no-store',
+      headers:{'Content-Type':'application/json','X-CSRF-Token':info.csrf_token},
+      body:JSON.stringify({operation_id:id,token:token})
+    });
+    if (!response.ok) {
+      status.textContent = 'Vuelve a autenticarte y abre de nuevo el enlace.'; return;
+    }
+    history.replaceState(null, '', location.pathname);
+    status.textContent = 'Solicitud recibida. Si el enlace sigue vigente, procesaremos el cambio.';
+  } catch (_) { status.textContent = 'No se pudo conectar. Inténtalo de nuevo.'; }
+  finally { button.disabled = false; }
+});
+"""
+_EMAIL_CONFIRM_PAGE = (
+    '<!doctype html><html lang="es"><meta charset="utf-8">'
+    '<meta name="viewport" content="width=device-width, initial-scale=1">'
+    "<title>Confirmar correo | AutoTramita</title><h1>Confirmar correo</h1>"
+    "<p>Confirma la nueva dirección de correo de tu cuenta.</p>"
+    '<button id="confirm" type="button">Confirmar</button>'
+    '<p id="status" role="status"></p><script>' + _EMAIL_CONFIRM_SCRIPT + "</script></html>"
+)
+_EMAIL_CONFIRM_CSP = base64.b64encode(
+    hashlib.sha256(_EMAIL_CONFIRM_SCRIPT.encode()).digest()
+).decode()
 
 
 class LogoutResult(BaseModel):
@@ -267,6 +311,25 @@ def build_auth_router(
                 response, rt.settings, outcome.secret, max_age_seconds=remaining
             )
         return response
+
+    @router.get(
+        "/email-change-verification",
+        responses={200: {"content": {"text/html": {"schema": {"type": "string"}}}}},
+        summary="Confirm an email change from an email link",
+        dependencies=[Depends(declared(AccessKind.PUBLIC))],
+        openapi_extra=INTERNAL,
+    )
+    def email_change_verification_page() -> HTMLResponse:
+        return HTMLResponse(
+            _EMAIL_CONFIRM_PAGE,
+            headers={
+                "Content-Security-Policy": "default-src 'none'; connect-src 'self'; "
+                f"script-src 'sha256-{_EMAIL_CONFIRM_CSP}'; "
+                "base-uri 'none'; frame-ancestors 'none'",
+                "Referrer-Policy": "no-referrer",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
 
     @router.post(
         "/password-recovery",

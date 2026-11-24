@@ -388,3 +388,35 @@ def test_sign_in_does_not_bypass_pending_email_recovery(env: RoleEnv) -> None:
             db.execute(text("SELECT email FROM users WHERE id=:id"), {"id": user}).scalar_one()
             != "new@example.test"
         )
+
+
+def test_worker_email_update_requires_matching_unexpired_lease(env: RoleEnv) -> None:
+    from app.auth.security.email_change import claim_recovery, confirm_request, create_request
+
+    user, _ = make_user(env)
+    session = open_session(env, user).session.id
+    with session_scope(factory(env), RequestContext(user_id=user)) as db:
+        operation, token = create_request(
+            db, user_id=user, session_id=session, new_email="new@example.test"
+        )
+        assert confirm_request(db, user_id=user, operation_id=operation, token=token)
+    with session_scope(factory(env, "worker"), RequestContext()) as db:
+        claim = claim_recovery(db)
+    assert claim is not None
+    update = text("""
+        UPDATE users SET email='new@example.test', email_normalized='new@example.test',
+            email_verified_at=now() WHERE id=:id
+    """)
+    with pytest.raises(DBAPIError), session_scope(factory(env, "worker"), RequestContext()) as db:
+        db.execute(update, {"id": user})
+    with session_scope(factory(env, "worker"), RequestContext()) as db:
+        db.execute(
+            text("SELECT set_config('app.email_change_lease', :lease, true)"),
+            {"lease": str(claim[1])},
+        )
+        db.execute(update, {"id": user})
+    with env.admin_engine().connect() as db:
+        assert (
+            db.execute(text("SELECT email FROM users WHERE id=:id"), {"id": user}).scalar_one()
+            == "new@example.test"
+        )

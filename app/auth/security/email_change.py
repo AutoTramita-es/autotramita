@@ -110,7 +110,8 @@ def claim_recovery(db: Session, *, now: datetime | None = None) -> tuple[UUID, U
             WITH candidate AS (
                 SELECT id FROM email_change_operations
                 WHERE status IN ('CONFIRMED', 'APPLYING')
-                  AND (next_attempt_at IS NULL OR next_attempt_at <= :now)
+                  AND (next_attempt_at IS NULL OR next_attempt_at <= :now
+                       OR confirmed_at <= :deadline OR attempts >= 10)
                   AND (lease_until IS NULL OR lease_until <= :now)
                 ORDER BY coalesce(next_attempt_at, confirmed_at), id
                 FOR UPDATE SKIP LOCKED LIMIT 1

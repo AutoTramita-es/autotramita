@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from email.message import EmailMessage
 from enum import StrEnum
 from typing import Protocol
+from urllib.parse import urlencode
 from uuid import UUID
 
 from app.auth.settings import AuthSettings
@@ -96,6 +97,7 @@ class SmtpNotifier:
         assert settings.smtp_host and settings.smtp_from  # noqa: S101 - validated by the settings
         self._host, self._port = settings.smtp_host, settings.smtp_port
         self._from, self._starttls = settings.smtp_from, settings.smtp_starttls
+        self._origins = frozenset(o for o in (settings.web_origin, settings.admin_origin) if o)
         self._user = settings.smtp_user
         self._password = settings.smtp_password
 
@@ -115,6 +117,39 @@ class SmtpNotifier:
                 smtp.login(self._user, self._password.get_secret_value())
             refused = smtp.send_message(message)
             if refused:
+                raise smtplib.SMTPException("recipient refused")
+
+    def send_email_change_verification(
+        self, *, to: str, origin: str, operation_id: UUID, token: str
+    ) -> None:
+        """Send a transient verification link; never persist or log its token.
+
+        The fragment is not sent to the web server on navigation. The client must read it and
+        submit it to the authenticated confirmation endpoint over HTTPS.
+        """
+        from app.auth.credentials import is_well_formed
+
+        if (
+            any(ch in to for ch in "\r\n")
+            or not is_well_formed(token)
+            or origin not in self._origins
+        ):
+            raise ValueError("invalid verification message")
+        fragment = urlencode({"id": str(operation_id), "token": token})
+        link = f"{origin}/api/v1/auth/email-change-verification#{fragment}"
+        message = EmailMessage()
+        message["From"], message["To"] = self._from, to
+        message["Subject"] = "AutoTramita: confirma tu nueva dirección de correo"
+        message.set_content(
+            "Hola,\n\nConfirma tu nueva dirección de correo con este enlace. "
+            "Caduca en 30 minutos.\n\n" + link + "\n\nAutoTramita\n"
+        )
+        with smtplib.SMTP(self._host, self._port, timeout=5) as smtp:
+            if self._starttls:
+                smtp.starttls()
+            if self._user and self._password:
+                smtp.login(self._user, self._password.get_secret_value())
+            if smtp.send_message(message):
                 raise smtplib.SMTPException("recipient refused")
 
     def send(self, notice: Notice) -> None:
