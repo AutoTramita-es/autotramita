@@ -1,0 +1,3 @@
+.secrets/
+.temp/
+__pycache__/
