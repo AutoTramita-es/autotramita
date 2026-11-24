@@ -139,6 +139,8 @@ class Admin:
                 "email": email,
                 "enabled": True,
                 "emailVerified": True,
+                "firstName": "Spike",
+                "lastName": "User",
                 "credentials": [{"type": "password", "value": password, "temporary": False}],
             },
         )
