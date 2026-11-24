@@ -268,6 +268,15 @@ Ograničenje (D37): tok promjene e-maila se NE implementira dok vlasnik ne potvr
 Zabranjeno izričito: T10–T13, merge u main, deployment, zajednička infrastruktura, izmjena Compose/Traefik
 ```
 
+```
+Paket: F2-T09-REC | Datum: 2026-11-24
+Tekst autorizacije vlasnika (doslovno): "Autoriziram isključivo: F2-T09-REC — Security Policy Completion and Reconciliation."
+Opseg: dovršavanje potvrđenog D37, sigurnosni ispravci i kriteriji T01–T09, regresijski testovi i dokumentacija; commit i push na dev te CI.
+Preduvjet: CP08 prihvaćen; CP09 nije prihvaćen. D42 ostaje OPEN; R10 odgođen.
+Zabranjeno: T10–T13, cijeli outbox/Celery prije T11, merge u main, deployment, zajednička infrastruktura i migracije na trajnu bazu.
+STOP: blocker koji zahtijeva novu arhitekturnu odluku; nakon REC zaustaviti se na CP09 bez samostalnog prihvaćanja.
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
