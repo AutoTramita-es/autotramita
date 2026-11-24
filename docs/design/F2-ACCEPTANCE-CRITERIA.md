@@ -1,6 +1,6 @@
 # F2 — Kriteriji prihvaćanja
 
-Datum: 2026-11-24 | Status: **PROPOSED — odobrava vlasnik na F2-CP00** | Povezano: [Execution order](F2-EXECUTION-ORDER.md) · [Plan §4](F2-IMPLEMENTATION-PLAN.md) · [AT-02](../specifications/AT-02-identity-security.md) · [Registar](F2-DECISION-REGISTER.md)
+Datum: 2026-11-24 | Status: **ACCEPTED uz CP00 (2026-11-24)** | Povezano: [Execution order](F2-EXECUTION-ORDER.md) · [Plan §4](F2-IMPLEMENTATION-PLAN.md) · [AT-02](../specifications/AT-02-identity-security.md) · [Registar](F2-DECISION-REGISTER.md)
 
 ## Pravila dokazivanja
 - Kriterij vrijedi samo uz **dokaz**: imenovani test u CI runu na točnom SHA-u (3+1 job zelen, 0 skipped, `-W error`), ili pregledan artefakt naveden u koloni „Dokaz". Tvrdnja bez dokaza = nije ispunjeno.

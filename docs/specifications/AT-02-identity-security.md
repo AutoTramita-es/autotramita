@@ -1,6 +1,6 @@
 # AT-02 — Identitet, autentifikacija i sigurnost (F2) + minimalni AT-17
 
-Verzija 0.1 | 2026-11-24 | Status: **PROPOSED — za pregled vlasnika (F2-CP00)**. Nije autorizacija implementacije, migracija, infrastrukture ni deploymenta.
+Verzija 0.1 | 2026-11-24 | Status: **odluke D01–D41, D43 ACCEPTED (2026-11-24, CP00)**; autoriziran samo F2-T01. Ostalo nije autorizacija implementacije, migracija, infrastrukture ni deploymenta.
 Odluke: [F2 registar odluka](../design/F2-DECISION-REGISTER.md) (ID-evi I01–I20 naslijeđeni ACCEPTED, D01–D43 PROPOSED). Plan: [F2-IMPLEMENTATION-PLAN](../design/F2-IMPLEMENTATION-PLAN.md) · [Execution order](../design/F2-EXECUTION-ORDER.md) · [Kriteriji](../design/F2-ACCEPTANCE-CRITERIA.md).
 
 ## 1. Izvori i prvenstvo

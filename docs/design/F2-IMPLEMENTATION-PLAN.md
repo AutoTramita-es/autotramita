@@ -1,6 +1,6 @@
 # F2 — Plan implementacije (AT-02 + minimalni AT-17)
 
-Datum: 2026-11-24 | Status: **PROPOSED — za pregled vlasnika na F2-CP00** | Planiranje; F2 implementacija **nije autorizirana**
+Datum: 2026-11-24 | Status: **CP00 prihvaćen 2026-11-24; D01–D41, D43 ACCEPTED; autoriziran samo F2-T01**
 [Specifikacija AT-02](../specifications/AT-02-identity-security.md) · [Registar odluka](F2-DECISION-REGISTER.md) · [Execution order](F2-EXECUTION-ORDER.md) · [Kriteriji](F2-ACCEPTANCE-CRITERIA.md)
 
 ## 1. Sažetak
