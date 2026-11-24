@@ -3,7 +3,15 @@ the public client), real access tokens against the application's mobile session 
 Runs only in the ``keycloak`` CI job."""
 
 import pytest
-from tests.identity.kc import MOBILE_REDIRECT, WEB_REDIRECT, Admin, Browser, Env, TestUser
+from tests.identity.kc import (
+    MOBILE_REDIRECT,
+    WEB_REDIRECT,
+    Admin,
+    BackchannelSink,
+    Browser,
+    Env,
+    TestUser,
+)
 from tests.identity.rig import Rig
 
 pytestmark = pytest.mark.keycloak
@@ -75,3 +83,38 @@ def test_the_same_person_on_two_keycloak_sessions_has_two_application_sessions(
     assert a.status_code == b.status_code == 201
     assert a.json()["session_id"] != b.json()["session_id"]
     assert len(rig.api.get("/api/v1/sessions", headers=bearer(first)).json()["items"]) == 2
+
+
+def test_mobile_backchannel_logout_revokes_app_session(
+    rig: Rig, env: Env, admin: Admin, backchannel: BackchannelSink
+) -> None:
+    import time
+
+    from tests.identity.kc import decode_jwt
+
+    user = admin.create_user()
+    token = access_token(env, user)
+    assert rig.api.post(OPEN, json=DEVICE, headers=bearer(token)).status_code == 201
+    assert admin.service("POST", f"/users/{user.id}/logout").status_code == 204
+    deadline = time.monotonic() + 15
+    raw = None
+    while time.monotonic() < deadline:
+        for body in backchannel.bodies:
+            if "logout_token" in body:
+                candidate = body["logout_token"][0]
+                audience = decode_jwt(candidate).get("aud")
+                if audience == "at-mobile" or (
+                    isinstance(audience, list) and "at-mobile" in audience
+                ):
+                    raw = candidate
+                    break
+        if raw:
+            break
+        time.sleep(0.3)
+    assert raw is not None, "Keycloak did not send mobile backchannel logout"
+    assert (
+        rig.api.post("/api/v1/auth/oidc/backchannel-logout", data={"logout_token": raw}).status_code
+        == 204
+    )
+    response = rig.api.get("/api/v1/auth/session", headers=bearer(token))
+    assert response.status_code == 401 and response.json()["code"] == "SESSION_REVOKED"

@@ -378,6 +378,17 @@ def test_backchannel_logout_revokes_the_named_keycloak_session_only(web: Web) ->
     assert audit(web, "session.revoked")[0][2] == "IDP"
 
 
+def test_mobile_backchannel_token_revokes_native_session(web: Web) -> None:
+    token = web.access(sid="mobile-logout-sid")
+    client = web.bearer(token)
+    opened = client.post(f"{API}/mobile/session", json={"device": {"platform": "android"}})
+    assert opened.status_code == 201, opened.text
+    logout = web.idp.sign(web.idp.logout_claims(client_id="at-mobile", sid="mobile-logout-sid"))
+    assert post_logout(web, logout).status_code == 204
+    problem(client.get(f"{API}/session"), 401, "SESSION_REVOKED")
+    problem(post_logout(web, logout), 400, "LOGOUT_TOKEN_INVALID")
+
+
 def test_a_logout_token_without_sid_ends_every_session_of_the_user(web: Web) -> None:
     one, two = web.client(), web.client()
     web.sign_in(one, sid="sid-one")
@@ -411,7 +422,7 @@ def test_invalid_logout_requests_are_refused(web: Web) -> None:
     other = FakeIdp()
     claims = web.idp.logout_claims
     bad_tokens = [
-        web.idp.sign(claims(iss="https://other.example/realms/x")), web.idp.sign(claims(aud="at-mobile")),
+        web.idp.sign(claims(iss="https://other.example/realms/x")), web.idp.sign(claims(aud="other-client")),
         web.idp.sign({k: v for k, v in claims().items() if k != "events"}),
         web.idp.sign(claims(nonce="n")), web.idp.sign({k: v for k, v in claims().items() if k != "jti"}),
         other.sign(other.logout_claims()), web.idp.unsigned(), "", "garbage", "a.b.c",

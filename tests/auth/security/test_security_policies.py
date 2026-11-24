@@ -436,3 +436,22 @@ def test_unconfigured_admin_client_answers_503_not_a_guess(rig: Rig) -> None:
     rig.web.runtime.admin = None
     problem(client.get(f"{API}/me/security"), 503, "AUTH_NOT_CONFIGURED")
     assert re.fullmatch(r"[a-z-]+", "ok")
+
+
+def test_revoking_other_sessions_sends_one_notice_after_commit(rig: Rig) -> None:
+    first = rig.login(sid="notice-first", auth_time=int(time.time()) - 5)
+    second = rig.login(sid="notice-second", auth_time=int(time.time()) - 5)
+    result = first.post(f"{API}/sessions/revoke-others", headers=secure(first))
+    assert result.status_code == 200 and result.json() == {"revoked": 1}
+    assert second.get(f"{API}/auth/session").status_code == 401
+    assert [notice.kind for notice in rig.notifier.notices] == [NoticeKind.SESSIONS_REVOKED]
+    assert first.post(f"{API}/sessions/revoke-others", headers=secure(first)).json() == {
+        "revoked": 0
+    }
+    assert len(rig.notifier.notices) == 1
+    result = first.post(f"{API}/sessions/revoke-all", headers=secure(first))
+    assert result.status_code == 200 and result.json() == {"revoked": 1}
+    assert [notice.kind for notice in rig.notifier.notices] == [
+        NoticeKind.SESSIONS_REVOKED,
+        NoticeKind.SESSIONS_REVOKED,
+    ]

@@ -403,3 +403,53 @@ def decode_header_kid(token: str) -> str:
     header += "=" * (-len(header) % 4)
     kid: str = json.loads(base64.urlsafe_b64decode(header))["kid"]
     return kid
+
+
+def test_s02_direct_recovery_url_is_denied_when_reset_is_disabled(env: Env, admin: Admin) -> None:
+    """Use a real auth session and captured reset URL, then disable the feature."""
+    browser = Browser(env)
+    admin.update_realm(resetPasswordAllowed=True)
+    try:
+        login_page = browser.authorize("at-web", WEB_REDIRECT)
+        href = re.search(r'href="([^"]*reset-credentials[^"]*)"', login_page.text)
+        assert href
+        reset_url = href.group(1).replace("&amp;", "&")
+    finally:
+        admin.update_realm(resetPasswordAllowed=False)
+    try:
+        denied = browser.get(reset_url)
+        assert 'name="username"' not in denied.text or "reset-credentials" not in denied.text
+    finally:
+        browser.close()
+
+
+def test_s01_temporary_lockout_expires_with_short_test_window(env: Env, admin: Admin) -> None:
+    """Exercise expiry without a 15-minute CI sleep; production values remain tested separately."""
+    user = admin.create_user()
+    realm = admin.realm()
+    changed = ("waitIncrementSeconds", "maxFailureWaitSeconds", "minimumQuickLoginWaitSeconds")
+    old = {name: realm[name] for name in changed}
+    admin.update_realm(
+        waitIncrementSeconds=5, maxFailureWaitSeconds=5, minimumQuickLoginWaitSeconds=5
+    )
+    try:
+        for _ in range(5):
+            browser = Browser(env)
+            browser.login(user.email, BAD)
+            browser.close()
+        locked = admin.master("GET", f"/attack-detection/brute-force/users/{user.id}").json()
+        assert locked["disabled"] is True
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            state = admin.master("GET", f"/attack-detection/brute-force/users/{user.id}").json()
+            if not state["disabled"]:
+                break
+            time.sleep(0.5)
+        assert not state["disabled"]
+        browser = Browser(env)
+        try:
+            browser.login(user).require_code()
+        finally:
+            browser.close()
+    finally:
+        admin.update_realm(**old)

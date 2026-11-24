@@ -205,6 +205,59 @@ jobs:
         run: |
           export SPIKE_RESULTS_PATH="$RUNNER_TEMP/spike-results.json"
           uv run --locked pytest -q -ra -m keycloak tests/identity --junitxml="$RUNNER_TEMP/junit-identity.xml" -W error -W 'ignore:Using `httpx` with `starlette.testclient` is deprecated:Warning'
+      - name: Import DEV and PROD realms into isolated Keycloak instances
+        run: |
+          set -eu
+          for kind in dev prod; do
+            container="keycloak-import-${kind}"
+            trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
+            docker run -d --name "$container" --network host \
+              -e KC_BOOTSTRAP_ADMIN_USERNAME="$TEST_KEYCLOAK_ADMIN_USER" \
+              -e KC_BOOTSTRAP_ADMIN_PASSWORD="$TEST_KEYCLOAK_ADMIN_PASSWORD" \
+              -e AT_WEB_CLIENT_SECRET -e AT_ADMIN_SVC_CLIENT_SECRET \
+              -v "$PWD/identity/keycloak/realm-${kind}.json:/opt/keycloak/data/import/realm.json:ro" \
+              -v "$PWD/identity/keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro" \
+              quay.io/keycloak/keycloak:26.4.7@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007 \
+              start-dev --import-realm --http-host=127.0.0.1 --http-port=18082 --hostname-strict=false
+            ready=0
+            for attempt in $(seq 1 90); do
+              if curl -sf http://127.0.0.1:18082/realms/master/.well-known/openid-configuration > /dev/null; then
+                ready=1; break
+              fi
+              sleep 2
+            done
+            if [ "$ready" != 1 ]; then docker logs "$container" | tail -80; exit 1; fi
+            REALM_KIND="$kind" uv run --locked python - <<'PYREALM'
+          import os
+          import httpx
+
+          base = "http://127.0.0.1:18082"
+          realm = "autotramita-" + os.environ["REALM_KIND"]
+          token = httpx.post(base + "/realms/master/protocol/openid-connect/token", data={
+              "grant_type": "password", "client_id": "admin-cli",
+              "username": os.environ["TEST_KEYCLOAK_ADMIN_USER"],
+              "password": os.environ["TEST_KEYCLOAK_ADMIN_PASSWORD"],
+          })
+          token.raise_for_status()
+          headers = {"Authorization": "Bearer " + token.json()["access_token"]}
+          response = httpx.get(base + "/admin/realms/" + realm, headers=headers)
+          response.raise_for_status()
+          assert response.json()["realm"] == realm
+          profile = httpx.get(base + "/admin/realms/" + realm + "/users/profile", headers=headers)
+          profile.raise_for_status()
+          attrs = {a["name"]: a for a in profile.json()["attributes"]}
+          assert "required" not in attrs["firstName"] and "required" not in attrs["lastName"]
+          for client in ("at-web", "at-mobile"):
+              result = httpx.get(base + "/admin/realms/" + realm + "/clients",
+                                 params={"clientId": client}, headers=headers)
+              result.raise_for_status()
+              rows = [c for c in result.json() if c["clientId"] == client]
+              assert len(rows) == 1 and rows[0]["fullScopeAllowed"] is False
+          print(realm + " imported and verified")
+          PYREALM
+            docker rm -f "$container" >/dev/null
+            trap - EXIT
+          done
       - name: Spike observations
         if: always()
         run: cat "$RUNNER_TEMP/spike-results.json" || true

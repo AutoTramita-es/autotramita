@@ -200,3 +200,64 @@ def test_old_verified_token_cannot_restore_previous_email(env: RoleEnv) -> None:
             db.execute(text("SELECT email FROM users WHERE id=:id"), {"id": user}).scalar_one()
             == "new@example.test"
         )
+
+
+def test_disabled_mail_retains_both_jobs_without_consuming_attempts(env: RoleEnv) -> None:
+    from app.auth.security.email_change_worker import run_once
+
+    admin = FakeAdmin()
+    _, claim = prepare(env, admin)
+    assert process_claim(factory(env, "worker"), admin, *claim)
+    run_once(factory(env, "worker"), admin, None)
+    with env.admin_engine().connect() as db:
+        rows = db.execute(text("SELECT status, attempts FROM email_change_notifications")).all()
+    assert rows == [("PENDING", 0), ("PENDING", 0)]
+
+
+def test_cleanup_expires_pending_tokens_and_purges_resolved_records(env: RoleEnv) -> None:
+    from app.auth.security.email_change_worker import cleanup
+
+    admin = FakeAdmin()
+    _, claim = prepare(env, admin)
+    assert process_claim(factory(env, "worker"), admin, *claim)
+    user, _ = make_user(env)
+    session_id = open_session(env, user).session.id
+    with session_scope(factory(env), RequestContext(user_id=user)) as session:
+        expired, _ = create_request(
+            session,
+            user_id=user,
+            session_id=session_id,
+            new_email="expired@example.test",
+            now=datetime.now(UTC) - timedelta(minutes=31),
+        )
+    with env.admin_engine().connect() as db:
+        db.execute(
+            text("""UPDATE email_change_notifications SET status='SENT', recipient=NULL,
+                         sent_at=now()-interval '31 days'""")
+        )
+        db.execute(text("ALTER TABLE email_change_operations DISABLE TRIGGER email_change_guard"))
+        try:
+            db.execute(
+                text("""UPDATE email_change_operations SET updated_at=now()-interval '31 days'
+                             WHERE status='COMPLETED'""")
+            )
+        finally:
+            db.execute(
+                text("ALTER TABLE email_change_operations ENABLE TRIGGER email_change_guard")
+            )
+    with session_scope(factory(env, "worker"), RequestContext()) as session:
+        cleanup(session)
+    with env.admin_engine().connect() as db:
+        row = db.execute(
+            text("""SELECT status, token_hash, old_email, new_email FROM
+                              email_change_operations WHERE id=:id"""),
+            {"id": expired},
+        ).one()
+        assert tuple(row) == ("EXPIRED", None, None, None)
+        assert db.execute(text("SELECT count(*) FROM email_change_notifications")).scalar_one() == 0
+        assert (
+            db.execute(
+                text("SELECT count(*) FROM email_change_operations WHERE status='COMPLETED'")
+            ).scalar_one()
+            == 0
+        )

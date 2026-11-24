@@ -557,10 +557,15 @@ def build_auth_router(
 
     def _process_logout(request: Request, rt: AuthRuntime, token: str) -> None:
         prefix, family = request_facts(request, rt)
-        try:
-            verified = rt.logout_validator.validate(token, client_id=rt.settings.web_client_id)
-        except TokenInvalid:
-            raise LogoutTokenInvalid() from None
+        verified = None
+        for client_id in (rt.settings.web_client_id, *sorted(rt.settings.authorized_parties)):
+            try:
+                verified = rt.logout_validator.validate(token, client_id=client_id)
+                break
+            except TokenInvalid:
+                continue
+        if verified is None:
+            raise LogoutTokenInvalid()
         ttl = max(verified.expires_at - int(rt.clock()), 1) + rt.settings.leeway_seconds
         if not rt.jti.first_use(verified.jti, ttl_seconds=ttl):
             record_independent(

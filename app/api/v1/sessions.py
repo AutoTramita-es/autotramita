@@ -28,6 +28,7 @@ from app.auth.errors import AccountDisabled, AmbiguousCredentials, AuthRequired
 from app.auth.mobile import service as mobile
 from app.auth.mobile.service import DeviceInfo
 from app.auth.runtime import AuthRuntime, runtime_of
+from app.auth.security.notify import Notice, NoticeKind, send_quietly
 from app.auth.sessions import repository
 from app.auth.sessions import service as sessions
 from app.auth.sessions.models import AuthLevel, RevokeReason, UserSession
@@ -197,6 +198,10 @@ def build_sessions_router(
         response = Response(status_code=204)
         if own:
             cookies.clear_session_cookie(response, rt.settings)
+        else:
+            send_quietly(
+                rt.notifier, Notice(NoticeKind.SESSIONS_REVOKED, user.email, datetime.now(UTC))
+            )
         return response
 
     @router.post(
@@ -214,6 +219,9 @@ def build_sessions_router(
                 ctx.resolved.session.id,
                 actor_user_id=ctx.resolved.user.id,
             )
+            email = ctx.resolved.user.email
+        if count:
+            send_quietly(rt.notifier, Notice(NoticeKind.SESSIONS_REVOKED, email, datetime.now(UTC)))
         return Revoked(revoked=count)
 
     @router.post(
@@ -234,6 +242,9 @@ def build_sessions_router(
                 actor_user_id=ctx.resolved.user.id,
             )
             web = ctx.token is None
+            email = ctx.resolved.user.email
+        if count:
+            send_quietly(rt.notifier, Notice(NoticeKind.SESSIONS_REVOKED, email, datetime.now(UTC)))
         if web:
             cookies.clear_session_cookie(response, rt.settings)
         return Revoked(revoked=count)
