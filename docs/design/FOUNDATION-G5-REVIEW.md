@@ -1,4 +1,7 @@
 # AutoTramita.es — G5 Foundation Technical Review
+
+> **Current execution status (2026-11-24):** ADR-010 and ADR-011 are Accepted; Keycloak and shared Nextcloud supersede earlier OIDC/S3 references. [G6](../G6-EXECUTION-ORDER.md) is Accepted, including F1 tooling and rate limits. AT-03 reconciliation is required before F3a, not F1. F1 remains explicitly unauthorized. Historical review findings and proposed roadmap text below are retained for traceability; current accepted ADRs and G6 govern F1.
+
 2026-11-24 | AT-18 G5 | review for product-owner decision | Scope: AT-01/02/03 foundation plus minimal AT-09/17/20 contracts, per [DESIGN-ROADMAP.md](DESIGN-ROADMAP.md) §9. Sources read: ADR-001 to ADR-009, [AT-03 decisions](../specifications/AT-03-decisions.md), [AT-03 final design](../specifications/AT-03-final-design.md) (PROPOSED), [DNS, Nextcloud and mail](../DNS-NEXTCLOUD-MAIL.md), `scripts/provision-postgres.py`, `docker-compose*.yml`, repo skeleton (empty `app/*`, `migrations`, `tests`). Product owner approved H1–H6 on 2026-11-24. Applied: provisioning script and Compose/env examples updated to the four-role model (script not run, nothing provisioned), ADR-010 and ADR-011 drafted as Proposed (later accepted by the owner, see ADR register), routing and naming decision recorded in the DNS document. Packet F1 is still **not authorized**; no application code exists. ADR-001/005 text is unchanged until ADR-010/011 are accepted.
 
 ## 1. Verdict
