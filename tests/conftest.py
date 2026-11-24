@@ -7,10 +7,13 @@ TEST_REDIS_URL. In CI (``CI`` set) a missing variable fails the run instead of s
 import os
 import uuid
 from collections.abc import Iterator
+from dataclasses import dataclass
 
+import psycopg
 import pytest
+from app.core.dbroles import RoleNames, create_roles, harden
 from sqlalchemy import Engine, create_engine, text
-from sqlalchemy.engine import make_url
+from sqlalchemy.engine import URL, make_url
 
 
 def _require(name: str) -> str:
@@ -55,3 +58,55 @@ def scratch_engine(pg_admin_url: str, scratch_database: str) -> Iterator[Engine]
     engine = create_engine(url.set(database=scratch_database))
     yield engine
     engine.dispose()
+
+
+def _sa_url(admin_url: str) -> URL:
+    return make_url(admin_url.replace("postgresql://", "postgresql+psycopg://"))
+
+
+@dataclass(frozen=True)
+class RoleEnv:
+    """A scratch database with the four-role model applied."""
+
+    names: RoleNames
+    passwords: dict[str, str]
+    database: str
+    admin_url: str
+
+    def url(self, kind: str) -> URL:
+        role = getattr(self.names, kind)
+        return _sa_url(self.admin_url).set(
+            username=role, password=self.passwords[kind], database=self.database
+        )
+
+    def engine(self, kind: str) -> Engine:
+        return create_engine(self.url(kind))
+
+    def admin_engine(self) -> Engine:
+        return create_engine(
+            _sa_url(self.admin_url).set(database=self.database), isolation_level="AUTOCOMMIT"
+        )
+
+
+@pytest.fixture
+def role_env(pg_admin_url: str) -> Iterator[RoleEnv]:
+    """Fresh database owned by the owner role, with roles created and hardened."""
+    base = f"at_{uuid.uuid4().hex[:10]}"
+    names = RoleNames.for_base(base)
+    passwords = {
+        k: uuid.uuid4().hex + uuid.uuid4().hex for k in ("owner", "app", "worker", "platform")
+    }
+    database = f"{base}_db"
+    with psycopg.connect(pg_admin_url, autocommit=True) as admin:
+        create_roles(admin, names, passwords)
+        admin.execute(f'CREATE DATABASE "{database}" OWNER "{names.owner}"')
+    db_url = _sa_url(pg_admin_url).set(database=database).render_as_string(hide_password=False)
+    with psycopg.connect(db_url.replace("+psycopg", ""), autocommit=True) as conn:
+        harden(conn, database, names)
+    try:
+        yield RoleEnv(names, passwords, database, pg_admin_url)
+    finally:
+        with psycopg.connect(pg_admin_url, autocommit=True) as admin:
+            admin.execute(f'DROP DATABASE IF EXISTS "{database}" WITH (FORCE)')
+            for role in names.all():
+                admin.execute(f'DROP ROLE IF EXISTS "{role}"')
