@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "f1/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint, types, tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci-throwaway-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CI: "true"
+      # Throwaway service containers of this job only; the tests create and drop their own
+      # databases and roles. Missing variables fail the run instead of skipping tests.
+      TEST_PG_ADMIN_URL: postgresql://postgres:ci-throwaway-password@127.0.0.1:5432/postgres
+      TEST_REDIS_URL: redis://127.0.0.1:6379/15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Ruff lint
+        run: uv run ruff check .
+      - name: Ruff format
+        run: uv run ruff format --check .
+      - name: mypy
+        run: uv run mypy
+      - name: Tests (real PostgreSQL 16 and Redis; migrations up/down, RLS, rate limiting)
+        run: uv run pytest -q
+      - name: OpenAPI contract is current
+        run: uv run python -m app.api.export_openapi --check
+      - name: TypeScript and Dart clients can be generated
+        run: ./openapi/check-clients.sh
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks (full history)
+        run: >-
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2
+          detect --source /repo --redact --no-banner --exit-code 1
+
+  dependencies:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: pip-audit against the locked dependency set
+        run: |
+          uv export --locked --no-hashes --no-emit-project --format requirements-txt > "$RUNNER_TEMP/requirements.txt"
+          uvx pip-audit --requirement "$RUNNER_TEMP/requirements.txt" --no-deps --disable-pip --strict

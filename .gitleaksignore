@@ -1,0 +1,4 @@
+# False positives: fake idempotency identifiers in tests, committed on the f1/foundation
+# branch before they were renamed. Fingerprints are commit:file:rule:line.
+dcc2640d1d8695b06f901bffb35ab239d4df8be5:tests/test_idempotency.py:generic-api-key:25
+dcc2640d1d8695b06f901bffb35ab239d4df8be5:tests/test_idempotency.py:generic-api-key:93
