@@ -1,7 +1,7 @@
 # AutoTramita.es — MASTER BLUEPRINT
 
 **Status:** MASTER INDEX / WORKING BLUEPRINT (not implementation authorization)  
-**Version:** 1.1  
+**Version:** 1.2  
 **Date:** 2026-11-24  
 **Repository:** [AutoTramita-es/autotramita](https://github.com/AutoTramita-es/autotramita)  
 **Language:** Croatian for planning; existing technical ADRs remain authoritative.
@@ -31,7 +31,7 @@ The existing ADRs and specifications take precedence over high-level summaries h
 | **AT-01** | Temelj sustava i infrastruktura | FastAPI, PostgreSQL, Redis, Celery, Docker, CI/CD, razvojna i produkcijska okruženja. | [ADR-001](adr/ADR-001-technology-stack.md), [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-004](adr/ADR-004-api-contracts.md), [ADR-008](adr/ADR-008-delivery-governance.md) | ADR prihvaćen; implementacija nije započela |
 | **AT-02** | Korisnički računi i sigurnost | Prijava, registracija, OIDC, e-mail verifikacija, sesije, MFA, uloge. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | Djelomično definirano |
 | **AT-03** | Autokuće, poslovnice i zaposlenici | Tenant, NIF, pravni oblici, provjera autokuća, poslovnice, pozivnice i pristupi. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-007](adr/ADR-007-pricing-credit-payments.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | [27 poslovnih odluka potvrđeno](specifications/AT-03-decisions.md); tehničko usklađivanje prije implementacije |
-| **AT-04** | Klijenti i vlasnici vozila | Fizičke i pravne osobe, anonimni zahtjevi, korisnički profili, zastupanje, povezivanje predmeta. | [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | ADR prihvaćen; detalji otvoreni |
+| **AT-04** | Klijenti i vlasnici vozila | Fizičke i pravne osobe, anonimni zahtjevi, korisnički profili, zastupanje, povezivanje predmeta. | [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | [AT-04 specifikacija — prijedlog za pregled](specifications/AT-04-customers-vehicle-owners.md); bez implementacije |
 | **AT-05** | Registar vozila | VIN, registracije, tehničke karakteristike, vlasništvo i povijest. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | Za razradu |
 | **AT-06** | Katalog administrativnih usluga | Registracija, prijenos vlasništva, uvoz, tehnička dokumentacija i drugi postupci. | [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | Osnovna arhitektura prihvaćena |
 | **AT-07** | Predmeti i radni procesi | Otvaranje, statusi, zadaci, dodjele, kontrolne liste, završetak i arhiva. | [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | Osnovna arhitektura; detalji otvoreni |
@@ -50,6 +50,8 @@ The existing ADRs and specifications take precedence over high-level summaries h
 | **AT-20** | Pravna usklađenost i operacije | GDPR, ovlasti, audit, backup, monitoring, incidenti i ugovori. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-005](adr/ADR-005-document-storage.md), [ADR-008](adr/ADR-008-delivery-governance.md) | Djelomično definirano |
 
 ## 4. Existing source documentation
+
+- [AT-04 customer and vehicle owner specification](specifications/AT-04-customers-vehicle-owners.md) — 25 proposed decisions and 40 acceptance criteria; pending product-owner review.
 
 - [AT-03 decision register](specifications/AT-03-decisions.md) — all 27 confirmed business decisions; implementation not authorized.
 
