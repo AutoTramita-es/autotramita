@@ -1,14 +1,14 @@
-# F2-CP09 reconciliation — preliminary, blocked
+# F2-CP09 reconciliation — preliminary, implementation pending
 
 Date: 2026-11-24. F2-T09-REC is authorized; CP09 is **not accepted**. This is an interim report, not acceptance evidence. Initial code SHA: `1e49b43a72b986f80614b7809715dcc4eb4a076a`. Authorization commit: `f7809c326006b9dcf1343a8e82ff53d3e575808c`. No implementation commit or final CI exists yet.
 
-## D37 blocker and proposed minimum
+## D37 recovery decision and proposed minimum
 
 The owner confirmed that the old verified address and login remain unchanged until the new address is verified, and that both addresses receive security notices. D37 is **not implemented**. A PostgreSQL transaction cannot include the Keycloak Admin API. An Admin API timeout can mean the update succeeded even though the response was lost; a crash can also occur after Keycloak changes and before the local transaction commits. The current admin client (`app/auth/idp_admin.py`) has neither an email update nor reconciliation API. The existing notifier (`app/auth/security/notify.py`) is best-effort: SMTP failures are swallowed, and the disabled notifier sends nothing. In-process background tasks can be lost on a crash. Consequently these components alone cannot ensure recoverable synchronization and retryable notices.
 
 Proposed minimum for owner decision: a durable, access-controlled email-change operation record with a hash-only, expiring one-use verification token and a serialized state machine; reserve/check normalized addresses and keep old and new addresses available for recovery and notices. Persist an intent before the Keycloak update, on timeout or restart read Keycloak's actual email, username and verified status, and reconcile idempotently; serialize concurrent changes and fail closed when the outcome is uncertain. After verified Keycloak state, commit the local email, session revocation, audit and two independent durable notification intents atomically. A bounded retry/reconciliation mechanism must process unresolved operations and notices without exposing addresses or tokens to audit/logs. Verification-link delivery needs a separately specified secure design: hash-only token storage is incompatible with simply persisting the raw link for later retries; reissue a fresh token on request or approve an alternative that preserves that constraint. Enforce current authenticated user's identity at confirmation and invalidate replaced/expired tokens. Exact recovery ownership, trigger/scheduling, retention and handling of permanent conflicts require approval; this is a narrow subset, not authorization for all of T11. Production email remains blocked by O15.
 
-The owner explicitly requires a stop when a new architecture decision is needed and asks for a blocker if durable outbox capability is needed. No schema or code for this proposal has been introduced. Platform mandatory-MFA identification also depends on future platform grants; do not claim AC-POL-09 is complete before T10.
+On 2026-11-24 the owner approved the limited durable mechanism: 60-second recovery worker, PostgreSQL locking and leases, exponential backoff with jitter, MANUAL_REVIEW after 10 failures or 24 hours, and retention/minimization rules. This authorizes D37 and its necessary migration and tests, but not the general T11 outbox. No schema or code for this proposal has yet been introduced. Platform mandatory-MFA identification also depends on future platform grants; do not claim AC-POL-09 is complete before T10.
 
 ## Initial T03 review (not final validation)
 
@@ -36,4 +36,4 @@ These statuses are conservative source inspection, not a claim that an attack ha
 
 ## Scope and next steps
 
-Only documentation was changed: execution-order authorization and this preliminary report. No shared infrastructure, production service or persistent database was modified; no deployment, merge or T10–T13 work occurred. No final acceptance matrix, complete CI, test count or final SHA is asserted. After the owner decides the minimum durable recovery mechanism, complete implementation and the full reconciliation, verify CI on the exact implementation SHA, and stop at CP09 for explicit acceptance.
+Only documentation was changed: execution-order authorization and this preliminary report. No shared infrastructure, production service or persistent database was modified; no deployment, merge or T10–T13 work occurred. No final acceptance matrix, complete CI, test count or final SHA is asserted. Complete the now-approved implementation and the full reconciliation, verify CI on the exact implementation SHA, and stop at CP09 for explicit acceptance.
