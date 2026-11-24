@@ -6,7 +6,7 @@ Status: visual direction approved by product owner; detailed specifications and 
 Cross-cutting design workstream under [AT-18](../MASTER-BLUEPRINT.md), not a new numbered module. Covers public website, customer portal, dealership workspace, central administration and mobile design consistency. Next.js/TypeScript web and Flutter mobile remain authoritative under [ADR-001](../adr/ADR-001-technology-stack.md).
 
 ## Approved direction
-Professional Spanish automotive administration SaaS, not a car dealership website. Navy #082344, blue #005BCB, pale blue #EFF5FC, success #16A34A, white #FFFFFF. Inter or Manrope (final choice pending). Clean typography, generous spacing, responsive layouts, subtle animation, light/dark modes. Logo concept combines automotive silhouette and verified document; Spanish accent colors used sparingly. Final vector artwork pending.
+Professional Spanish automotive administration SaaS, not a car dealership website. Navy #082344, blue #005BCB, pale blue #EFF5FC, success #16A34A, white #FFFFFF. Inter (selected for brand review). Clean typography, generous spacing, responsive layouts, subtle animation, light/dark modes. Logo concept combines automotive silhouette and verified document; Spanish accent colors used sparingly. Editable vector concepts saved; final visual approval and raster exports pending.
 Proposed frontend tools: Tailwind CSS, shadcn/ui, Lucide, Motion, next/image, next/font; exact versions and compatibility pending. Use WCAG 2.2 AA as design target; keyboard access, visible focus, reduced motion, non-color status indicators.
 
 ## Public homepage
@@ -16,7 +16,7 @@ Spanish-first navigation, hero with live HTML heading and CTA, service cards, pr
 ADR-002/003/009: server-authorized tenant and branch context; distinct customer and employee workspaces; role-aware UI is not authorization. ADR-004: generated TypeScript/Dart API clients. ADR-005: no real private documents or customer data in public assets, demos or shared caches. ADR-006: versioned catalog, anonymous submission and secure claim; regulated actions routed to authorized professionals, integrated Ficha Reducida. ADR-007: public unified prices, separately disclosed statutory fees, dealership-funded discounts and centrally managed credit; never present pending payments as settled. ADR-008: specifications and review precede implementation.
 
 ## Planned documents
-- BRAND-IDENTITY.md — logo variants, color tokens, typography, usage rules.
+- [BRAND-IDENTITY.md](BRAND-IDENTITY.md) — logo variants, color tokens, typography, usage rules.
 - DESIGN-SYSTEM.md — semantic tokens, spacing, elevation, themes and accessibility.
 - WEBSITE-STRUCTURE.md — public routes, navigation, page sections and Spanish copy.
 - UI-COMPONENTS.md — forms, tables, navigation, status, dialogs and states.
