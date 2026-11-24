@@ -20,8 +20,10 @@ from app.api.v1.authn import (
     request_facts,
     session_info,
 )
+from app.api.v1.guards import AccessKind, declared
 from app.audit.models import ActorType, AuditEvent, Outcome
 from app.audit.record import record_independent
+from app.auth.context import change_workspace
 from app.auth.errors import AccountDisabled, AmbiguousCredentials, AuthRequired
 from app.auth.mobile import service as mobile
 from app.auth.mobile.service import DeviceInfo
@@ -36,6 +38,7 @@ from app.core.db import RequestContext
 from app.core.errors import NotFound, Problem
 from app.core.pagination import CursorPage
 from app.core.ratelimit import IPNetwork, Policy, by_ip, rate_limit
+from app.core.versioning import format_etag, if_match_version
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -72,6 +75,15 @@ class SessionSummary(BaseModel):
     current: bool
 
 
+class WorkspaceSwitch(BaseModel):
+    """A *request* to switch; the membership check decides. The identifiers grant nothing."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tenant_id: UUID
+    branch_id: UUID | None = None
+
+
 class Revoked(BaseModel):
     revoked: int
 
@@ -103,6 +115,7 @@ def build_sessions_router(
     limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
 ) -> APIRouter:
     router = APIRouter(tags=["sessions"])
+    session_access = declared(AccessKind.SESSION)
     open_limit = rate_limit(
         Policy("auth_mobile_session", limits.login_per_min_ip), by_ip(trusted), trusted
     )
@@ -115,7 +128,7 @@ def build_sessions_router(
             200: {"description": "The existing live session"},
             201: {"description": "Created"},
         },
-        dependencies=[Depends(open_limit)],
+        dependencies=[Depends(declared(AccessKind.TOKEN)), Depends(open_limit)],
     )
     def open_mobile_session(
         request: Request, body: MobileSessionRequest, response: Response
@@ -152,6 +165,7 @@ def build_sessions_router(
         "/sessions",
         summary="My signed-in sessions",
         response_model=CursorPage[SessionSummary],
+        dependencies=[Depends(session_access)],
     )
     def list_sessions(request: Request) -> CursorPage[SessionSummary]:
         rt = runtime_of(request)
@@ -165,6 +179,7 @@ def build_sessions_router(
         status_code=204,
         summary="Sign out one of my sessions",
         response_class=Response,
+        dependencies=[Depends(session_access)],
     )
     def revoke_one(request: Request, session_id: UUID) -> Response:
         rt = runtime_of(request)
@@ -185,7 +200,10 @@ def build_sessions_router(
         return response
 
     @router.post(
-        "/sessions/revoke-others", summary="Sign out all my other sessions", response_model=Revoked
+        "/sessions/revoke-others",
+        summary="Sign out all my other sessions",
+        response_model=Revoked,
+        dependencies=[Depends(session_access)],
     )
     def revoke_others(request: Request) -> Revoked:
         rt = runtime_of(request)
@@ -203,6 +221,7 @@ def build_sessions_router(
         summary="Sign out all my sessions, this one included (needs a fresh authentication)",
         response_model=Revoked,
         responses={401: {"model": Problem, "description": "Step-up required (RFC 9470)"}},
+        dependencies=[Depends(session_access)],
     )
     def revoke_all(request: Request, response: Response) -> Revoked:
         rt = runtime_of(request)
@@ -218,5 +237,36 @@ def build_sessions_router(
         if web:
             cookies.clear_session_cookie(response, rt.settings)
         return Revoked(revoked=count)
+
+    @router.post(
+        "/sessions/workspace",
+        summary="Switch the active tenant and branch of this session",
+        response_model=SessionInfo,
+        responses={
+            404: {"model": Problem, "description": "No such workspace for this person"},
+            412: {"model": Problem, "description": "The session context changed (If-Match)"},
+        },
+        dependencies=[Depends(session_access)],
+    )
+    def switch_workspace(
+        request: Request,
+        body: WorkspaceSwitch,
+        response: Response,
+        expected: Annotated[int, Depends(if_match_version)],
+    ) -> SessionInfo:
+        rt = runtime_of(request)
+        with authenticated(request, rt, lock=False) as ctx:
+            updated = change_workspace(
+                ctx.db,
+                rt.membership,
+                ctx.resolved.session,
+                ctx.resolved.user,
+                tenant_id=body.tenant_id,
+                branch_id=body.branch_id,
+                expected_version=expected,
+            )
+            info = session_info(rt, sessions.Resolved(updated, ctx.resolved.user), ctx.credential)
+        response.headers["ETag"] = format_etag(updated.context_version)
+        return info
 
     return router

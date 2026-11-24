@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 
 import redis
 from app.auth.errors import AuthNotConfigured
+from app.auth.membership import DenyAllAuthorizer, MembershipAuthorizer
 from app.auth.sessions.models import ClientType, SessionPolicy
 from app.auth.settings import AuthSettings
 from app.auth.tokens import (
@@ -49,6 +50,8 @@ class AuthRuntime:
     factory: sessionmaker[Session]
     policy: SessionPolicy
     trusted_proxies: Sequence[IPNetwork] = ()
+    # F2 ships no memberships: the only production authorizer says no to everything (D18).
+    membership: MembershipAuthorizer = field(default_factory=DenyAllAuthorizer)
     clock: Callable[[], float] = field(default=time.time)
 
     @classmethod

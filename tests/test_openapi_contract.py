@@ -144,7 +144,10 @@ F2_AUTH_PATHS = [
     "/api/v1/sessions",
     "/api/v1/sessions/revoke-all",
     "/api/v1/sessions/revoke-others",
+    "/api/v1/sessions/workspace",
     "/api/v1/sessions/{session_id}",
+    "/api/v1/me",
+    "/api/v1/me/workspaces",
 ]
 
 
@@ -153,7 +156,7 @@ def test_only_the_documented_routes_are_exposed_and_nothing_else() -> None:
     paths = sorted(json.loads(render())["paths"])
     assert paths == sorted(
         [*F2_AUTH_PATHS, "/api/v1/health"]
-    )  # F1 health, F2-T06 web sign-in, F2-T07 mobile and sessions
+    )  # F1 health, F2-T06 web sign-in, F2-T07 mobile and sessions, F2-T08 profile and workspaces
     plain = [getattr(route, "path", None) for route in app.routes]
     assert {p for p in plain if p} <= {"/openapi.json"}  # no hidden docs or test routes
 
@@ -163,7 +166,8 @@ def test_common_response_models(spec: dict[str, Any]) -> None:
     assert set(schemas) == {
         "Health", "Problem", "LogoutResult", "SessionInfo", "StepUpPurpose", "StepUpRequest",
         "StepUpResult", "UserSummary", "WorkspaceInfo", "CursorPage_SessionSummary_", "DeviceBody",
-        "MobileSessionRequest", "Revoked", "SessionSummary",
+        "MobileSessionRequest", "Revoked", "SessionSummary", "CursorPage_WorkspaceOption_",
+        "ProfilePatch", "UserProfile", "WorkspaceOption", "WorkspaceSwitch",
     }  # fmt: skip
     assert set(schemas["Problem"]["required"]) == {"type", "title", "status", "code"}
     assert set(schemas["Problem"]["properties"]) == {

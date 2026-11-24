@@ -190,3 +190,32 @@ def touch_skip_locked(
         {"n": now, "idle": idle_expires_at, "cc": country_code, "i": session_id, "t": threshold},
     )
     return bool(result.rowcount)
+
+
+def set_workspace(
+    db: Session,
+    session_id: UUID,
+    *,
+    tenant_id: UUID,
+    branch_id: UUID | None,
+    membership_id: UUID,
+    expected_version: int,
+) -> bool:
+    """Switch the active workspace if the context version is still the one the caller saw and
+    the session is live. One statement: of two parallel switches exactly one matches."""
+    result: Any = db.execute(
+        text(
+            "UPDATE user_sessions SET active_tenant_id = :t, active_branch_id = :b, "
+            "active_membership_id = :m, context_version = context_version + 1, "
+            "version = version + 1 WHERE id = :i AND context_version = :v "
+            "AND revoked_at IS NULL"
+        ),
+        {
+            "t": tenant_id,
+            "b": branch_id,
+            "m": membership_id,
+            "i": session_id,
+            "v": expected_version,
+        },
+    )
+    return bool(result.rowcount)

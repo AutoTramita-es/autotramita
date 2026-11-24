@@ -46,6 +46,8 @@ select = ["E", "F", "I", "UP", "B", "S", "SIM", "RUF"]
 # Long scenario tables and banners in the end-to-end web tests read better unwrapped.
 "tests/auth/web/test_web_flow.py" = ["E501"]
 "tests/auth/mobile/test_mobile_flow.py" = ["E501"]
+"tests/auth/probe_routes.py" = ["E501"]
+"tests/auth/context/*.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

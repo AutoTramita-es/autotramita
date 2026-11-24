@@ -4,7 +4,7 @@ transaction and the request context (row-level security decides what is visible)
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from app.auth.users.models import User, UserStatus
@@ -102,3 +102,22 @@ def set_status(
         ),
         {"s": status.value, "r": reason, "b": changed_by, "i": user_id},
     )
+
+
+def update_profile(
+    session: Session,
+    user_id: UUID,
+    *,
+    display_name: str | None,
+    preferred_language: str,
+    expected_version: int,
+) -> bool:
+    """Write the profile if the version is still the one the caller saw (If-Match)."""
+    result: Any = session.execute(
+        text(
+            "UPDATE users SET display_name = :d, preferred_language = :l, "
+            "version = version + 1 WHERE id = :i AND version = :v"
+        ),
+        {"d": display_name, "l": preferred_language, "i": user_id, "v": expected_version},
+    )
+    return bool(result.rowcount)

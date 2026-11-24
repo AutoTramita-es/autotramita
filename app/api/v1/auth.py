@@ -13,6 +13,7 @@ from typing import Any, NoReturn
 from urllib.parse import parse_qs
 
 from app.api.v1.authn import SessionInfo, authenticated, request_facts, session_info
+from app.api.v1.guards import AccessKind, declared
 from app.audit.models import ActorType, AuditEvent, Outcome
 from app.audit.record import record, record_independent
 from app.auth import credentials
@@ -41,6 +42,7 @@ from app.auth.web.stepup import StepUpPurpose, authorization_params, level_from_
 from app.core.db import RequestContext, session_scope
 from app.core.errors import TooManyRequests
 from app.core.ratelimit import IPNetwork, Policy, by_ip, rate_limit
+from app.core.versioning import format_etag
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
@@ -116,7 +118,7 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
         status_code=302,
         summary="Start the sign-in (redirects to the identity provider)",
         responses={302: {"description": "Redirect to the identity provider"}},
-        dependencies=[Depends(login_limit)],
+        dependencies=[Depends(declared(AccessKind.PUBLIC)), Depends(login_limit)],
         openapi_extra=INTERNAL,
     )
     def login(request: Request, return_to: str | None = None) -> Response:
@@ -137,7 +139,7 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
         status_code=302,
         summary="Finish the sign-in (the identity provider redirects here)",
         responses={302: {"description": "Redirect to the application"}},
-        dependencies=[Depends(callback_limit)],
+        dependencies=[Depends(declared(AccessKind.PUBLIC)), Depends(callback_limit)],
         openapi_extra=INTERNAL,
     )
     def callback(
@@ -276,6 +278,7 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
         "/logout",
         summary="Sign out of this session",
         response_model=LogoutResult,
+        dependencies=[Depends(declared(AccessKind.SESSION))],
     )
     def logout(request: Request, response: Response) -> LogoutResult:
         rt = runtime_of(request)
@@ -304,11 +307,17 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
         cookies.no_store(response)
         return LogoutResult(end_session_url=rt.endpoints.end_session_url(f"{origin}/"))
 
-    @router.get("/session", summary="State of the current session", response_model=SessionInfo)
+    @router.get(
+        "/session",
+        summary="State of the current session",
+        response_model=SessionInfo,
+        dependencies=[Depends(declared(AccessKind.SESSION))],
+    )
     def session_state(request: Request, response: Response) -> SessionInfo:
         rt = runtime_of(request)
         with authenticated(request, rt, lock=False) as ctx:
             info = session_info(rt, ctx.resolved, ctx.credential)
+            response.headers["ETag"] = format_etag(ctx.resolved.session.context_version)
         cookies.no_store(response)
         return info
 
@@ -316,6 +325,7 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
         "/step-up",
         summary="Ask for a fresh or stronger authentication",
         response_model=StepUpResult,
+        dependencies=[Depends(declared(AccessKind.SESSION))],
     )
     def step_up(request: Request, body: StepUpRequest, response: Response) -> StepUpResult:
         rt = runtime_of(request)
@@ -362,7 +372,7 @@ def build_auth_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = 
         "/oidc/backchannel-logout",
         status_code=204,
         summary="Back-channel logout from the identity provider",
-        dependencies=[Depends(callback_limit)],
+        dependencies=[Depends(declared(AccessKind.PUBLIC)), Depends(callback_limit)],
         openapi_extra={
             "x-internal": True,
             "requestBody": {

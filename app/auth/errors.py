@@ -10,6 +10,7 @@ from app.core.errors import (
     BadRequest,
     Conflict,
     Forbidden,
+    NotFound,
     ServiceUnavailable,
     Unauthenticated,
 )
@@ -154,3 +155,30 @@ class StepUpRequired(Unauthenticated):
             f'acr_values="{acr_values}", max_age="{max_age}"'
         )
         super().__init__(headers={"WWW-Authenticate": challenge})
+
+
+class WorkspaceRequired(Forbidden):
+    """403 WORKSPACE_REQUIRED: the route needs an active tenant context and the session has none
+    (or the person's access to it has ended since)."""
+
+    code = "WORKSPACE_REQUIRED"
+    title = "An active workspace is required"
+
+
+class WorkspaceNotFound(NotFound):
+    """404 WORKSPACE_NOT_FOUND: no such workspace *for this person*. An unknown tenant and a
+    tenant the person has no access to look exactly the same (AT-03 decision 5)."""
+
+    code = "WORKSPACE_NOT_FOUND"
+    title = "Workspace not found"
+
+
+class AuthorizationUnavailable(ServiceUnavailable):
+    """503 AUTHORIZATION_UNAVAILABLE: membership could not be checked; the request is refused
+    (fail closed), never guessed."""
+
+    code = "AUTHORIZATION_UNAVAILABLE"
+    title = "Authorization is temporarily unavailable"
+
+    def __init__(self) -> None:
+        super().__init__(headers={"Retry-After": "5"})
