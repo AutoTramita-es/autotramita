@@ -1,5 +1,5 @@
 # F1 reconciliation plan — 2026-11-24
-REC-01–03 COMPLETE; REC-04–06 IMPLEMENTATION COMPLETE; CP10 ACCEPTED; REC-07.0 COMPLETE (plan v1.0 approved); REC-07.1–07.3 ACCEPTED; REC-07.4 (scope review) at STOP V4; F1 FINAL ACCEPTANCE PENDING (REC-07.5).
+REC-01–03 COMPLETE; REC-04–06 IMPLEMENTATION COMPLETE; CP10 ACCEPTED; REC-07.0 COMPLETE (plan v1.0 approved); REC-07.1–07.4 ACCEPTED; REC-07.5 final validation at STOP V5; F1 FINAL ACCEPTANCE PENDING OWNER DECISION.
 [Audit findings](F1-RECONCILIATION-AUDIT.md) | [AT-01](../specifications/AT-01-foundation-infrastructure.md) | [Execution brief](../specifications/AT-01-F1-CLAUDE-CODE-EXECUTION-BRIEF.md) | [G6](../G6-EXECUTION-ORDER.md)
 
 | Gate | Scope | Exit evidence |
@@ -83,3 +83,6 @@ Owner explicitly ACCEPTED CP14 and REC-07.4 and approved exactly two `.gitleaksi
 
 ## CP15 accepted; REC-07.5 authorized (2026-11-24)
 Owner explicitly ACCEPTED CP15 and authorizes ONLY REC-07.5 — final F1 validation of a candidate SHA: clean checkout, locked sync and lock check, Ruff/mypy, full pytest on isolated PostgreSQL 16 and Redis 7 with zero skips, role SQL twice, migrations up/down/re-up and schema/catalog checks, OpenAPI validation/drift and client generation, full-history secret scan, dependency audit, exact diff review (no business tables, generated clients or real secrets), rollback guide, recorded logs, AC01–15 matrix and finding dispositions. Documentation and validation only; any defect found stops for owner decision. Not authorized: owner F1 acceptance (that is STOP V5), merge to main, release, F2, deployment, shared infrastructure. Findings A, B and the release selection remain open owner decisions unless the owner records them.
+
+## REC-07.5 — final validation complete; STOP V5 (2026-11-24)
+Candidate `0fa6cab58feb4c74ea773548b2b162d43545a4ec`; CI run [45442918072](https://github.com/AutoTramita-es/autotramita/actions/runs/45442918072) all three jobs passed (419 passed, 0 skipped, `-W error`; migrations up/down/up and role SQL twice; OpenAPI validation, drift, TS/Dart generation; full-history secret scan 451 commits, no leaks; no known vulnerabilities). Independent clean-clone checks, exact-diff review, rollback review, AC01–15 dispositions (AC09 bounded scope, AC15 conditional on release selection) and the final findings register are in [F1-FINAL-ACCEPTANCE-EVIDENCE.md](F1-FINAL-ACCEPTANCE-EVIDENCE.md). No defect found; no code changed in REC-07.5 except one corrected documentation line. Owner F1 acceptance, release selection, finding A, finding B and P2 live-gate acknowledgement are requested; merge, release, F2 and deployment are not authorized.
