@@ -9,6 +9,24 @@ from app.core.config import RateLimitSettings
 
 PLACEHOLDER = re.compile(r"^\$\{[A-Z][A-Z0-9_]*\}$")
 ADMIN_SVC_ROLES = {"manage-users", "view-users", "view-events"}
+# Every required action and whether people may use it. Passkey registration stays off until the
+# step-up flow accepts a passkey as a second level (F2-T09-REC F-1); none is forced (I07).
+REQUIRED_ACTIONS = {
+    "CONFIGURE_TOTP": True,
+    "TERMS_AND_CONDITIONS": False,
+    "UPDATE_PASSWORD": True,
+    "UPDATE_PROFILE": True,
+    "VERIFY_EMAIL": True,
+    "delete_account": False,
+    "UPDATE_EMAIL": False,
+    "webauthn-register": False,
+    "webauthn-register-passwordless": False,
+    "VERIFY_PROFILE": True,
+    "delete_credential": True,
+    "idp_link": True,
+    "CONFIGURE_RECOVERY_AUTHN_CODES": True,
+    "update_user_locale": True,
+}
 SECRET_KEYS = re.compile(r"secret|password|credential", re.I)
 
 
@@ -58,6 +76,14 @@ def lint_realm(realm: dict[str, Any], *, kind: str) -> list[str]:
         need(part in policy, f"password policy lacks {part}")
     need(realm.get("browserFlow") == "browser-loa", "step-up browser flow must be active")
 
+    actions = {a.get("alias"): a for a in realm.get("requiredActions", [])}
+    need(set(REQUIRED_ACTIONS) <= set(actions), "required actions must all be listed")
+    for alias, enabled in REQUIRED_ACTIONS.items():
+        found = actions.get(alias, {})
+        need(
+            found.get("enabled") is enabled and found.get("defaultAction") is False,
+            f"required action {alias} must be {'on' if enabled else 'off'} and never forced",
+        )
     clients = {c["clientId"]: c for c in realm.get("clients", [])}
     need(set(clients) == {"at-web", "at-mobile", "at-admin-svc"}, "unexpected client set")
     for client_id, client in clients.items():

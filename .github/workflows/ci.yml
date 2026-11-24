@@ -247,6 +247,13 @@ jobs:
           profile.raise_for_status()
           attrs = {a["name"]: a for a in profile.json()["attributes"]}
           assert "required" not in attrs["firstName"] and "required" not in attrs["lastName"]
+          actions = httpx.get(base + "/admin/realms/" + realm + "/authentication/required-actions",
+                              headers=headers)
+          actions.raise_for_status()
+          enabled = {a["alias"]: a["enabled"] for a in actions.json()}
+          assert enabled["webauthn-register"] is False
+          assert enabled["webauthn-register-passwordless"] is False
+          assert enabled["CONFIGURE_TOTP"] is True and enabled["UPDATE_PASSWORD"] is True
           for client in ("at-web", "at-mobile"):
               result = httpx.get(base + "/admin/realms/" + realm + "/clients",
                                  params={"clientId": client}, headers=headers)

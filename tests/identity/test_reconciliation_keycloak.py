@@ -15,9 +15,10 @@ from urllib.parse import parse_qs, urlparse
 from uuid import UUID
 
 import pytest
+from app.auth.security import recovery
 from app.auth.security.email_change import confirm_request, create_request
 from app.auth.security.email_change_worker import run_once
-from app.auth.security.notify import SmtpNotifier
+from app.auth.security.notify import NoticeKind, SmtpNotifier
 from app.auth.security.recovery_worker import EmailChangeRecoveryWorker
 from app.core.db import RequestContext, create_session_factory, session_scope
 from tests.identity.kc import (
@@ -330,17 +331,57 @@ def test_keycloak_needs_level_two_to_remove_a_second_factor(env: Env, admin: Adm
     assert kinds == {"password", "otp"}
 
 
+PASSKEY_ACTIONS = ("webauthn-register", "webauthn-register-passwordless")
+
+
+@contextmanager
+def required_action_enabled(admin: Admin, alias: str) -> Iterator[None]:
+    path = f"/authentication/required-actions/{alias}"
+    committed = admin.master("GET", path).json()
+    assert committed["enabled"] is False
+    admin.master("PUT", path, json={**committed, "enabled": True}).raise_for_status()
+    try:
+        yield
+    finally:
+        admin.master("PUT", path, json=committed).raise_for_status()
+
+
+@pytest.mark.parametrize("alias", PASSKEY_ACTIONS)
+def test_f1_nobody_can_register_a_passkey(env: Env, admin: Admin, alias: str) -> None:
+    """F-1 (b): both registration actions are off, so neither a crafted authorization request
+    nor the account console can add a passkey."""
+    user = admin.create_user()
+    browser = Browser(env)
+    browser.login(user).require_code()
+    page = browser.authorize("at-web", WEB_REDIRECT, kc_action=alias)
+    assert "registerWebAuthn" not in page.text and 'name="attestationObject"' not in page.text
+    account = f"{env.base_url}/realms/{REALM}/account/"
+    console = Browser(env)
+    signed = console.login(user, client_id="account-console", redirect_uri=account)
+    tokens = console.token("account-console", signed.require_code(), account)
+    listed = console.http.get(
+        f"{account}credentials",
+        headers={"Authorization": f"Bearer {tokens['access_token']}", "Accept": "application/json"},
+    )
+    assert listed.status_code == 200
+    offered = {entry.get("createAction") for entry in listed.json()}
+    assert alias not in offered, offered
+    kinds = {c["type"] for c in admin.master("GET", f"/users/{user.id}/credentials").json()}
+    assert kinds == {"password"}
+
+
 def test_s03_webauthn_enrols_but_the_realm_does_not_use_it_for_level_two(
     rig: Rig, env: Env, admin: Admin
 ) -> None:
-    """OPEN FINDING (owner decision, relevant before F2-T10): a person whose only second factor
-    is a passkey reaches level two with the password alone, because the committed flow knows
-    only one-time codes and offers to set one up. This test records the behaviour; it must be
-    changed together with the realm flow."""
+    """Why registration is off (F-1). With the action switched on for this test only: a person
+    whose only second factor is a passkey reaches level two with the password alone, because
+    the flow knows only one-time codes and offers to set one up. This must be changed together
+    with the realm flow before passkeys are switched on again."""
     user = admin.create_user()
     assert rig.sign_in(user).status_code == 302
-    page = rig.browser.authorize("at-web", WEB_REDIRECT, kc_action="webauthn-register")
-    done = register(rig.browser, page, env.base_url)
+    with required_action_enabled(admin, "webauthn-register"):
+        page = rig.browser.authorize("at-web", WEB_REDIRECT, kc_action="webauthn-register")
+        done = register(rig.browser, page, env.base_url)
     assert done.location and "kc_action_status=success" in done.location, done.summary
     factors = rig.api.get(f"{API}/me/security").json()["second_factors"]
     assert [f["type"] for f in factors] == ["webauthn"]
@@ -353,6 +394,25 @@ def test_s03_webauthn_enrols_but_the_realm_does_not_use_it_for_level_two(
     offered = Browser(env).login(user, acr_values="loa2")
     assert offered.code is None and "totp" in offered.text.lower(), offered.summary
     assert "webauthn" not in offered.text.lower()
+
+
+def test_recovery_codes_alone_do_not_protect_level_two(rig: Rig, env: Env, admin: Admin) -> None:
+    """OPEN FINDING (not covered by F-1 (b); owner decision). An account whose only second
+    factor is a set of recovery codes, which the application itself can enrol, is also offered
+    one-time code setup after the password alone. This records the behaviour; it must be
+    changed together with the realm flow or the enrolment rule."""
+    user = admin.create_user()
+    assert rig.sign_in(user).status_code == 302
+    page = rig.browser.authorize("at-web", WEB_REDIRECT, kc_action="CONFIGURE_RECOVERY_AUTHN_CODES")
+    fields = hidden_inputs(page.text)
+    for checkbox in re.findall(r'<input[^>]*type="checkbox"[^>]*name="([^"]+)"', page.text):
+        fields[checkbox] = "on"
+    done = rig.browser.submit(page, fields, action=form_action(page.text))
+    assert done.location and "kc_action_status=success" in done.location, done.summary
+    factors = rig.api.get(f"{API}/me/security").json()["second_factors"]
+    assert [f["type"] for f in factors] == ["recovery-authn-codes"]
+    offered = Browser(env).login(user, acr_values="loa2")
+    assert offered.code is None and "totp" in offered.text.lower(), offered.summary
 
 
 # --- what Keycloak tells the application --------------------------------------------------------
@@ -391,9 +451,9 @@ def test_a_password_reset_and_the_sessions_that_existed_before_it(
     rig: Rig, env: Env, admin: Admin, smtp: SmtpSink, backchannel: BackchannelSink, sign_out: bool
 ) -> None:
     """AC-POL-05. Keycloak notifies the application at once only when the person ticks "sign out
-    from other devices". Otherwise (OPEN, needs the T11 event feed or an owner decision) the old
-    application session lives until the next sign-in; that sign-in ends it, and the surviving
-    Keycloak session cannot open a new one."""
+    from other devices". Otherwise the old application session lives until the periodic check
+    (next test; not running here) or the next sign-in sees the change; that sign-in ends it,
+    and the surviving Keycloak session cannot open a new one."""
     user = admin.create_user()
     assert rig.sign_in(user).status_code == 302
     sid = str(rig.rows("SELECT kc_session_id FROM user_sessions")[0][0])
@@ -412,7 +472,7 @@ def test_a_password_reset_and_the_sessions_that_existed_before_it(
         assert delivered.status_code == 204
         assert rig.api.get(f"{API}/auth/session").status_code == 401
         return
-    assert rig.api.get(f"{API}/auth/session").status_code == 200  # the open gap
+    assert rig.api.get(f"{API}/auth/session").status_code == 200  # until a check or a sign-in
     old_cookie = rig.api.cookies[SESSION]
     # the old single sign-on session comes back first: nothing survives it
     stale = rig.another_client()
@@ -428,6 +488,65 @@ def test_a_password_reset_and_the_sessions_that_existed_before_it(
     owner = rig.another_client()
     assert rig.sign_in(renewed, client=owner, browser=Browser(env)).status_code == 302
     assert owner.get(f"{AUTH_API}/session").status_code == 200
+
+
+def test_f0_the_periodic_check_ends_old_sessions_after_a_reset_without_a_sign_in(
+    rig: Rig, env: Env, admin: Admin, smtp: SmtpSink, backchannel: BackchannelSink
+) -> None:
+    """AC-POL-05 with F-0 (a): the person does not tick "sign out from other devices" and
+    nobody signs in; the worker notices the new password and ends the old sessions."""
+    user = admin.create_user()
+    assert rig.sign_in(user).status_code == 302
+    second = rig.another_client()
+    assert rig.sign_in(user, client=second, browser=Browser(env)).status_code == 302
+    time.sleep(3.2)  # beyond the whole-second tolerance of auth_time
+
+    def check(should_stop: Callable[[], bool]) -> None:
+        recovery.check_pending_password_changes(
+            rig.runtime,
+            create_session_factory(rig.role_env.engine("worker")),
+            rig.notices,
+            should_stop=should_stop,
+        )
+
+    worker = EmailChangeRecoveryWorker(
+        create_session_factory(rig.role_env.engine("worker")),
+        settings_admin(rig),
+        None,
+        on_cycle=lambda ok: None,
+        password_check=check,
+        interval_seconds=0.3,
+    )
+    worker.start()
+    try:
+        response = rig.another_client().post(
+            f"{API}/auth/password-recovery", json={"email": user.email}
+        )
+        assert response.status_code == 202
+        link = mail_link(smtp, user.email)
+        time.sleep(1)  # several cycles with a pending request and an unchanged password
+        assert rig.api.get(f"{AUTH_API}/session").status_code == 200
+        reset_password(env, link, sign_out_other_devices=False)
+        wait_for(
+            lambda: (
+                rig.rows("SELECT count(*) FROM user_sessions WHERE revoked_at IS NULL") == [(0,)]
+            )
+        )
+        wait_for(lambda: bool(rig.notices.notices))
+        time.sleep(1)  # further cycles add nothing
+    finally:
+        assert worker.stop()
+    assert rig.api.get(f"{AUTH_API}/session").status_code == 401
+    assert second.get(f"{AUTH_API}/session").status_code == 401
+    assert [n.kind for n in rig.notices.notices] == [NoticeKind.PASSWORD_RESET_COMPLETED]
+    assert rig.rows(
+        "SELECT actor_type FROM audit_events WHERE action = 'security.password.changed'"
+    ) == [("SYSTEM",)]
+    renewed = TestUser(id=user.id, email=user.email, password=NEW_PASSWORD)
+    owner = rig.another_client()
+    assert rig.sign_in(renewed, client=owner, browser=Browser(env)).status_code == 302
+    assert owner.get(f"{AUTH_API}/session").status_code == 200
+    assert len(rig.notices.notices) == 1
 
 
 def test_after_a_password_change_another_signed_in_browser_must_authenticate_again(

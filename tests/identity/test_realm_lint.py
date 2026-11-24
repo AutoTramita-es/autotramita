@@ -56,6 +56,11 @@ def _mutated(kind: str, change: Any) -> list[str]:
     return lint_realm(realm, kind=kind)
 
 
+def _action(realm: dict[str, Any], alias: str) -> dict[str, Any]:
+    found: dict[str, Any] = next(a for a in realm["requiredActions"] if a["alias"] == alias)
+    return found
+
+
 def _client(realm: dict[str, Any], client_id: str) -> dict[str, Any]:
     return next(c for c in realm["clients"] if c["clientId"] == client_id)
 
@@ -102,6 +107,26 @@ def _client(realm: dict[str, Any], client_id: str) -> dict[str, Any]:
         ("long token", lambda r: r.update(accessTokenLifespan=3600), "access token"),
         ("admin repr", lambda r: r.update(adminEventsDetailsEnabled=True), "representation"),
         ("short password", lambda r: r.update(passwordPolicy="length(8)"), "length"),
+        (
+            "passkey registration",
+            lambda r: _action(r, "webauthn-register").update(enabled=True),
+            "webauthn-register must be off",
+        ),
+        (
+            "passwordless registration",
+            lambda r: _action(r, "webauthn-register-passwordless").update(enabled=True),
+            "webauthn-register-passwordless must be off",
+        ),
+        (
+            "forced second factor",
+            lambda r: _action(r, "CONFIGURE_TOTP").update(defaultAction=True),
+            "CONFIGURE_TOTP must be on and never forced",
+        ),
+        (
+            "defaults left to Keycloak",
+            lambda r: r.pop("requiredActions"),
+            "required actions must all be listed",
+        ),
         (
             "svc roles",
             lambda r: r["users"][0]["clientRoles"]["realm-management"].append("manage-realm"),
