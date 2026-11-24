@@ -200,19 +200,25 @@ def test_provider_down_without_cache_fails_closed_with_503(rig: Rig) -> None:
     assert caught.value.headers.get("Retry-After") == "5"
 
 
-def test_provider_down_with_cached_key_keeps_working_but_unknown_key_fails_closed(
-    rig: Rig,
-) -> None:
+def test_provider_down_uses_only_unexpired_cached_keys(rig: Rig) -> None:
     token = rig.idp.token()
     rig.validator.validate(token)
     rig.idp.down = True
-    rig.mono.now += 700  # cache expired, refresh fails
+    rig.mono.now += 599
     assert rig.validator.validate(token)
-    rig.idp.add_rsa("rsa-2")
-    other = rig.idp.token(kid="rsa-2")
+    rig.mono.now += 1  # TTL is a hard maximum even during an outage
+    with pytest.raises(IdentityProviderUnavailable):
+        rig.validator.validate(token)
+    fetches = rig.idp.fetches
+    with pytest.raises(IdentityProviderUnavailable):  # refresh throttling never revives stale keys
+        rig.validator.validate(token)
+    assert rig.idp.fetches == fetches
     rig.mono.now += 61
     with pytest.raises(IdentityProviderUnavailable):
-        rig.validator.validate(other)
+        rig.validator.validate(token)
+    rig.idp.down = False
+    rig.mono.now += 61
+    assert rig.validator.validate(token)
 
 
 def test_only_signing_rsa_and_ec_keys_are_loaded() -> None:

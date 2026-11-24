@@ -61,7 +61,7 @@ def http_jwks_fetcher(url: str, timeout: float) -> JwksFetcher:
 class JwksCache:
     """Signing keys by ``kid``. Cached for ``ttl`` seconds; a refresh is attempted at most once
     per ``min_refresh`` seconds, also when an unknown ``kid`` appears (key rotation, D06). If the
-    provider is unreachable, keys already cached keep working; an unknown key then fails closed."""
+    provider is unreachable, only keys within the configured TTL remain usable."""
 
     def __init__(
         self,
@@ -96,9 +96,9 @@ class JwksCache:
                     self._loaded_at = now
                 except JwksFetchError:
                     logger.warning("jwks refresh failed")
-                    if kid in self._keys:  # keep serving keys we already trust
-                        return self._keys[kid]
                     raise IdentityProviderUnavailable() from None
+            if self._loaded_at is None or now - self._loaded_at >= self._ttl:
+                raise IdentityProviderUnavailable()
             if kid in self._keys:
                 return self._keys[kid]
             if not self._keys:
