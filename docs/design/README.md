@@ -20,7 +20,7 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 
 ## Planned documents
 - [BRAND-IDENTITY.md](BRAND-IDENTITY.md) — logo variants, color tokens, typography, usage rules.
-- DESIGN-SYSTEM.md — semantic tokens, spacing, elevation, themes and accessibility.
+- [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) — shared tokens, themes, typography, geometry, motion and accessibility; G0 drafted, approval pending.
 - [WEBSITE-STRUCTURE.md](WEBSITE-STRUCTURE.md) — homepage UX, public routes, Spanish copy and responsive rules.
 - [Homepage desktop wireframe](assets/wireframes/homepage-desktop.svg) — editable layout concept; raster placeholders pending.
 - [SERVICE-PAGES.md](SERVICE-PAGES.md) — dynamic service details, pricing, documents and guest request UX.
@@ -70,4 +70,4 @@ Proposed public/images/{brand,hero,services,business,process,product,patterns,so
 Design specification coverage complete for review; legal approval, raster upload, identity details and final visual approval pending. All 11 SaaS UX phases now documented for review.
 
 ## Next gate
-Follow the consolidated master design review: shared design system, components, responsive/Flutter, asset manifest and roadmap; resolve relevant domain gates before implementation. Link design index from master blueprint when updating it. No application code, dependencies, migrations or deployment in this step.
+G0 shared design system drafted for approval; next G1 components, then responsive/Flutter, asset manifest and roadmap; resolve relevant domain gates before implementation. Link design index from master blueprint when updating it. No application code, dependencies, migrations or deployment in this step.
