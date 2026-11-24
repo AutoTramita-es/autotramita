@@ -30,6 +30,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - [Light shell](assets/wireframes/saas-shell-light.svg) / [Dark shell](assets/wireframes/saas-shell-dark.svg) — editable concepts.
 - [DEALER-DASHBOARD.md](DEALER-DASHBOARD.md) — dealer dashboard metrics, tasks, credit and responsive UX.
 - [Dealer dashboard wireframe](assets/wireframes/dealer-dashboard.svg) — fictional data concept.
+- [CASE-MANAGEMENT.md](CASE-MANAGEMENT.md) — case list, board, creation, detail, deadlines and assignments.
+- Case wireframes: [table](assets/wireframes/case-table.svg), [Kanban](assets/wireframes/case-kanban.svg), [detail](assets/wireframes/case-detail.svg), [wizard](assets/wireframes/case-wizard.svg).
 - UI-COMPONENTS.md — forms, tables, navigation, status, dialogs and states.
 - IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
 - RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
