@@ -12,7 +12,7 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
-from app.auth.idp import IdpAdminError, IdpCredential, IdpUser
+from app.auth.idp import IdpAdminError, IdpConflict, IdpCredential, IdpEmailState, IdpUser
 from app.auth.settings import AuthSettings
 
 log = logging.getLogger(__name__)
@@ -76,6 +76,8 @@ class KeycloakAdmin:
             )
         except httpx.HTTPError:
             raise IdpAdminError("admin request failed") from None
+        if response.status_code == 409:
+            raise IdpConflict("identity update conflicts")
         if response.status_code not in ok:
             log.warning(
                 "identity admin call refused",
@@ -100,6 +102,29 @@ class KeycloakAdmin:
             subject=str(user["id"]),
             enabled=bool(user.get("enabled", False)),
             email_verified=bool(user.get("emailVerified", False)),
+        )
+
+    def get_email_state(self, subject: str) -> IdpEmailState:
+        response = self._call("GET", f"/users/{self._id(subject)}")
+        try:
+            user = response.json()
+            if (
+                not isinstance(user, dict)
+                or user.get("id") != subject
+                or not isinstance(user.get("email"), str)
+                or not isinstance(user.get("username"), str)
+                or not isinstance(user.get("emailVerified"), bool)
+            ):
+                raise ValueError("invalid response")
+            return IdpEmailState(subject, user["email"], user["username"], user["emailVerified"])
+        except (ValueError, KeyError, TypeError):
+            raise IdpAdminError("invalid identity state") from None
+
+    def set_verified_email(self, subject: str, email: str) -> None:
+        self._call(
+            "PUT",
+            f"/users/{self._id(subject)}",
+            json={"email": email, "username": email, "emailVerified": True},
         )
 
     def set_user_enabled(self, subject: str, *, enabled: bool) -> None:

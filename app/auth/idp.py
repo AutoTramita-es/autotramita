@@ -12,6 +12,18 @@ class IdpAdminError(Exception):
     """The identity provider's admin API failed. The message never carries a response body."""
 
 
+class IdpConflict(IdpAdminError):
+    """The provider refused a conflicting identity update."""
+
+
+@dataclass(frozen=True, slots=True, repr=False)
+class IdpEmailState:
+    subject: str
+    email: str
+    username: str
+    email_verified: bool
+
+
 @dataclass(frozen=True, slots=True)
 class IdpUser:
     subject: str
@@ -37,6 +49,10 @@ class IdentityProviderAdmin(Protocol):
     """Least-privilege operations the application needs from the identity provider."""
 
     def find_user_by_email(self, email: str) -> IdpUser | None: ...
+
+    def get_email_state(self, subject: str) -> IdpEmailState: ...
+
+    def set_verified_email(self, subject: str, email: str) -> None: ...
 
     def set_user_enabled(self, subject: str, *, enabled: bool) -> None: ...
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from app.auth.idp import IdpAdminError, IdpCredential, IdpUser
+from app.auth.idp import IdpAdminError, IdpCredential, IdpEmailState, IdpUser
 from app.auth.security.notify import Notice
 
 
@@ -29,6 +29,23 @@ class FakeAdmin:
     def find_user_by_email(self, email: str) -> IdpUser | None:
         self._check("find")
         return self.users.get(email)
+
+    def get_email_state(self, subject: str) -> IdpEmailState:
+        self._check("email_state")
+        for address, user in self.users.items():
+            if user.subject == subject:
+                return IdpEmailState(subject, address, address, user.email_verified)
+        raise IdpAdminError("missing user")
+
+    def set_verified_email(self, subject: str, email: str) -> None:
+        self._check("set_email")
+        old = next(
+            (address for address, user in self.users.items() if user.subject == subject), None
+        )
+        if old is None or (email in self.users and self.users[email].subject != subject):
+            raise IdpAdminError("identity update refused")
+        user = self.users.pop(old)
+        self.users[email] = IdpUser(subject, user.enabled, True)
 
     def set_user_enabled(self, subject: str, *, enabled: bool) -> None:
         self._check("enable")

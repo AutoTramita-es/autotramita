@@ -306,3 +306,26 @@ def test_recovery_codes_can_be_enrolled_through_keycloak_d41(rig: Rig, admin: Ad
     types = [f["type"] for f in rig.api.get(f"{API}/me/security").json()["second_factors"]]
     assert types == ["recovery-authn-codes"]
     record_result("T09.recovery_codes_full_flow", "works on 26.4.7")
+
+
+def test_d37_admin_reads_and_changes_only_the_target_subject(rig: Rig, admin: Admin) -> None:
+    """The D37 transport uses a stable subject; Keycloak enforces address conflicts."""
+    from app.auth.idp import IdpConflict
+
+    user = admin.create_user()
+    other = admin.create_user()
+    client = settings_admin(rig)
+    original = client.get_email_state(user.id)
+    assert original.subject == user.id and original.email == user.email and original.email_verified
+    with pytest.raises(IdpConflict):
+        client.set_verified_email(user.id, other.email)
+    assert client.get_email_state(user.id).email == user.email
+    replacement = f"changed-{user.email}"
+    client.set_verified_email(user.id, replacement)
+    updated = client.get_email_state(user.id)
+    assert (updated.email, updated.username, updated.email_verified) == (
+        replacement,
+        replacement,
+        True,
+    )
+    assert client.get_email_state(other.id).email == other.email

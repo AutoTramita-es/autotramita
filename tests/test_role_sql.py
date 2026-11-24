@@ -17,7 +17,13 @@ RUNTIME = ("app", "worker", "platform")
 # idempotency table is a test fixture); F2 adds the append-only audit log (T03), the global
 # users (T04) and application sessions (T05). Any other table in public would be a business
 # table and fail this test.
-NON_BUSINESS_TABLES: set[str] = {"audit_events", "users", "user_sessions"}
+NON_BUSINESS_TABLES: set[str] = {
+    "audit_events",
+    "users",
+    "user_sessions",
+    "email_change_operations",
+    "email_change_notifications",
+}
 TABLE_PRIVS = "ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']"
 
 

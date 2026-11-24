@@ -218,7 +218,9 @@ def test_active_requires_a_verified_email_and_rows_are_never_deleted(env: RoleEn
                            "VALUES ('u1', 'u1@x.zz', 'u1@x.zz', 'ACTIVE')"))  # fmt: skip
         raw_user(env, S.ACTIVE)
         for sql in ("DELETE FROM users", "TRUNCATE users, user_sessions"):
-            with pytest.raises(DBAPIError, match="never deleted"):
+            with pytest.raises(
+                DBAPIError, match=r"never deleted|cannot truncate a table referenced"
+            ):
                 c.execute(text(sql))
 
 
