@@ -1,0 +1,27 @@
+# Disposable Keycloak for the F2 integration tests. NOT the shared Keycloak and not a
+# deployment: single container, in-memory dev database, nothing persisted, loopback only.
+# Use on a developer machine or in CI; never against real data. Realm file is imported on start.
+#
+#   export AT_WEB_CLIENT_SECRET=local-throwaway AT_ADMIN_SVC_CLIENT_SECRET=local-throwaway-2
+#   docker compose -f identity/docker-compose.keycloak-test.yml up
+#   TEST_KEYCLOAK_URL=http://127.0.0.1:18081 TEST_KEYCLOAK_ADMIN_USER=local-admin \
+#     TEST_KEYCLOAK_ADMIN_PASSWORD=local-throwaway-admin uv run pytest -m keycloak tests/identity
+name: autotramita-keycloak-test
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.7@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007
+    network_mode: host # the tests receive SMTP and back-channel logout calls on 127.0.0.1
+    command:
+      - start-dev
+      - --import-realm
+      - --http-host=127.0.0.1
+      - --http-port=18081
+      - --hostname-strict=false
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: local-admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: local-throwaway-admin
+      AT_WEB_CLIENT_SECRET: ${AT_WEB_CLIENT_SECRET:?set a throwaway secret}
+      AT_ADMIN_SVC_CLIENT_SECRET: ${AT_ADMIN_SVC_CLIENT_SECRET:?set a throwaway secret}
+    volumes:
+      - ./keycloak/realm-test.json:/opt/keycloak/data/import/realm-test.json:ro
+      - ./keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro

@@ -59,13 +59,13 @@ def test_toolchain_versions_match_the_project() -> None:
     uv = re.search(r'required-version = "==([\d.]+)"', pyproject)
     assert uv
     python = (ROOT / ".python-version").read_text().strip()
-    assert re.findall(r'^\s+version: "([\d.]+)"', WORKFLOW, re.M) == [uv.group(1)] * 2
-    assert re.findall(r'python-version: "([\d.]+)"', WORKFLOW) == [python] * 2
+    assert re.findall(r'^\s+version: "([\d.]+)"', WORKFLOW, re.M) == [uv.group(1)] * 3
+    assert re.findall(r'python-version: "([\d.]+)"', WORKFLOW) == [python] * 3
     assert "uv sync --locked" in WORKFLOW and "--locked" in WORKFLOW
 
 
 def test_every_job_has_a_timeout_and_the_required_checks_exist() -> None:
-    assert len(re.findall(r"timeout-minutes:", WORKFLOW)) == 3
+    assert len(re.findall(r"timeout-minutes:", WORKFLOW)) == 4  # F2-T01 added the identity job
     for required in (
         "uv sync --locked",
         "ruff check .",

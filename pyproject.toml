@@ -53,4 +53,5 @@ files = ["app", "tests"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-ra --strict-markers --strict-config"
+addopts = "-ra --strict-markers --strict-config -m 'not keycloak'"
+markers = ["keycloak: needs the disposable Keycloak container (identity CI job)"]

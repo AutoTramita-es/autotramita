@@ -138,6 +138,77 @@ jobs:
       - name: TypeScript and Dart clients can be generated
         run: ./openapi/check-clients.sh
 
+  identity:
+    name: Keycloak 26.4.7 integration (disposable container)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      # Throwaway values that exist only inside this job; the realm file holds no secret.
+      TEST_KEYCLOAK_URL: http://127.0.0.1:18081
+      TEST_KEYCLOAK_ADMIN_USER: ci-admin
+      TEST_KEYCLOAK_ADMIN_PASSWORD: ci-throwaway-admin-password
+      AT_WEB_CLIENT_SECRET: ci-throwaway-web-client-secret
+      AT_ADMIN_SVC_CLIENT_SECRET: ci-throwaway-svc-client-secret
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          version: "0.13.9"
+          python-version: "3.12.16"
+          enable-cache: true
+      - name: Install locked dependencies
+        run: uv sync --locked
+      - name: Start Keycloak (pinned by digest, in-memory, test realm only)
+        run: >-
+          docker run -d --name keycloak --network host
+          -e KC_BOOTSTRAP_ADMIN_USERNAME="$TEST_KEYCLOAK_ADMIN_USER"
+          -e KC_BOOTSTRAP_ADMIN_PASSWORD="$TEST_KEYCLOAK_ADMIN_PASSWORD"
+          -e AT_WEB_CLIENT_SECRET -e AT_ADMIN_SVC_CLIENT_SECRET
+          -v "$PWD/identity/keycloak/realm-test.json:/opt/keycloak/data/import/realm-test.json:ro"
+          -v "$PWD/identity/keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro"
+          quay.io/keycloak/keycloak:26.4.7@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007
+          start-dev --import-realm --http-host=127.0.0.1 --http-port=18081 --hostname-strict=false
+      - name: Wait for the imported realm
+        run: |
+          for attempt in $(seq 1 90); do
+            if curl -sf "$TEST_KEYCLOAK_URL/realms/autotramita-test/.well-known/openid-configuration" > /dev/null; then
+              echo "realm ready after ${attempt} attempts"; exit 0
+            fi
+            sleep 2
+          done
+          docker logs keycloak | tail -80
+          echo "Keycloak did not become ready" >&2
+          exit 1
+      - name: Keycloak spike and OIDC tests (no skipped tests allowed)
+        run: |
+          export SPIKE_RESULTS_PATH="$RUNNER_TEMP/spike-results.json"
+          uv run --locked pytest -q -ra -m keycloak tests/identity --junitxml="$RUNNER_TEMP/junit-identity.xml" -W error
+      - name: Spike observations
+        if: always()
+        run: cat "$RUNNER_TEMP/spike-results.json" || true
+      - name: Test counts (no skipped tests allowed)
+        run: |
+          python3 - <<'PY'
+          import os, sys
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse(os.path.join(os.environ["RUNNER_TEMP"], "junit-identity.xml")).getroot()
+          suite = root if root.tag == "testsuite" else root.find("testsuite")
+          total, failed, errors, skipped = (
+              int(suite.get(k, 0)) for k in ("tests", "failures", "errors", "skipped")
+          )
+          line = f"tests={total} failed={failed} errors={errors} skipped={skipped}"
+          print(line)
+          if total < 10 or skipped or failed or errors:
+              sys.exit("Keycloak job needs all tests to run and pass.")
+          PY
+      - name: Keycloak log on failure
+        if: failure()
+        run: docker logs keycloak | tail -150
+
   secrets:
     name: Secret scan
     runs-on: ubuntu-24.04
