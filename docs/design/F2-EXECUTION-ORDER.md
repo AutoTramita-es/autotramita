@@ -284,6 +284,14 @@ Odobreni opseg: D37, potrebne migracije, periodički recovery worker (60 s, Post
 Zabranjeno: opći Celery/outbox T11, T10–T13, migracije na trajnu bazu, deployment. CP09 nije unaprijed prihvaćen.
 ```
 
+```
+F2-T09-REC odluke F-0 i F-1 | 2026-11-24
+Tekst vlasnika (doslovno): "Autoriziram F-0 opciju (a) i F-1 opciju (b)."
+F-0 (a), kako je predloženo u izvještaju CP09 §2: uska periodička provjera neriješenih markera promjene lozinke na postojećem 60 s workeru (novi mehanizam).
+F-1 (b), kako je predloženo ondje: isključiti obje akcije registracije passkeya dok WebAuthn ne bude podržan u LoA2 toku (F-1 (a) nije autoriziran).
+Okvir nepromijenjen: samo dev; bez T10–T13, mergea, deploymenta, zajedničke infrastrukture, trajnih migracija i produkcijske pošte. CP09 nije unaprijed prihvaćen.
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
