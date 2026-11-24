@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from email.message import EmailMessage
 from enum import StrEnum
 from typing import Protocol
+from uuid import UUID
 
 from app.auth.settings import AuthSettings
 
@@ -92,6 +93,24 @@ class SmtpNotifier:
         self._from, self._starttls = settings.smtp_from, settings.smtp_starttls
         self._user = settings.smtp_user
         self._password = settings.smtp_password
+
+    def send_durable(self, notice: Notice, job_id: UUID) -> None:
+        """Send one durable job; failures propagate and retries retain the same Message-ID."""
+        if any(ch in notice.to for ch in "\r\n"):
+            raise ValueError("invalid recipient")
+        subject, body = render(notice)
+        message = EmailMessage()
+        message["From"], message["To"], message["Subject"] = self._from, notice.to, subject
+        message["Message-ID"] = f"<{job_id}@autotramita.es>"
+        message.set_content(body)
+        with smtplib.SMTP(self._host, self._port, timeout=5) as smtp:
+            if self._starttls:
+                smtp.starttls()
+            if self._user and self._password:
+                smtp.login(self._user, self._password.get_secret_value())
+            refused = smtp.send_message(message)
+            if refused:
+                raise smtplib.SMTPException("recipient refused")
 
     def send(self, notice: Notice) -> None:
         if any(ch in notice.to for ch in "\r\n"):
