@@ -1,7 +1,7 @@
 # AutoTramita.es — MASTER BLUEPRINT
 
 **Status:** MASTER INDEX / WORKING BLUEPRINT (not implementation authorization)  
-**Version:** 1.3
+**Version:** 1.4
 **Date:** 2026-11-24  
 **Repository:** [AutoTramita-es/autotramita](https://github.com/AutoTramita-es/autotramita)  
 **Language:** Croatian for planning; existing technical ADRs remain authoritative.
@@ -28,7 +28,7 @@ The existing ADRs and specifications take precedence over high-level summaries h
 
 | ID | Module | Scope | Existing ADRs | Status |
 |---|---|---|---|---|
-| **AT-01** | Temelj sustava i infrastruktura | FastAPI, PostgreSQL, Redis, Celery, Docker, CI/CD, razvojna i produkcijska okruženja. | [ADR-001](adr/ADR-001-technology-stack.md), [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-004](adr/ADR-004-api-contracts.md), [ADR-008](adr/ADR-008-delivery-governance.md) | DNS, tuneli i DEV TLS djelomično postavljeni; Compose pripremljen, aplikacija nije implementirana |
+| **AT-01** | Temelj sustava i infrastruktura | FastAPI, PostgreSQL, Redis, Celery, Docker, CI/CD, razvojna i produkcijska okruženja. | [ADR-001](adr/ADR-001-technology-stack.md), [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-004](adr/ADR-004-api-contracts.md), [ADR-008](adr/ADR-008-delivery-governance.md) | [AT-01 v1.1 APPROVED](specifications/AT-01-foundation-infrastructure.md); 5 F1 odluka potvrđeno, 15 otvoreno; F1 nije autoriziran; infrastruktura djelomično pripremljena, aplikacija nije implementirana |
 | **AT-02** | Korisnički računi i sigurnost | Prijava, registracija, OIDC, e-mail verifikacija, sesije, MFA, uloge. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | Djelomično definirano |
 | **AT-03** | Autokuće, poslovnice i zaposlenici | Tenant, NIF, pravni oblici, provjera autokuća, poslovnice, pozivnice i pristupi. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-007](adr/ADR-007-pricing-credit-payments.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | [27 poslovnih odluka potvrđeno](specifications/AT-03-decisions.md); tehničko usklađivanje prije implementacije |
 | **AT-04** | Klijenti i vlasnici vozila | Fizičke i pravne osobe, anonimni zahtjevi, korisnički profili, zastupanje, povezivanje predmeta. | [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | [AT-04 specifikacija — prijedlog za pregled](specifications/AT-04-customers-vehicle-owners.md); bez implementacije |
@@ -50,6 +50,8 @@ The existing ADRs and specifications take precedence over high-level summaries h
 | **AT-20** | Pravna usklađenost i operacije | GDPR, ovlasti, audit, backup, monitoring, incidenti i ugovori. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-005](adr/ADR-005-document-storage.md), [ADR-008](adr/ADR-008-delivery-governance.md) | Djelomično definirano |
 
 ## 4. Existing source documentation
+
+- [AT-01 foundation specification v1.1](specifications/AT-01-foundation-infrastructure.md) — APPROVED 2026-11-24; 15 deferred decisions remain PROPOSED; [G6 execution order](G6-EXECUTION-ORDER.md) Accepted, F1 not authorized.
 
 - [DNS, Nextcloud and mail](DNS-NEXTCLOUD-MAIL.md) — current domain and infrastructure decisions, deployed components and remaining work.
 - [Docker Compose operations](DOCKER-COMPOSE.md) — prepared environments, shared services, configuration and prerequisites; not evidence that the application stack is deployed.
@@ -99,7 +101,7 @@ Next modules should be selected according to dependencies, not forced into a rig
 Update this file when a module is added, renamed, split, superseded or its verified status changes. Link to the approved decision/specification; do not replace them with an informal summary. Record substantive changes in Git commits. This document remains a **planning index**, not an executable specification or deployment plan.
 
 ## 9. Design roadmap follow-up — 2026-11-24
-[Design Roadmap](design/DESIGN-ROADMAP.md) proposes dependency slices, limited prepaid commercial MVP, manual Tramisur and integrated Ficha procurement, and readiness/release gates. All five originally missing design documents drafted for review; no domain approval or implementation inferred. Next G5 foundation technical review (AT-01/02/03 plus minimal AT-09/17/20 contracts), then G6 bounded execution order. No deployment authorization.
+[Design Roadmap](design/DESIGN-ROADMAP.md) proposes dependency slices, limited prepaid commercial MVP, manual Tramisur and integrated Ficha procurement, and readiness/release gates. All five originally missing design documents drafted for review; no domain approval or implementation inferred. G5 foundation technical review completed and G6 bounded execution order accepted; AT-01 v1.1 approved. Next AT-01 step is preparation of the Claude Code execution brief, not implementation. No deployment authorization.
 
 ## 10. Infrastructure status — 2026-11-24
 
@@ -110,3 +112,5 @@ Update this file when a module is added, renamed, split, superseded or its verif
 
 - **Design raster import — 2026-11-24:** 80 raster candidates imported into [design/assets](design/assets/MANIFEST.csv) via Git LFS (see [Master Design Blueprint §15](design/MASTER-DESIGN-BLUEPRINT.md)); not approved for release.
 - **G5 foundation review — 2026-11-24:** see [FOUNDATION-G5-REVIEW.md](design/FOUNDATION-G5-REVIEW.md); ADR-010 and ADR-011 later Accepted; [G6 execution order](G6-EXECUTION-ORDER.md) Accepted; F1 not yet authorized.
+
+- **AT-01.04 — 2026-11-24:** owner approved AT-01 v1.1; G6 prerequisites updated. Fifteen open decisions remain assigned to their respective gates. No F1 or deployment authorization.
