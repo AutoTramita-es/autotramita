@@ -369,3 +369,22 @@ def test_recovery_after_24_hours_moves_to_manual_review(env: RoleEnv) -> None:
             ).scalar_one()
             == "MANUAL_REVIEW"
         )
+
+
+def test_sign_in_does_not_bypass_pending_email_recovery(env: RoleEnv) -> None:
+    from app.auth.errors import IdentityProviderUnavailable
+    from app.auth.users.service import provision_or_link
+
+    user, subject = make_user(env)
+    session = open_session(env, user).session.id
+    insert_change(env, user, session, "new@example.test")
+    with (
+        pytest.raises(IdentityProviderUnavailable),
+        session_scope(factory(env), RequestContext(auth_subject=subject)) as db,
+    ):
+        provision_or_link(db, subject=subject, email="new@example.test", email_verified=True)
+    with env.admin_engine().connect() as db:
+        assert (
+            db.execute(text("SELECT email FROM users WHERE id=:id"), {"id": user}).scalar_one()
+            != "new@example.test"
+        )

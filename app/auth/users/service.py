@@ -25,12 +25,14 @@ from app.auth.errors import (
     AccountConflict,
     AccountDisabled,
     EmailNotVerified,
+    IdentityProviderUnavailable,
     InvalidStatusTransition,
 )
 from app.auth.users import repository
 from app.auth.users.models import ALLOWED_TRANSITIONS, User, UserStatus
 from app.core.db import RequestContext, apply_context
 from app.core.errors import BadRequest
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -150,6 +152,17 @@ def _sync(
     if not email_verified:
         return user
     if normalized != user.email_normalized:
+        # D37 owns reconciliation once a verified change is in progress. A sign-in must not
+        # bypass its session revocation, notifications or recovery after an uncertain IdP call.
+        pending = session.execute(
+            text("""
+                SELECT EXISTS (SELECT 1 FROM email_change_operations WHERE user_id = :u
+                    AND status IN ('PENDING', 'CONFIRMED', 'APPLYING', 'MANUAL_REVIEW'))
+            """),
+            {"u": user.id},
+        ).scalar_one()
+        if pending:
+            raise IdentityProviderUnavailable()
         try:
             with session.begin_nested():
                 repository.update_email(

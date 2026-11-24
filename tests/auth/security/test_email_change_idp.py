@@ -63,3 +63,31 @@ def test_wrong_subject_and_conflict_fail_closed() -> None:
     with pytest.raises(IdpConflict) as caught:
         admin.set_verified_email("user-1", "b@example.test")
     assert "@" not in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    ("subject", "email", "username", "verified", "expected"),
+    [
+        ("sub", "old@example.test", "old@example.test", True, "APPLY"),
+        ("sub", "new@example.test", "new@example.test", True, "FINALIZE"),
+        ("other", "new@example.test", "new@example.test", True, "MANUAL_REVIEW"),
+        ("sub", "other@example.test", "other@example.test", True, "MANUAL_REVIEW"),
+        ("sub", "new@example.test", "old@example.test", True, "MANUAL_REVIEW"),
+        ("sub", "new@example.test", "new@example.test", False, "MANUAL_REVIEW"),
+    ],
+)
+def test_recovery_decision_fails_closed_on_divergent_identity(
+    subject: str, email: str, username: str, verified: bool, expected: str
+) -> None:
+    from app.auth.idp import IdpEmailState
+    from app.auth.security.email_change import classify_identity_state
+
+    assert (
+        classify_identity_state(
+            subject="sub",
+            old_email="old@example.test",
+            new_email="new@example.test",
+            actual=IdpEmailState(subject, email, username, verified),
+        )
+        == expected
+    )

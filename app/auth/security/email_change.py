@@ -11,6 +11,7 @@ from uuid import UUID
 
 from app.auth import credentials
 from app.auth.email import normalize_email
+from app.auth.idp import IdpEmailState
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -170,3 +171,27 @@ def release_recovery(
         },
     ).one_or_none()
     return row is not None
+
+
+def classify_identity_state(
+    *, subject: str, old_email: str, new_email: str, actual: IdpEmailState
+) -> str:
+    """Choose the only safe next action after reading Keycloak by immutable subject.
+
+    The caller must re-read after an attempted update; an HTTP timeout is never interpreted as
+    success or failure. A divergent state needs manual review, not an automatic overwrite.
+    """
+    if not isinstance(actual, IdpEmailState) or actual.subject != subject:
+        return "MANUAL_REVIEW"
+    try:
+        actual_email = normalize_email(actual.email)
+        username = normalize_email(actual.username)
+        old = normalize_email(old_email)
+        new = normalize_email(new_email)
+    except ValueError:
+        return "MANUAL_REVIEW"
+    if actual.email_verified and actual_email == new and username == new:
+        return "FINALIZE"
+    if actual.email_verified and actual_email == old and username == old:
+        return "APPLY"
+    return "MANUAL_REVIEW"
