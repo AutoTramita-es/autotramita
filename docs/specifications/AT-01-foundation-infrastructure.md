@@ -1,6 +1,6 @@
 # AT-01 — Temelj sustava i infrastruktura
 
-> **Current status pointer (REC-07.4, 2026-11-24):** F1 implementation T01–T10 is accepted (CP10) and REC-07.1–07.3 are accepted; REC-07.4 (scope review) is at STOP V4; F1 final acceptance is pending REC-07.5. The status blocks below are historical records, not current authorization. Authoritative current state: [F1 reconciliation plan](../design/F1-RECONCILIATION-PLAN.md) and [REC-07.4 scope review](../design/F1-REC-07-4-SCOPE-REVIEW.md). Normative requirements are unchanged; no merge, deployment, F2 or shared-infrastructure access is authorized.
+> **Current status pointer (REC-07.4, 2026-11-24):** F1 implementation T01–T10 is accepted (CP10) and REC-07.1–07.3 are accepted; REC-07.4 and REC-07.5 are accepted; **F1 is ACCEPTED by the owner (CP16, 2026-11-24)**, with release selection, archive ref and live gates still open. The status blocks below are historical records, not current authorization. Authoritative current state: [F1 reconciliation plan](../design/F1-RECONCILIATION-PLAN.md) and [REC-07.4 scope review](../design/F1-REC-07-4-SCOPE-REVIEW.md). Normative requirements are unchanged; no merge, deployment, F2 or shared-infrastructure access is authorized.
 
 - Verzija: 1.1, 2026-11-24
 - Status: APPROVED (2026-11-24) — vlasnik odobrio v1.1; O01/O02/O03/O18/O19 ACCEPTED; 15 odluka ostaje PROPOSED

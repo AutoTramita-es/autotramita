@@ -1,5 +1,5 @@
 # REC-07.5 — F1 final validation evidence
-2026-11-24 | STOP V5 | validation only: no code change, no merge, no deployment | **owner F1 acceptance pending**
+2026-11-24 | STOP V5 | validation only: no code change, no merge, no deployment | **F1 ACCEPTED by owner 2026-11-24 (CP16)**; release selection, archive ref and live gates still open
 [Validation plan](F1-FINAL-VALIDATION-PLAN.md) | [Reconciliation plan](F1-RECONCILIATION-PLAN.md) | [Scope review](F1-REC-07-4-SCOPE-REVIEW.md)
 
 ## 1. Candidate and evidence
