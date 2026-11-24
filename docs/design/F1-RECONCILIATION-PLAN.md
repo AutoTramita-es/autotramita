@@ -1,5 +1,5 @@
 # F1 reconciliation plan — 2026-11-24
-REC-01 AND REC-02 APPROVED AND COMPLETE (documentation); REC-03 COMPLETE; REC-04–07 NOT AUTHORIZED.
+REC-01 AND REC-02 APPROVED AND COMPLETE (documentation); REC-03 COMPLETE; REC-04.1 ACCEPTED; REC-04.2 ONLY AUTHORIZED; REC-04.3–05 AND REC-05–07 NOT AUTHORIZED.
 [Audit findings](F1-RECONCILIATION-AUDIT.md) | [AT-01](../specifications/AT-01-foundation-infrastructure.md) | [Execution brief](../specifications/AT-01-F1-CLAUDE-CODE-EXECUTION-BRIEF.md) | [G6](../G6-EXECUTION-ORDER.md)
 
 | Gate | Scope | Exit evidence |
@@ -28,3 +28,6 @@ GitHub comparison verified f1/foundation is an ancestor of dev, main unchanged a
 
 ## REC-03 — COMPLETE (2026-11-24)
 Verified GitHub Actions run [45407904806](https://github.com/AutoTramita-es/autotramita/actions/runs/45407904806) on dev commit 61fa40f1d100f1d4712b6128d2eaa1c00fc6b292: completed/success; all three jobs passed (lint/types/tests, dependency audit, secret scan). All test job steps passed including locked sync, Ruff, mypy, real PG16/Redis pytest, migrations/RLS/rate limiting, OpenAPI and TS/Dart generation. 93 passed, 1 warning in 21.64s Previous run 45407872533 cancelled; superseded by successful run. REC-03 COMPLETE under owner conditional approval. This is integration/CI acceptance only, not F1 acceptance. REC-04–07 remain unauthorized. No deployment or production branch change. This documentation-only closure commit may trigger another CI run; evidence above applies to the tested baseline.
+
+## REC-04.1 / CP01 acceptance and REC-04.2 authorization (2026-11-24)
+Owner explicitly ACCEPTED CP01 / F1-T01. Implementation commit 8e1de017e0dcf2ab1537d432d600b5183a4766b8 on dev; verified CI run 45411248406, all three jobs successful, 93 passed, no skips, one Starlette TestClient/HTTPX deprecation warning, pip-audit no known vulnerabilities. Python 3.12.16, uv 0.13.9, OTel API/SDK 1.45.2; no instrumentation. Warning tracked for later review. Owner authorizes ONLY REC-04.2 / F1-T02 under existing brief and G6 scope, mandatory STOP CP02, owner acceptance required before T03. T03–T10 and deployment not authorized. Work on dev only; main unchanged. This current authorization supersedes earlier historical blocked/not-authorized statements only for T01 acceptance and T02. Full regression may use isolated GitHub Actions services after a scoped dev commit, as previously approved for T01; for T02 use the same CI-only approach only with owner approval if local integration is blocked. No shared infrastructure access or bypass of tool restrictions.
