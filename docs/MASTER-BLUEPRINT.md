@@ -1,8 +1,8 @@
 # AutoTramita.es — MASTER BLUEPRINT
 
 **Status:** MASTER INDEX / WORKING BLUEPRINT (not implementation authorization)  
-**Version:** 1.0  
-**Date:** 2026-11-23  
+**Version:** 1.1  
+**Date:** 2026-11-24  
 **Repository:** [AutoTramita-es/autotramita](https://github.com/AutoTramita-es/autotramita)  
 **Language:** Croatian for planning; existing technical ADRs remain authoritative.
 
@@ -30,7 +30,7 @@ The existing ADRs and specifications take precedence over high-level summaries h
 |---|---|---|---|---|
 | **AT-01** | Temelj sustava i infrastruktura | FastAPI, PostgreSQL, Redis, Celery, Docker, CI/CD, razvojna i produkcijska okruženja. | [ADR-001](adr/ADR-001-technology-stack.md), [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-004](adr/ADR-004-api-contracts.md), [ADR-008](adr/ADR-008-delivery-governance.md) | ADR prihvaćen; implementacija nije započela |
 | **AT-02** | Korisnički računi i sigurnost | Prijava, registracija, OIDC, e-mail verifikacija, sesije, MFA, uloge. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | Djelomično definirano |
-| **AT-03** | Autokuće, poslovnice i zaposlenici | Tenant, NIF, pravni oblici, provjera autokuća, poslovnice, pozivnice i pristupi. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-007](adr/ADR-007-pricing-credit-payments.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | Detaljno razrađeno; bez implementacije |
+| **AT-03** | Autokuće, poslovnice i zaposlenici | Tenant, NIF, pravni oblici, provjera autokuća, poslovnice, pozivnice i pristupi. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-007](adr/ADR-007-pricing-credit-payments.md), [ADR-009](adr/ADR-009-tenant-organization-membership-verification.md) | [27 poslovnih odluka potvrđeno](specifications/AT-03-decisions.md); tehničko usklađivanje prije implementacije |
 | **AT-04** | Klijenti i vlasnici vozila | Fizičke i pravne osobe, anonimni zahtjevi, korisnički profili, zastupanje, povezivanje predmeta. | [ADR-003](adr/ADR-003-identity-customer-membership.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | ADR prihvaćen; detalji otvoreni |
 | **AT-05** | Registar vozila | VIN, registracije, tehničke karakteristike, vlasništvo i povijest. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | Za razradu |
 | **AT-06** | Katalog administrativnih usluga | Registracija, prijenos vlasništva, uvoz, tehnička dokumentacija i drugi postupci. | [ADR-006](adr/ADR-006-service-catalog-case-workflows.md) | Osnovna arhitektura prihvaćena |
@@ -50,6 +50,8 @@ The existing ADRs and specifications take precedence over high-level summaries h
 | **AT-20** | Pravna usklađenost i operacije | GDPR, ovlasti, audit, backup, monitoring, incidenti i ugovori. | [ADR-002](adr/ADR-002-multi-tenancy-rls.md), [ADR-005](adr/ADR-005-document-storage.md), [ADR-008](adr/ADR-008-delivery-governance.md) | Djelomično definirano |
 
 ## 4. Existing source documentation
+
+- [AT-03 decision register](specifications/AT-03-decisions.md) — all 27 confirmed business decisions; implementation not authorized.
 
 - [ADR register](adr/ADR-REGISTER.md) — ADR-001 through ADR-009; all listed Accepted as of 2026-11-23.
 - [TenantBranch specification](specifications/tenant-branch.md) — approved business rules, no implementation.
@@ -73,7 +75,7 @@ The current repository includes placeholder folders `app/api`, `app/auth`, `app/
 
 ## 6. Recommended sequence
 
-**First design focus: AT-03 — Autokuće, poslovnice i zaposlenici.** Existing ADR-009 and tenant specifications provide the most developed foundation. Finish remaining open questions, then prepare a bounded approved implementation task separately if desired.
+**First design focus: AT-03 — Autokuće, poslovnice i zaposlenici.** Existing ADR-009 and tenant specifications provide the most developed foundation. The 27 business decisions are now recorded; reconcile detailed specifications before separately authorizing implementation.
 
 Next modules should be selected according to dependencies, not forced into a rigid all-at-once roadmap. A useful early chain is AT-02/AT-03 → AT-04/AT-05 → AT-06/AT-07/AT-08/AT-09; financial and regulated integrations require their own approvals before production use.
 
