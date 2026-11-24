@@ -132,3 +132,6 @@ Inventory covers indexed files, not proof of no other unindexed files. SVG sourc
 
 ## 13. G3 follow-up — 2026-11-24
 [IMAGE-ASSETS.md](IMAGE-ASSETS.md) created: 85 indexed SVGs, 18 source rechecks, 28 raster briefs, 40 acceptance criteria. Raster originals, exports, rights and rendered QA pending; R18/R19 remain open. 23 design specifications excluding master/index; DESIGN-ROADMAP.md remains missing from original five. Next G4; G3 asset release gate remains open. No ADR changes or implementation.
+
+## 14. G4 follow-up — 2026-11-24
+[DESIGN-ROADMAP.md](DESIGN-ROADMAP.md) created: all20 modules,9 ADRs,23 input designs,14 phase labels F0–F13 (F3 split), R01–R20,40 acceptance criteria. All five originally missing design documents now drafted; 24 design specifications excluding master/index. Approval, asset recovery, domain blockers and runtime evidence remain open. Next G5 bounded foundation technical review, then G6 execution order. No ADR or implementation changes.
