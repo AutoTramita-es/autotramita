@@ -2618,7 +2618,14 @@
             }
           },
           "401": {
-            "description": "Step-up required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Step-up required (RFC 9470)",
             "headers": {
               "X-Request-ID": {
                 "$ref": "#/components/headers/RequestId"

@@ -33,7 +33,7 @@ from app.auth.settings import AuthLimitSettings
 from app.auth.web import cookies
 from app.auth.web.stepup import require_step_up, require_token_step_up
 from app.core.db import RequestContext
-from app.core.errors import NotFound
+from app.core.errors import NotFound, Problem
 from app.core.pagination import CursorPage
 from app.core.ratelimit import IPNetwork, Policy, by_ip, rate_limit
 from fastapi import APIRouter, Depends, Request, Response
@@ -202,7 +202,7 @@ def build_sessions_router(
         "/sessions/revoke-all",
         summary="Sign out all my sessions, this one included (needs a fresh authentication)",
         response_model=Revoked,
-        responses={401: {"description": "Step-up required"}},
+        responses={401: {"model": Problem, "description": "Step-up required (RFC 9470)"}},
     )
     def revoke_all(request: Request, response: Response) -> Revoked:
         rt = runtime_of(request)
