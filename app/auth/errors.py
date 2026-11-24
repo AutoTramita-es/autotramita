@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from app.core.errors import ServiceUnavailable, Unauthenticated
+from app.core.errors import Conflict, Forbidden, ServiceUnavailable, Unauthenticated
 
 
 class TokenRejection(StrEnum):
@@ -43,3 +43,28 @@ class IdentityProviderUnavailable(ServiceUnavailable):
 
     def __init__(self) -> None:
         super().__init__(headers={"Retry-After": "5"})
+
+
+class AccountConflict(Conflict):
+    """409 ACCOUNT_CONFLICT: the e-mail already belongs to another identity (D09). Generic on
+    purpose: it must not reveal whose account it is."""
+
+    code = "ACCOUNT_CONFLICT"
+    title = "Account conflict"
+
+
+class InvalidStatusTransition(Conflict):
+    code = "INVALID_STATUS_TRANSITION"
+    title = "Status change not allowed"
+
+
+class AccountDisabled(Forbidden):
+    """403 ACCOUNT_DISABLED, only ever returned after the person authenticated successfully."""
+
+    code = "ACCOUNT_DISABLED"
+    title = "Account disabled"
+
+
+class EmailNotVerified(Forbidden):
+    code = "EMAIL_NOT_VERIFIED"
+    title = "E-mail address not verified"
