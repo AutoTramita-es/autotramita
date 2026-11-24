@@ -277,6 +277,13 @@ Zabranjeno: T10–T13, cijeli outbox/Celery prije T11, merge u main, deployment,
 STOP: blocker koji zahtijeva novu arhitekturnu odluku; nakon REC zaustaviti se na CP09 bez samostalnog prihvaćanja.
 ```
 
+```
+D37 dodatna odluka i autorizacija | 2026-11-24
+Tekst vlasnika (doslovno): "Odobravam implementaciju minimalnog trajnog mehanizma za D37 unutar F2-T09-REC."
+Odobreni opseg: D37, potrebne migracije, periodički recovery worker (60 s, PostgreSQL lease, backoff i jitter), dva trajna posla obavijesti, testovi i dokumentacija F2-T09-REC. Token vrijedi 30 minuta; najviše 10 pokušaja ili 24 sata do MANUAL_REVIEW. Detalji i sigurnosni uvjeti: odluka vlasnika u razgovoru od 2026-11-24.
+Zabranjeno: opći Celery/outbox T11, T10–T13, migracije na trajnu bazu, deployment. CP09 nije unaprijed prihvaćen.
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
