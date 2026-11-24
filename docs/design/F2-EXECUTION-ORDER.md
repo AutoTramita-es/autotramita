@@ -1,6 +1,6 @@
 # F2 — Redoslijed izvršavanja (execution order)
 
-Datum: 2026-11-24 | Status: **CP00–CP07 prihvaćeni 2026-11-24; autoriziran samo F2-T08** | T09–T13 nisu autorizirani
+Datum: 2026-11-24 | Status: **CP00–CP08 prihvaćeni 2026-11-24; autoriziran samo F2-T09** | T10–T13 nisu autorizirani
 [Plan](F2-IMPLEMENTATION-PLAN.md) · [Specifikacija AT-02](../specifications/AT-02-identity-security.md) · [Registar odluka](F2-DECISION-REGISTER.md) · [Kriteriji](F2-ACCEPTANCE-CRITERIA.md) · [G6 (F1 obrazac)](../G6-EXECUTION-ORDER.md)
 
 **Sažetak:** 13 paketa (F2-T01…T13), 14 checkpointova (F2-CP00 planiranje, CP01…CP12 po paketu, CP13 završno prihvaćanje).
@@ -257,6 +257,15 @@ Tekst autorizacije vlasnika (doslovno): "Prihvaćam CP07; autoriziram samo F2-T0
 Prihvaćene odluke: D01–D41 (D37 izmijenjen), D43; D42 OPEN | Preduvjet: F2-CP07 prihvaćen 2026-11-24 (kod 850316b, CI run 45469542994)
 Prihvaćena odstupanja uz CP07: bez Idempotency-Key (jedinstveni indeks), GET /sessions bez cursora (max 10), mobilne sesije bez UA veze, migracija 0006
 Zabranjeno izričito: T09–T13, merge u main, deployment, zajednička infrastruktura, implementacija AT-03 (članstva, tenanti, poslovnice)
+```
+
+```
+Paket: F2-T09 | Datum: 2026-11-24
+Tekst autorizacije vlasnika (doslovno): "Prihvaćam CP08; autoriziram samo F2-T09"
+Prihvaćene odluke: D01–D41 (D37 izmijenjen), D43; D42 OPEN | Preduvjet: F2-CP08 prihvaćen 2026-11-24 (kod dd7f492, CI run 45472663659)
+Prihvaćena odstupanja uz CP08: bez Idempotency-Key na promjeni workspacea, dvostruka autentikacija guard + request_scope, USER guard ne zove port, branch_ids = samo odabrana poslovnica
+Ograničenje (D37): tok promjene e-maila se NE implementira dok vlasnik ne potvrdi predloženi detalj prijavnog imena (prijedlog ide u izvještaj CP09)
+Zabranjeno izričito: T10–T13, merge u main, deployment, zajednička infrastruktura, izmjena Compose/Traefik
 ```
 
 ## 4. Checkpointovi
