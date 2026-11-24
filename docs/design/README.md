@@ -54,7 +54,7 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - SaaS design phases 09.1–09.11: specification coverage complete for review; domain approvals and implementation remain pending.
 - [UI-COMPONENTS.md](UI-COMPONENTS.md) — 82 shared component contracts and 40 acceptance criteria; G1 drafted, approval pending.
 - IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
-- RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
+- [RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md) — responsive web and Flutter, capture, security, lifecycle and 80 acceptance criteria; G2 drafted.
 - DESIGN-ROADMAP.md — review gates and acceptance criteria.
 
 - [ICON-SYSTEM.md](ICON-SYSTEM.md) — 50 core Lucide icons and accessibility rules.
@@ -70,4 +70,4 @@ Proposed public/images/{brand,hero,services,business,process,product,patterns,so
 Design specification coverage complete for review; legal approval, raster upload, identity details and final visual approval pending. All 11 SaaS UX phases now documented for review.
 
 ## Next gate
-G0 and G1 drafted for approval; next G2 responsive/Flutter, then asset manifest and roadmap; resolve relevant domain gates before implementation. Link design index from master blueprint when updating it. No application code, dependencies, migrations or deployment in this step.
+G0–G2 drafted for approval; next G3 asset manifest and visual review, then roadmap; resolve relevant domain gates before implementation. Link design index from master blueprint when updating it. No application code, dependencies, migrations or deployment in this step.
