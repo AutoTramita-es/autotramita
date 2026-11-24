@@ -1,6 +1,6 @@
 # ADR-011: Document content on the shared Nextcloud
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-24
 - **Project:** AutoTramita.es
 - **Depends on:** ADR-002, ADR-005, ADR-008
@@ -25,4 +25,4 @@ Reuses existing infrastructure; requires an application-side storage adapter, ca
 Retention and deletion rules, encryption and key management, file-size limits (proposed 50 MB documents, 20 MB photos, 250 MB video), malware pipeline operation, backup and restore, Nextcloud service-account provisioning.
 
 ## Scope
-Architecture decision proposal only; nothing is provisioned or implemented.
+Accepted architecture decision only; nothing is provisioned or implemented.
