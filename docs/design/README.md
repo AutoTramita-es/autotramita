@@ -55,7 +55,7 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - [UI-COMPONENTS.md](UI-COMPONENTS.md) — 82 shared component contracts and 40 acceptance criteria; G1 drafted, approval pending.
 - [IMAGE-ASSETS.md](IMAGE-ASSETS.md) — 85 indexed SVGs, 28 raster briefs, export/rights/QA requirements; G3 documentation drafted, raster recovery pending.
 - [RESPONSIVE-DESIGN.md](RESPONSIVE-DESIGN.md) — responsive web and Flutter, capture, security, lifecycle and 80 acceptance criteria; G2 drafted.
-- DESIGN-ROADMAP.md — review gates and acceptance criteria.
+- [DESIGN-ROADMAP.md](DESIGN-ROADMAP.md) — 20 modules, 9 ADRs, 23 input designs, MVP, dependency packets and 40 acceptance criteria.
 
 - [ICON-SYSTEM.md](ICON-SYSTEM.md) — 50 core Lucide icons and accessibility rules.
 - [BACKGROUND-PATTERNS.md](BACKGROUND-PATTERNS.md) — three editable SVG patterns.
@@ -70,4 +70,4 @@ Proposed public/images/{brand,hero,services,business,process,product,patterns,so
 Design specification coverage complete for review; legal approval, raster upload, identity details and final visual approval pending. All 11 SaaS UX phases now documented for review.
 
 ## Next gate
-G0–G3 documentation drafted for approval; G3 asset recovery and rendered review pending; next G4 roadmap; resolve relevant domain gates before implementation. Link design index from master blueprint when updating it. No application code, dependencies, migrations or deployment in this step.
+G0–G4 documentation drafted for approval; G3 asset recovery and rendered review pending; next G5 technical foundation review; resolve relevant domain gates before implementation. Link design index from master blueprint when updating it. No application code, dependencies, migrations or deployment in this step.
