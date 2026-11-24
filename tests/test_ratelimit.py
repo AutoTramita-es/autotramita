@@ -721,3 +721,98 @@ def test_limited_route_without_redis_is_503_never_unlimited(
         assert r.headers["retry-after"] == "5"
         assert r.headers["content-type"].startswith("application/problem+json")
     assert app_for(None, monkeypatch).get("/t/public").status_code == 503  # not configured
+
+
+# --- R15: deterministic boundary tests (seeded counters, Redis server time, no sleeping) -----
+
+WINDOW = 60
+
+
+def model_wait(limit: int, previous: float, current: float, elapsed: float) -> float:
+    """Reference model, independent of the Lua code: the smallest wait (seconds) after which
+    ``estimate + 1 <= limit`` holds, following the documented estimate and bucket roll-over."""
+
+    def allowed(wait: float) -> bool:
+        at = elapsed + wait
+        if at < WINDOW:
+            estimate = previous * (1 - at / WINDOW) + current
+        elif at < 2 * WINDOW:
+            estimate = current * (1 - (at - WINDOW) / WINDOW)
+        else:
+            estimate = 0.0
+        return estimate + 1 <= limit + 1e-9
+
+    low, high = 0.0, 2.0 * WINDOW
+    assert allowed(high)
+    for _ in range(60):
+        mid = (low + high) / 2
+        low, high = (low, mid) if allowed(mid) else (mid, high)
+    return high
+
+
+def seed(
+    client: redis.Redis, limiter: RateLimiter, policy: Policy, identity: str, prev: int, cur: int
+) -> float:
+    """Write the two bucket counters for the current Redis-time bucket; returns that time."""
+    now = server_time(client)
+    bucket = int(now // policy.window_seconds)
+    base = limiter._key(policy, identity)
+    client.set(f"{base}:{bucket - 1}", prev, ex=3 * policy.window_seconds)
+    client.set(f"{base}:{bucket}", cur, ex=3 * policy.window_seconds)
+    return now
+
+
+@pytest.mark.parametrize(
+    ("limit", "prev", "cur"),
+    [(1, 0, 1), (1, 1, 1), (4, 4, 4), (5, 0, 5), (5, 5, 5), (10, 3, 10), (60, 60, 60)],
+)
+def test_retry_after_matches_reference_model_and_stays_within_two_windows(
+    limiter: RateLimiter, client_redis: redis.Redis, limit: int, prev: int, cur: int
+) -> None:
+    ensure_room(client_redis, WINDOW, 6)  # the whole test stays inside one bucket
+    policy = Policy("r15-retry", limit, window_seconds=WINDOW)
+    start = seed(client_redis, limiter, policy, "u", prev, cur)
+    denied = limiter.check(policy, "u")
+    end = server_time(client_redis)
+    assert int(start // WINDOW) == int(end // WINDOW)
+    assert not denied.allowed  # the current bucket alone is already at the limit
+    # Time only moves forward, so the true wait lies between the model at the two readings.
+    longest = model_wait(limit, prev, cur, start % WINDOW)
+    shortest = model_wait(limit, prev, cur, end % WINDOW)
+    assert (
+        max(1, math.ceil(shortest - 0.002))
+        <= denied.retry_after_seconds
+        <= math.ceil(longest + 0.002)
+    )
+    assert 1 <= denied.retry_after_seconds <= 2 * WINDOW  # the documented upper bound (120 s)
+
+
+def test_allowance_follows_the_sliding_estimate_without_waiting(
+    limiter: RateLimiter, client_redis: redis.Redis
+) -> None:
+    ensure_room(client_redis, WINDOW, 6)
+    limit = 100
+    policy = Policy("r15-slide", limit, window_seconds=WINDOW)
+    start = seed(client_redis, limiter, policy, "u", prev=limit, cur=0)
+    allowed = 0
+    while limiter.check(policy, "u").allowed:
+        allowed += 1
+        assert allowed <= limit
+    end = server_time(client_redis)
+    assert int(start // WINDOW) == int(end // WINDOW)
+    # estimate = limit * (1 - e/W): exactly floor(limit - estimate) requests fit at elapsed e.
+    low = math.floor(limit * ((start % WINDOW) / WINDOW) - 1e-6)
+    high = math.floor(limit * ((end % WINDOW) / WINDOW) + 1e-6)
+    assert low <= allowed <= high
+
+
+def test_current_bucket_counts_exactly_at_the_boundary_of_the_limit(
+    limiter: RateLimiter, client_redis: redis.Redis
+) -> None:
+    ensure_room(client_redis, WINDOW, 6)
+    policy = Policy("r15-edge", 5, window_seconds=WINDOW)
+    seed(client_redis, limiter, policy, "edge", prev=0, cur=4)  # exactly one slot is left
+    results = [limiter.check(policy, "edge") for _ in range(3)]
+    assert [r.allowed for r in results] == [True, False, False]
+    assert results[0].remaining == 0
+    assert 1 <= results[1].retry_after_seconds <= 2 * WINDOW

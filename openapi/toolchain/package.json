@@ -1,0 +1,11 @@
+{
+  "name": "autotramita-openapi-client-check",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Locked toolchain for the OpenAPI client generation check (no generated code is committed).",
+  "engines": { "node": ">=20.19.0 <21" },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.6.3"
+  }
+}

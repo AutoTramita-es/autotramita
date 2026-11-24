@@ -86,3 +86,22 @@ def test_every_job_has_a_timeout_and_the_required_checks_exist() -> None:
         assert required in WORKFLOW, required
     assert 'CI: "true"' in WORKFLOW  # a missing integration variable fails instead of skipping
     assert "ci-throwaway-password" in WORKFLOW  # disposable credentials only
+
+
+def test_node_is_pinned_to_an_exact_version_and_clients_use_the_lockfile() -> None:
+    assert re.search(r'node-version: "\d+\.\d+\.\d+"', WORKFLOW)  # R10: exact patch, not "20"
+    engines = (ROOT / "openapi" / "toolchain" / "package.json").read_text()
+    assert '"node": ">=20.19.0 <21"' in engines
+
+
+def test_spec_validation_runs_independently_and_warnings_are_errors() -> None:
+    assert "openapi-spec-validator openapi/openapi.json" in WORKFLOW  # R09
+    assert "-W error" in WORKFLOW  # R15: no new warning can pass unnoticed
+    allowed = re.findall(r"-W 'ignore:([^']+)'", WORKFLOW)
+    assert set(allowed) == {"Using `httpx` with `starlette.testclient` is deprecated:Warning"}
+
+
+def test_rate_limit_timing_regression_is_repeated_in_ci() -> None:
+    assert re.search(
+        r"for run in 1 2 3; do\s+uv run --locked pytest -q tests/test_ratelimit.py", WORKFLOW
+    )

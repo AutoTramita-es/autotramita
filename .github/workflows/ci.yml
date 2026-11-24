@@ -55,7 +55,7 @@ jobs:
           enable-cache: true
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: "20"
+          node-version: "20.20.0"
       - name: Install locked dependencies
         run: uv sync --locked
       - name: Wait for PostgreSQL and Redis
@@ -93,7 +93,12 @@ jobs:
       - name: mypy
         run: uv run --locked mypy
       - name: Tests (real PostgreSQL 16 and Redis 7; RLS, API conventions, rate limiting)
-        run: uv run --locked pytest -q -ra --junitxml="$RUNNER_TEMP/junit.xml"
+        # Warnings are errors, except the one known upstream deprecation (R15): Starlette's
+        # TestClient asks for httpx2. Any other warning fails the run instead of being hidden.
+        run: >-
+          uv run --locked pytest -q -ra --junitxml="$RUNNER_TEMP/junit.xml"
+          -W error
+          -W 'ignore:Using `httpx` with `starlette.testclient` is deprecated:Warning'
       - name: Test counts (no skipped tests allowed)
         run: |
           python3 - <<'PY'
@@ -120,6 +125,14 @@ jobs:
           tests/test_role_sql.py::test_role_sql_is_idempotent
           tests/test_roles_and_migrations.py::test_baseline_up_and_down
           tests/test_role_sql.py::test_migrations_refuse_non_owner_roles
+      - name: Rate-limit timing regression (3 repeated runs, no assertion loosened)
+        run: |
+          for run in 1 2 3; do
+            uv run --locked pytest -q tests/test_ratelimit.py -W error \
+              -W 'ignore:Using `httpx` with `starlette.testclient` is deprecated:Warning'
+          done
+      - name: OpenAPI specification is valid OpenAPI 3.1 (independent of the generators)
+        run: uv run --locked openapi-spec-validator openapi/openapi.json
       - name: OpenAPI contract is current
         run: uv run --locked python -m app.api.export_openapi --check
       - name: TypeScript and Dart clients can be generated

@@ -15,7 +15,7 @@ uv python install 3.12.16
 
 The locked direct runtime versions include Alembic 1.20.1, FastAPI 0.165.0, OpenTelemetry API/SDK 1.45.2, psycopg 3.3.9, Pydantic 2.14.4, pydantic-settings 2.16.3, redis client 8.2.0 and SQLAlchemy 2.1.9. The dev group locks HTTPX 0.28.1, mypy 2.4.1, pytest 9.2.0 and Ruff 0.17.6.
 
-Also install Docker (disposable test containers, client generation) and Node 20 (TypeScript client check).
+Also install Docker (disposable test containers, client generation) and Node 20.19 or newer 20.x (TypeScript client check).
 
 ```sh
 uv sync --locked          # create .venv from uv.lock
@@ -46,7 +46,7 @@ Without these variables integration tests are skipped locally; when `CI` is set 
 - **Secret scan**: gitleaks v8.21.2 (image pinned by digest) over the full history. Exceptions are exact fingerprints in `.gitleaksignore`.
 - **Dependency audit**: `pip-audit==2.10.1` against the locked requirements.
 
-Everything is pinned: actions by commit SHA, runner `ubuntu-24.04`, uv 0.13.9, Python 3.12.16, Node 20, container images by digest. `tests/test_ci_workflow.py` guards these properties. Dependabot is not configured (a separate owner decision). When a pin needs updating, look up the new SHA or digest, change it in the workflow (and `openapi/check-clients.sh` for the Dart generator), and let CI prove it.
+Everything is pinned: actions by commit SHA, runner `ubuntu-24.04`, uv 0.13.9, Python 3.12.16, Node 20.20.0 (exact patch), container images by digest. `tests/test_ci_workflow.py` guards these properties. Dependabot is not configured (a separate owner decision). When a pin needs updating, look up the new SHA or digest, change it in the workflow (and `openapi/check-clients.sh` for the Dart generator), and let CI prove it.
 
 ## Layout
 - `app/core/` configuration, database layer and request context, role model, errors, pagination, idempotency, versioning, rate limiting, logging.
@@ -90,3 +90,8 @@ F1 is not deployed and nothing here touches a shared environment, so rollback is
 - TypeScript and Dart generation is checked, not committed; npm transitive packages of the generator are not locked.
 - Migration 0002 was removed from the chain on the basis of repository documentation that no persistent database was ever migrated, not of a check of the live databases.
 - Keycloak, documents and deployment belong to later phases.
+
+## REC-07.3 notes (contract and CI, R09/R10/R15)
+- **OpenAPI validation (R09):** CI runs `openapi-spec-validator openapi/openapi.json` (locked dev dependency) as its own step, independent of the client generators; `tests/test_openapi_contract.py` proves the validator rejects broken specs (missing info/version, bad OpenAPI version, path without slash, dangling `$ref`, bad schema type, bad status key) and that the CLI exit code is non-zero for an invalid file. The Dart generator now validates the spec too (`--skip-validate-spec` removed).
+- **Client toolchain (R10):** `openapi/toolchain/package.json` and `package-lock.json` (owner-approved manifest paths) pin `openapi-typescript` 7.13.0 and `typescript` 5.6.3 with integrity hashes for every transitive package; `check-clients.sh` runs `npm ci --ignore-scripts` in a temporary directory and verifies the installed versions. Node is pinned to the exact patch 20.20.0 in CI. The Dart check generates code only; `dart analyze` of the generated client is deferred by owner decision (AC13 requires generation, not compilation; it would add pub.dev downloads and another pinned image). Nothing generated is committed.
+- **Warnings and timing (R15):** the single warning in the suite is Starlette's `StarletteDeprecationWarning` ("Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead"), raised when `fastapi.testclient` is imported. Classification: upstream test-tooling deprecation, no product code path, no runtime impact; the fix is a dependency change (httpx2), outside REC-07.3 paths, so it is tracked for a later approved change. CI now runs pytest with `-W error` and an exact ignore for that one message, so any other warning fails the run. Deterministic Redis tests (`test_ratelimit.py`, R15 section) seed the two bucket counters using Redis server time and compare `Retry-After` with an independent reference model, including the 120 s (two-window) bound, without sleeping; the older real-time tests remain unchanged and CI repeats the whole rate-limit file three more times.

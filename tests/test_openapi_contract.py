@@ -295,8 +295,16 @@ def test_429_carries_the_documented_headers(contract_redis: redis.Redis) -> None
 
 def test_client_generation_commands_are_pinned_and_write_only_temporary_output() -> None:
     script = (ROOT / "openapi" / "check-clients.sh").read_text()
-    assert re.search(r'^TS_GENERATOR="openapi-typescript@\d+\.\d+\.\d+"$', script, re.M)
-    assert re.search(r'^TS_COMPILER="typescript@\d+\.\d+\.\d+"$', script, re.M)
+    manifest = json.loads((ROOT / "openapi" / "toolchain" / "package.json").read_text())
+    pinned = manifest["devDependencies"]
+    for name, constant in (
+        ("openapi-typescript", "TS_GENERATOR_VERSION"),
+        ("typescript", "TS_COMPILER_VERSION"),
+    ):
+        assert re.fullmatch(r"\d+\.\d+\.\d+", pinned[name]), f"{name} must be an exact version"
+        assert re.search(rf'^{constant}="{re.escape(pinned[name])}" ', script, re.M), constant
+    assert set(pinned) == {"openapi-typescript", "typescript"}
+    assert "npm ci --ignore-scripts" in script and "npx" not in script  # lockfile, no ad-hoc npx
     assert re.search(
         r'^DART_GENERATOR_IMAGE="[\w/.-]+:v\d+\.\d+\.\d+@sha256:[0-9a-f]{64}"$', script, re.M
     )
@@ -320,4 +328,73 @@ def test_no_generated_clients_are_committed() -> None:
     assert sorted(p for p in tracked if p.startswith("openapi/")) == [
         "openapi/check-clients.sh",
         "openapi/openapi.json",
+        "openapi/toolchain/package-lock.json",
+        "openapi/toolchain/package.json",
     ]
+
+
+def test_npm_lockfile_pins_every_package_with_integrity_hashes() -> None:
+    lock = json.loads((ROOT / "openapi" / "toolchain" / "package-lock.json").read_text())
+    assert lock["lockfileVersion"] >= 3
+    packages = {name: meta for name, meta in lock["packages"].items() if name}
+    assert packages
+    for name, meta in packages.items():
+        assert re.fullmatch(r"\d+\.\d+\.\d+", meta["version"]), name
+        assert meta["resolved"].startswith("https://registry.npmjs.org/"), name
+        assert meta["integrity"].startswith("sha512-"), name
+    root = lock["packages"][""]["devDependencies"]
+    assert packages["node_modules/openapi-typescript"]["version"] == root["openapi-typescript"]
+    assert packages["node_modules/typescript"]["version"] == root["typescript"]
+
+
+def test_dart_generation_does_not_skip_spec_validation_without_a_documented_reason() -> None:
+    script = (ROOT / "openapi" / "check-clients.sh").read_text()
+    assert "--skip-validate-spec" not in script
+
+
+# --- R09: the validator really rejects broken contracts (CI also runs the CLI on the file) ---
+
+
+def broken(spec: dict[str, Any], mutate: Any) -> dict[str, Any]:
+    clone: dict[str, Any] = json.loads(json.dumps(spec))
+    mutate(clone)
+    return clone
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda s: s.pop("info"),
+        lambda s: s["info"].pop("version"),
+        lambda s: s.update(openapi="9.9.9"),
+        lambda s: s["paths"].update({"no-slash": {}}),
+        lambda s: s["paths"]["/api/v1/health"]["get"]["responses"]["200"]["content"][
+            "application/json"
+        ]["schema"].update({"$ref": "#/components/schemas/DoesNotExist"}),
+        lambda s: s["components"]["schemas"]["Problem"].update({"type": "not-a-type"}),
+        lambda s: s["paths"]["/api/v1/health"]["get"]["responses"].update({"2xx0": {}}),
+    ],
+    ids=[
+        "no-info",
+        "no-version",
+        "bad-openapi-version",
+        "path-without-slash",
+        "dangling-ref",
+        "bad-schema-type",
+        "bad-status-key",
+    ],
+)
+def test_validator_rejects_broken_specs(spec: dict[str, Any], mutate: Any) -> None:
+    with pytest.raises(Exception):  # noqa: B017  any validator error class is a failure
+        validate(broken(spec, mutate))
+
+
+def test_validator_cli_exit_codes_match_the_ci_step(spec: dict[str, Any], tmp_path: Path) -> None:
+    good, bad = tmp_path / "good.json", tmp_path / "bad.json"
+    good.write_text(json.dumps(spec))
+    bad.write_text(json.dumps(broken(spec, lambda s: s.pop("info"))))
+    cmd = [sys.executable, "-m", "openapi_spec_validator"]
+    assert subprocess.run([*cmd, str(good)], capture_output=True).returncode == 0  # noqa: S603
+    assert subprocess.run([*cmd, str(bad)], capture_output=True).returncode != 0  # noqa: S603
+    committed = subprocess.run([*cmd, str(TARGET)], capture_output=True)  # noqa: S603
+    assert committed.returncode == 0
