@@ -1,6 +1,6 @@
 # F2-CP09 reconciliation — preliminary, implementation pending
 
-Date: 2026-11-24. F2-T09-REC is authorized; CP09 is **not accepted**. This is an interim report, not acceptance evidence. Initial code SHA: `1e49b43a72b986f80614b7809715dcc4eb4a076a`. Authorization commit: `f7809c326006b9dcf1343a8e82ff53d3e575808c`. No implementation commit or final CI exists yet.
+Date: 2026-11-24. F2-T09-REC is authorized; CP09 is **not accepted**. This is an interim report, not acceptance evidence. Initial code SHA: `1e49b43a72b986f80614b7809715dcc4eb4a076a`. Authorization commit: `f7809c326006b9dcf1343a8e82ff53d3e575808c`. No complete D37 implementation commit or final REC CI exists yet.
 
 ## D37 recovery decision and proposed minimum
 
@@ -40,6 +40,8 @@ Changes to date include the authorization and preliminary report plus a tested S
 
 ## Resume checkpoint — D37 work in progress
 
-On `dev`, migration `0007_email_change.py` defines operation and notification tables, bounded token lifetime and size, unique active user/address reservations, state checks, per-role RLS and lease metadata. Focused disposable-PostgreSQL tests cover reservation races, owner isolation, constraints and the migration cycle. `KeycloakAdmin` now has subject-addressed read/update operations; unit tests exist and an isolated Keycloak integration test has been added but is not yet verified in CI. Internal database primitives create and reissue tokens, confirm once, and claim or release a fenced recovery lease; they are not connected to an API or worker. Existing HTTP handlers do not expose this partial work.
+On `dev`, migration `0007_email_change.py` defines operation and notification tables, bounded token lifetime and size, unique active user/address reservations, state checks, per-role RLS and lease metadata. Focused disposable-PostgreSQL tests cover reservation races, owner isolation, constraints and the migration cycle. `KeycloakAdmin` now has subject-addressed read/update operations; unit tests exist and an isolated Keycloak integration test has been added but is not yet verified in CI. Internal database primitives create and reissue tokens, confirm once, and claim or release a fenced recovery lease; tests cover concurrent claims, lease expiry and manual review after 10 attempts or 24 hours; they are not connected to an API or worker. Existing HTTP handlers do not expose this partial work.
 
 Next: verify the Keycloak integration on the disposable instance, connect and secure D37 request and confirmation API and verification delivery, implement the subject-verified state machine, transactionally consistent completion and two jobs, periodic recovery worker with fencing, exponential backoff and jitter, notification delivery and cleanup. Review 0007 privileges and retention under the real worker code before considering the foundation complete. Then complete T03 reconciliation, acceptance matrix and full CI. No live migration or deployment.
+
+Migration numbering: 0007 is now reserved for the approved D37 foundation; the planned T11 outbox migration must be renumbered when T11 is separately authorized. This does not authorize T11.

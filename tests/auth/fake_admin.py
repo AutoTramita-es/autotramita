@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from app.auth.idp import IdpAdminError, IdpCredential, IdpEmailState, IdpUser
+from app.auth.idp import IdpAdminError, IdpConflict, IdpCredential, IdpEmailState, IdpUser
 from app.auth.security.notify import Notice
 
 
@@ -42,8 +42,10 @@ class FakeAdmin:
         old = next(
             (address for address, user in self.users.items() if user.subject == subject), None
         )
-        if old is None or (email in self.users and self.users[email].subject != subject):
+        if old is None:
             raise IdpAdminError("identity update refused")
+        if email in self.users and self.users[email].subject != subject:
+            raise IdpConflict("identity update conflicts")
         user = self.users.pop(old)
         self.users[email] = IdpUser(subject, user.enabled, True)
 

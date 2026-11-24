@@ -319,3 +319,53 @@ def test_recovery_retries_end_in_manual_review(env: RoleEnv) -> None:
             {"id": operation},
         ).one()
     assert (status, attempts) == ("MANUAL_REVIEW", 10)
+
+
+def test_competing_recovery_workers_only_one_claims(env: RoleEnv) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from app.auth.security.email_change import claim_recovery, confirm_request, create_request
+
+    user, _ = make_user(env)
+    session = open_session(env, user).session.id
+    with session_scope(factory(env), RequestContext(user_id=user)) as db:
+        operation, token = create_request(
+            db, user_id=user, session_id=session, new_email="new@example.test"
+        )
+        assert confirm_request(db, user_id=user, operation_id=operation, token=token)
+    barrier = Barrier(2)
+
+    def attempt() -> tuple[uuid.UUID, uuid.UUID] | None:
+        barrier.wait(timeout=10)
+        with session_scope(factory(env, "worker"), RequestContext()) as db:
+            return claim_recovery(db)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = (pool.submit(attempt), pool.submit(attempt))
+        claims = [future.result(timeout=15) for future in futures]
+    assert sum(claim is not None for claim in claims) == 1
+
+
+def test_recovery_after_24_hours_moves_to_manual_review(env: RoleEnv) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from app.auth.security.email_change import claim_recovery, confirm_request, create_request
+
+    now = datetime.now(UTC)
+    user, _ = make_user(env)
+    session = open_session(env, user).session.id
+    with session_scope(factory(env), RequestContext(user_id=user)) as db:
+        operation, token = create_request(
+            db, user_id=user, session_id=session, new_email="new@example.test", now=now
+        )
+        assert confirm_request(db, user_id=user, operation_id=operation, token=token, now=now)
+    with session_scope(factory(env, "worker"), RequestContext()) as db:
+        assert claim_recovery(db, now=now + timedelta(hours=24)) is None
+    with env.admin_engine().connect() as db:
+        assert (
+            db.execute(
+                text("SELECT status FROM email_change_operations WHERE id=:id"), {"id": operation}
+            ).scalar_one()
+            == "MANUAL_REVIEW"
+        )
