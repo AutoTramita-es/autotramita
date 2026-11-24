@@ -18,12 +18,13 @@ from dataclasses import dataclass, field
 from typing import Literal
 from uuid import UUID
 
-from app.core.config import DatabaseCredentials, Settings
+from app.core.config import DatabaseCredentials, DatabaseRole, Settings
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import URL
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
-Role = Literal["runtime", "owner", "platform"]
+# "runtime" is the pre-T03 name of the app role and stays accepted for compatibility.
+Role = Literal["runtime", "owner", "app", "worker", "platform"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +34,18 @@ class RequestContext:
     user_id: UUID | None = None
     tenant_id: UUID | None = None
     branch_ids: Sequence[UUID] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        """Only real UUIDs are accepted; strings and other raw input are rejected."""
+        for name in ("user_id", "tenant_id"):
+            value = getattr(self, name)
+            if value is not None and not isinstance(value, UUID):
+                raise TypeError(f"{name} must be a UUID or None")
+        if isinstance(self.branch_ids, str | bytes) or not all(
+            isinstance(b, UUID) for b in self.branch_ids
+        ):
+            raise TypeError("branch_ids must be a sequence of UUIDs")
+        object.__setattr__(self, "branch_ids", tuple(self.branch_ids))
 
 
 def build_url(settings: Settings, credentials: DatabaseCredentials) -> URL:
@@ -47,21 +60,27 @@ def build_url(settings: Settings, credentials: DatabaseCredentials) -> URL:
     )
 
 
-def create_db_engine(settings: Settings, role: Role = "runtime") -> Engine:
-    """Create an engine for the runtime, owner (migrations) or platform role."""
-    credentials = {
-        "runtime": lambda: settings.runtime_role,
-        "owner": lambda: settings.owner_role,
-        "platform": lambda: settings.platform_role,
-    }[role]()
+def create_db_engine(settings: Settings, role: Role = "app") -> Engine:
+    """Create an engine for exactly one role; nothing is opened until first use.
+
+    A role that is not configured raises ``RuntimeError``; there is no fallback to another
+    role, so the API runtime (``app``) can never end up on the owner or platform role.
+    """
+    kind: DatabaseRole = "app" if role == "runtime" else role
     return create_engine(
-        build_url(settings, credentials),
+        build_url(settings, settings.role_credentials(kind)),
         pool_pre_ping=True,
         pool_size=5,
         max_overflow=5,
         pool_recycle=1800,
         hide_parameters=True,
     )
+
+
+def create_session_factory(engine: Engine) -> sessionmaker[Session]:
+    """Session factory bound to one role's engine. Sessions never autobegin outside scopes
+    created by ``session_scope``; ``expire_on_commit`` is off so results stay readable."""
+    return sessionmaker(engine, expire_on_commit=False)
 
 
 def apply_context(session: Session, context: RequestContext) -> None:
@@ -78,8 +97,12 @@ def apply_context(session: Session, context: RequestContext) -> None:
 
 
 @contextmanager
-def session_scope(engine: Engine, context: RequestContext | None = None) -> Iterator[Session]:
-    """One transaction with the request context applied first; commits on success."""
-    with Session(engine) as session, session.begin():
+def session_scope(
+    engine: Engine | sessionmaker[Session], context: RequestContext | None = None
+) -> Iterator[Session]:
+    """One transaction with the request context applied first; commits on success, rolls
+    back on any exception, and always closes the session (returning the connection)."""
+    factory = engine if isinstance(engine, sessionmaker) else create_session_factory(engine)
+    with factory() as session, session.begin():
         apply_context(session, context or RequestContext())
         yield session
