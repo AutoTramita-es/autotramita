@@ -1,5 +1,5 @@
 # F1 reconciliation plan — 2026-11-24
-REC-01 AND REC-02 APPROVED AND COMPLETE (documentation); REC-03 COMPLETE; REC-04.1 ACCEPTED; REC-04.2 ONLY AUTHORIZED; REC-04.3–05 AND REC-05–07 NOT AUTHORIZED.
+REC-01–03 COMPLETE; REC-04–06 IMPLEMENTATION COMPLETE; CP10 ACCEPTED; REC-07.0 PLANNING AUTHORIZED; F1 FINAL ACCEPTANCE PENDING.
 [Audit findings](F1-RECONCILIATION-AUDIT.md) | [AT-01](../specifications/AT-01-foundation-infrastructure.md) | [Execution brief](../specifications/AT-01-F1-CLAUDE-CODE-EXECUTION-BRIEF.md) | [G6](../G6-EXECUTION-ORDER.md)
 
 | Gate | Scope | Exit evidence |
@@ -31,3 +31,6 @@ Verified GitHub Actions run [45407904806](https://github.com/AutoTramita-es/auto
 
 ## REC-04.1 / CP01 acceptance and REC-04.2 authorization (2026-11-24)
 Owner explicitly ACCEPTED CP01 / F1-T01. Implementation commit 8e1de017e0dcf2ab1537d432d600b5183a4766b8 on dev; verified CI run 45411248406, all three jobs successful, 93 passed, no skips, one Starlette TestClient/HTTPX deprecation warning, pip-audit no known vulnerabilities. Python 3.12.16, uv 0.13.9, OTel API/SDK 1.45.2; no instrumentation. Warning tracked for later review. Owner authorizes ONLY REC-04.2 / F1-T02 under existing brief and G6 scope, mandatory STOP CP02, owner acceptance required before T03. T03–T10 and deployment not authorized. Work on dev only; main unchanged. This current authorization supersedes earlier historical blocked/not-authorized statements only for T01 acceptance and T02. Full regression may use isolated GitHub Actions services after a scoped dev commit, as previously approved for T01; for T02 use the same CI-only approach only with owner approval if local integration is blocked. No shared infrastructure access or bypass of tool restrictions.
+
+## REC-07.0 — CP10 accepted; final validation planning (2026-11-24)
+Owner explicitly accepted CP10 and completion of T01–T10 collectively and authorized REC-07 planning only. Baseline dev 5d46c234f75ada37fe7121543fb3236d9d3cdb1f; verified CI run 45430813346 all three jobs passed, 336 passed, zero skipped, one warning, mypy 46 files, no leaks or known vulnerabilities. See [final validation plan](F1-FINAL-VALIDATION-PLAN.md) for R01–R15, AC01–15 and proposed packets. CP01 previously accepted; individual historical CP02–09 approvals not inferred. REC-04–06 implementation complete; F1 final acceptance pending. This entry supersedes stale execution status/authorization text only; normative requirements unchanged. STOP V0: no corrections, merge, F2, deployment or shared infrastructure access authorized. Main remains 1e8be38a40aac63f5c58d6dbb01daaa051326e6b.
