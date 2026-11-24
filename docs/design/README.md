@@ -20,6 +20,8 @@ ADR-002/003/009: server-authorized tenant and branch context; distinct customer 
 - DESIGN-SYSTEM.md — semantic tokens, spacing, elevation, themes and accessibility.
 - [WEBSITE-STRUCTURE.md](WEBSITE-STRUCTURE.md) — homepage UX, public routes, Spanish copy and responsive rules.
 - [Homepage desktop wireframe](assets/wireframes/homepage-desktop.svg) — editable layout concept; raster placeholders pending.
+- [SERVICE-PAGES.md](SERVICE-PAGES.md) — dynamic service details, pricing, documents and guest request UX.
+- [Service detail wireframe](assets/wireframes/service-detail-desktop.svg) — editable layout concept.
 - UI-COMPONENTS.md — forms, tables, navigation, status, dialogs and states.
 - IMAGE-ASSETS.md — asset inventory, briefs, formats, naming and rights.
 - RESPONSIVE-DESIGN.md — mobile/tablet/desktop and Flutter parity.
