@@ -43,9 +43,5 @@ def create_app(
 
 def create_app_from_settings(settings: Settings) -> FastAPI:
     limits = RateLimitSettings()
-    limiter = RateLimiter(
-        create_redis(settings.redis_url),
-        namespace=settings.environment,
-        fail_open=limits.fail_open,
-    )
+    limiter = RateLimiter(create_redis(settings.redis_url), namespace=settings.environment)
     return create_app(limiter, create_db_engine(settings), limits)

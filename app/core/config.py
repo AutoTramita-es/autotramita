@@ -268,10 +268,6 @@ class RateLimitSettings(BaseSettings):
     password_recovery_per_hour: int = Field(
         default=3, ge=1, validation_alias="RATE_LIMIT_PASSWORD_RECOVERY_PER_HOUR"
     )
-    # If Redis is unreachable: allow requests (availability, logged) or answer 503.
-    # Known deviation: O02 (Redis fail closed) conflicts with this fail-open default;
-    # behaviour is deliberately unchanged here and is resolved in F1-T07.
-    fail_open: bool = Field(default=True, validation_alias="RATE_LIMIT_FAIL_OPEN")
     # Number of trusted reverse proxies in front of the API; 0 ignores X-Forwarded-For.
     trusted_proxy_hops: int = Field(default=0, ge=0, le=5, validation_alias="TRUSTED_PROXY_HOPS")
 

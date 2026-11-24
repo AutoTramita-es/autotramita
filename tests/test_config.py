@@ -389,10 +389,10 @@ def test_rate_limit_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.password_recovery_per_hour == 3
 
 
-def test_rate_limit_fail_open_current_default_is_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Known deviation from O02 (fail closed); the behaviour change belongs to F1-T07."""
-    monkeypatch.delenv("RATE_LIMIT_FAIL_OPEN", raising=False)
-    assert RateLimitSettings().fail_open is True
+def test_rate_limit_fail_open_switch_was_removed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O02 deviation resolved in F1-T07: no fail-open setting, the old variable is ignored."""
+    monkeypatch.setenv("RATE_LIMIT_FAIL_OPEN", "true")
+    assert not hasattr(RateLimitSettings(), "fail_open")
 
 
 def test_cursor_signing_key_is_optional_secret_and_must_be_strong(
