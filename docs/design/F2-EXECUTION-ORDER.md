@@ -279,8 +279,8 @@ Zabranjeno izričito: T10–T13, merge u main, deployment, zajednička infrastru
 | F2-CP05 | T05 | **PRIHVAĆEN 2026-11-24**: `user_sessions`, opoziv, konkurentnost | CI run 45463940778 (kod 3f64cfd) |
 | F2-CP06 | T06 | **PRIHVAĆEN 2026-11-24**: web tok, kolačić, CSRF | CI run 45467370715 (kod e2736d6) |
 | F2-CP07 | T07 | **PRIHVAĆEN 2026-11-24**: mobilni tok | CI run 45469542994 (kod 850316b) |
-| F2-CP08 | T08 | Pipeline konteksta, port AT-03, cross-tenant | CI run, cross-tenant izvještaj |
-| F2-CP09 | T09 | Sigurnosne politike i anti-enumeracija | CI run, rezultati spika naspram implementacije |
+| F2-CP08 | T08 | **PRIHVAĆEN 2026-11-24**: pipeline konteksta, port AT-03, cross-tenant | CI run 45472663659 (kod dd7f492) |
+| F2-CP09 | T09 | Sigurnosne politike i anti-enumeracija | CI run, [bilješke T09](F2-T09-SECURITY-POLICY-NOTES.md) (rezultati spika naspram implementacije, prijedlog za D37) |
 | F2-CP10 | T10 | `platform_grants`, eskalacije, bootstrap | CI run, pregled migracije 0006 |
 | F2-CP11 | T11 | Admin korisnika, outbox, KC događaji | CI run, pregled migracije 0007 |
 | F2-CP12 | T12 | Zamrznuti API ugovor | CI run, OpenAPI diff, klijenti |

@@ -131,7 +131,8 @@ def test_recovery_through_keycloak_sends_one_mail_to_real_accounts_only_and_ends
     assert still.status_code == 200  # requesting recovery ends nothing
     set_new_password(env, mail_link(smtp, user.email))
     fresh = rig.another_client()  # a new device signs in with the new password
-    assert rig.sign_in(user, client=fresh, browser=Browser(env)).status_code == 302
+    renewed = TestUser(id=user.id, email=user.email, password=NEW_PASSWORD)
+    assert rig.sign_in(renewed, client=fresh, browser=Browser(env)).status_code == 302
     stale = rig.api.get(f"{AUTH_API}/session", headers={"Cookie": f"{SESSION}={old_cookie}"})
     assert stale.status_code == 401
     assert NoticeKind.PASSWORD_RESET_COMPLETED in [n.kind for n in rig.notices.notices]
