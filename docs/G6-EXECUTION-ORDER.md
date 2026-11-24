@@ -3,6 +3,11 @@
 Datum: 2026-11-24
 Status: ACCEPTED (2026-11-24) — pravila izvršavanja i detaljni redoslijed F1 potvrdio vlasnik projekta. **Nije autorizacija implementacije:** F1 zahtijeva zasebnu izričitu autorizaciju.
 
+## Aktualni status — REC-02
+REC-02 (2026-11-24): F1 implementation exists on f1/foundation at e22ae3b0c9b2bed861f29ed4d7dfd1c366a8ff7a, preserved identically in archive/f1-foundation-2026-11-24; not merged or accepted. Historical broad authorization quoted in c467005 ("Autoriziram F1 prema G6-EXECUTION-ORDER.md") is UNVERIFIED: repository record exists, original owner instruction not established; neither confirmed nor invalidated retroactively. Later explicit T01-only authorization b6462e4 / 0973e24 remains recorded; CP01 blocked in preflight, no new implementation authorized or executable during reconciliation. T02–T10 not currently authorized. Audit reports 93 passing CI tests at e22ae3b (run 45398235580), not independently rerun; T01–05/T08–10 PARTIAL, T06–07 NON-COMPLIANT; AC05–08 compliant per reported CI, 7 partial, 3 non-compliant, AC09 not verified. F1 acceptance pending REC-07. REC-01 and REC-02 documentation approved; REC-03–07 require separate approval. No merge, deployment, F2 or infrastructure changes authorized. O01/O02/O03/O18/O19 remain ACCEPTED; 15 deferred decisions remain PROPOSED. Maintenance page and routing reported on implementation branch; live state and separate authorization unverified. Preserve both histories; no duplicate implementation or automatic cherry-pick.
+
+[Audit](design/F1-RECONCILIATION-AUDIT.md) | [Plan](design/F1-RECONCILIATION-PLAN.md)
+
 ## Preduvjeti F1
 - [x] ADR-010 Accepted — Keycloak.
 - [x] ADR-011 Accepted — Nextcloud, bez MinIO/S3.
@@ -29,7 +34,7 @@ Status: ACCEPTED (2026-11-24) — pravila izvršavanja i detaljni redoslijed F1 
 ## Izvor i sljedivost plana
 Izvorni plan faza pronađen je u design dokumentima, ne u zasebnom G6 dokumentu: [DESIGN-ROADMAP.md](design/DESIGN-ROADMAP.md) §5 (pakete F0–F13), §9 (definition of ready) i §10 (izvršavanje i definition of done) te [FOUNDATION-G5-REVIEW.md](design/FOUNDATION-G5-REVIEW.md) §3 (granice F1/F2/F3a). Detalji F1 u nastavku izvedeni su iz njih i iz odobrenih odluka H1–H6 te potvrđenih tehničkih odluka G6; F2 i F3a ostaju samo okvir. Ovaj zapis ne autorizira kod, migracije, infrastrukturu ni deployment.
 
-## F1 — AT-01 temelj sustava (ACCEPTED redoslijed; čeka izričitu autorizaciju)
+## F1 — AT-01 temelj sustava (ACCEPTED redoslijed; RECONCILIATION / NOT ACCEPTED)
 **Cilj:** reproducibilan lokalni i CI kostur s dokazano ispravnom RLS izolacijom i zajedničkim API konvencijama, bez ijedne poslovne tablice.
 
 **Dopuštene putanje:** `pyproject.toml`, `uv.lock`, `.python-version`, `alembic.ini`, `app/core/**`, `app/api/**`, `migrations/**`, `tests/**`, `scripts/db/**` (SQL rola), `openapi/**` (izvezeni ugovor), `.github/workflows/**`, `docs/DEVELOPMENT.md`.
@@ -51,7 +56,7 @@ Izvorni plan faza pronađen je u design dokumentima, ne u zasebnom G6 dokumentu:
 **Uvjeti zaustavljanja:** neriješena odluka, pao sigurnosni test, neočekivana promjena sheme, potreba za vanjskim vjerodajnicama ili stvarnim PostgreSQL-om izvan CI/lokalnog spremnika, proširenje opsega. Tada stati i prijaviti.
 **Izvješće nakon F1:** promijenjene datoteke, migracije, naredbe i rezultati testova, neuspjesi, rizici, rollback, sljedeća ovisnost. Prihvaćanje vlasnika odvojeno je od merge-a i deploymenta.
 
-**Potvrđene tehničke odluke (2026-11-24):** sinkroni sloj baze (SQLAlchemy 2.x, psycopg 3); Python 3.12 i `uv`; GitHub Actions kao CI; Redis za rate limiting s gore navedenim početnim limitima. Vlasnik projekta izričito je potvrdio G6 i sve četiri tehničke odluke, uključujući osam početnih limita. F1 nije autoriziran; potrebna je zasebna izričita autorizacija.
+**Potvrđene tehničke odluke (2026-11-24):** sinkroni sloj baze (SQLAlchemy 2.x, psycopg 3); Python 3.12 i `uv`; GitHub Actions kao CI; Redis za rate limiting s gore navedenim početnim limitima. Vlasnik projekta izričito je potvrdio G6 i sve četiri tehničke odluke, uključujući osam početnih limita. Povijesno stanje pri potvrdi G6: F1 tada nije bio autoriziran ovim zapisom; aktualni status vidi REC-02.
 
 ## Dodatak — potvrda AT-01.03 (2026-11-24)
 O01, O02, O03, O18 i O19 izričito potvrđeni. Normativni detalji u AT-01 §10a; testirati prema tamošnjim kriterijima uz postojeće G6 sigurnosne testove. Ostalih 15 odluka ostaje PROPOSED. Nema proširenja dopuštenih putanja ni autorizacije F1/deploymenta. Ako detalj fingerprinta, cursora ili testne perzistencije zahtijeva novu arhitektonsku odluku, stati prema G6.
