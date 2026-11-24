@@ -9,7 +9,8 @@ Status: ACCEPTED (2026-11-24) — pravila izvršavanja i detaljni redoslijed F1 
 - [x] G6 — detaljni redoslijed izvršavanja potvrđen (Accepted).
 - [x] AT-01 O01/O02/O03/O18/O19 — potvrđeno 2026-11-24.
 - [x] Završno odobrenje cjelovite AT-01 specifikacije v1.1 — APPROVED (2026-11-24).
-- [ ] Izričita autorizacija F1 od vlasnika projekta.
+- [x] Izričita djelomična autorizacija F1 od vlasnika projekta — samo F1-T01 (2026-11-24).
+- [ ] F1-T02–T10: zasebne autorizacije nakon checkpointova.
 
 ## Pravila
 1. Svaka faza zahtijeva zasebnu autorizaciju.
@@ -57,6 +58,9 @@ O01, O02, O03, O18 i O19 izričito potvrđeni. Normativni detalji u AT-01 §10a;
 
 ## Odobrenje AT-01.04 (2026-11-24)
 Vlasnik je odobrio AT-01 v1.1. Preostalih 15 odluka ostaje PROPOSED za pripadajuće faze. Slijedi priprema naloga za Claude Code; F1 i deployment nisu autorizirani. Opseg i redoslijed G6 ostaju nepromijenjeni.
+
+## AT-01.06 — djelomična autorizacija (2026-11-24)
+Vlasnik odobrio [Execution Brief v1.0](specifications/AT-01-F1-CLAUDE-CODE-EXECUTION-BRIEF.md) i autorizirao isključivo F1-T01 (G6.1). Obvezan STOP na CP01; T02–T10, merge i deployment nisu autorizirani. Ovaj kasniji zapis nadjačava ranije povijesne navode da nijedan F1 zadatak nije autoriziran. Nema proširenja opsega.
 
 ## F2 i F3a — samo okvir
 F2 (AT-02 identitet/sesije, minimalni AT-17): `users`, `user_sessions`, validacija konteksta, opoziv, `audit_events`, `platform_grants`; prije toga zaseban detalj i autorizacija. F3a (AT-03 tenant/poslovnica/članstvo/pozivnica/verifikacija, minimalni AT-09): tek nakon AT-03 usklađivanja (pravilo 4). Detaljni redoslijed za F2 i F3a piše se kad F1 završi.
