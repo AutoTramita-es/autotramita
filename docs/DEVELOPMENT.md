@@ -3,12 +3,25 @@
 Scope: the F1 foundation only (toolchain, configuration, database layer, migrations, RLS tests, API conventions, rate limiting, health, OpenAPI, CI). There are no business tables, no authentication and no deployment. See [G6-EXECUTION-ORDER.md](G6-EXECUTION-ORDER.md) for what F1 may and may not touch.
 
 ## Prerequisites
-Python 3.12 and [uv](https://docs.astral.sh/uv/) (`uv python install 3.12`), Docker (disposable test containers, client generation), Node 20 (TypeScript client check).
+Use Python **3.12.16** and uv **0.13.9**. Install uv from the versioned official release, then install the pinned Python:
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://releases.astral.sh/github/uv/releases/download/0.13.9/uv-installer.sh | sh
+uv --version                 # must report 0.13.9
+uv python install 3.12.16
+```
+
+`pyproject.toml` enforces uv 0.13.9; commands fail rather than silently using another version. `.python-version` selects Python 3.12.16. Runtime requirements and the `dev` dependency group remain separate; `uv.lock` fixes the resolved versions. OpenTelemetry API and SDK are runtime dependencies for the future integration point; no instrumentation or exporter is configured in F1.
+
+The locked direct runtime versions include Alembic 1.20.1, FastAPI 0.165.0, OpenTelemetry API/SDK 1.45.2, psycopg 3.3.9, Pydantic 2.14.4, pydantic-settings 2.16.3, redis client 8.2.0 and SQLAlchemy 2.1.9. The dev group locks HTTPX 0.28.1, mypy 2.4.1, pytest 9.2.0 and Ruff 0.17.6.
+
+Also install Docker (disposable test containers, client generation) and Node 20 (TypeScript client check).
 
 ```sh
 uv sync --locked          # create .venv from uv.lock
-uv run ruff check . && uv run ruff format --check .
-uv run mypy
+uv run --locked ruff check .
+uv run --locked ruff format --check .
+uv run --locked mypy
 ```
 
 ## Test infrastructure (disposable, never the shared server)
