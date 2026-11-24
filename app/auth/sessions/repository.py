@@ -77,12 +77,15 @@ def count_live(db: Session, user_id: UUID, now: datetime) -> int:
 
 
 def revoke_oldest_live(db: Session, user_id: UUID, now: datetime, how_many: int) -> int:
+    # The victims are chosen once (MATERIALIZED): a subselect inside the UPDATE could be
+    # evaluated again while rows change and take more rows than asked for.
     rows = db.execute(
         text(
-            "UPDATE user_sessions SET revoked_at = :n, revoked_reason = 'SESSION_LIMIT', "
-            "version = version + 1 WHERE id IN (SELECT id FROM user_sessions WHERE user_id = :u "
+            "WITH victims AS MATERIALIZED (SELECT id FROM user_sessions WHERE user_id = :u "
             "AND revoked_at IS NULL AND idle_expires_at > :n AND absolute_expires_at > :n "
-            "ORDER BY created_at, id LIMIT :k FOR UPDATE) RETURNING id"
+            "ORDER BY created_at, id LIMIT :k FOR UPDATE) "
+            "UPDATE user_sessions SET revoked_at = :n, revoked_reason = 'SESSION_LIMIT', "
+            "version = version + 1 WHERE id IN (SELECT id FROM victims) RETURNING id"
         ),
         {"u": user_id, "n": now, "k": how_many},
     ).all()
@@ -118,10 +121,11 @@ def revoke_where(
     Rows are locked in id order so concurrent revocations cannot deadlock."""
     rows = db.execute(
         text(
-            "UPDATE user_sessions SET revoked_at = :now, revoked_reason = :reason, "  # noqa: S608
-            "revoked_by = :by, version = version + 1 WHERE id IN ("
-            f"SELECT id FROM user_sessions WHERE revoked_at IS NULL AND {condition} "
-            "ORDER BY id FOR UPDATE) RETURNING id"
+            "WITH victims AS MATERIALIZED (SELECT id FROM user_sessions "  # noqa: S608
+            f"WHERE revoked_at IS NULL AND {condition} ORDER BY id FOR UPDATE) "
+            "UPDATE user_sessions SET revoked_at = :now, revoked_reason = :reason, "
+            "revoked_by = :by, version = version + 1 "
+            "WHERE id IN (SELECT id FROM victims) RETURNING id"
         ),
         {**params, "now": now, "reason": reason, "by": revoked_by},
     ).all()

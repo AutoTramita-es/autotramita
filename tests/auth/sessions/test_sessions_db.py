@@ -82,6 +82,7 @@ def open_session(
 
 def resolve(env: RoleEnv, secret: str, **kw: Any) -> Resolved:
     lock = kw.pop("lock", False)
+    kw.setdefault("now", T0)
     with session_scope(factory(env), RequestContext()) as db:
         return sessions.resolve_web(db, secret, lock=lock, **kw)
 
@@ -112,8 +113,9 @@ def test_database_holds_only_the_hash_and_logs_never_show_the_secret(
     created = open_session(env, user)
     secret = created.credential
     assert secret is not None and credentials.is_well_formed(secret)
-    assert rows(env, "SELECT credential_hash FROM user_sessions")[0][0].tobytes() == (
-        credentials.hash_credential(secret))  # fmt: skip
+    assert bytes(rows(env, "SELECT credential_hash FROM user_sessions")[0][0]) == (
+        credentials.hash_credential(secret)
+    )
     dump = rows(env, "SELECT row_to_json(s)::text FROM user_sessions s")[0][0]
     assert secret not in dump and secret not in caplog.text
     resolved = resolve(env, secret)
@@ -195,7 +197,9 @@ def test_touch_skips_a_row_that_is_locked_instead_of_waiting(env: RoleEnv) -> No
 
     def hold() -> None:
         with session_scope(factory(env), RequestContext()) as db:
-            sessions.resolve_web(db, created.credential, lock=True)  # FOR SHARE, uncommitted
+            sessions.resolve_web(
+                db, created.credential, lock=True, now=T0
+            )  # FOR SHARE, uncommitted
             locked.set()
             assert release.wait(10)
 
@@ -332,7 +336,7 @@ def test_revocation_waits_for_a_request_in_flight_and_every_later_request_sees_i
 
     def request_in_flight() -> None:
         with session_scope(factory(env), RequestContext()) as db:
-            sessions.resolve_web(db, created.credential, lock=True)
+            sessions.resolve_web(db, created.credential, lock=True, now=T0)
             started.set()
             assert release.wait(10)
             committed_at.append(time.monotonic())  # the request finishes before the revoke
@@ -563,6 +567,7 @@ def verified(subject: str, sid: str) -> VerifiedToken:
 
 
 def resolve_mobile(env: RoleEnv, token: VerifiedToken, **kw: Any) -> Resolved:
+    kw.setdefault("now", T0)
     with session_scope(factory(env), RequestContext()) as db:
         return sessions.resolve_mobile(db, token, **kw)
 

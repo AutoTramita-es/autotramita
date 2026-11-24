@@ -217,7 +217,7 @@ def test_active_requires_a_verified_email_and_rows_are_never_deleted(env: RoleEn
             c.execute(text("INSERT INTO users (auth_subject, email, email_normalized, status) "
                            "VALUES ('u1', 'u1@x.zz', 'u1@x.zz', 'ACTIVE')"))  # fmt: skip
         raw_user(env, S.ACTIVE)
-        for sql in ("DELETE FROM users", "TRUNCATE users"):
+        for sql in ("DELETE FROM users", "TRUNCATE users, user_sessions"):
             with pytest.raises(DBAPIError, match="never deleted"):
                 c.execute(text(sql))
 
