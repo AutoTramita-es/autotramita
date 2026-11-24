@@ -1,4 +1,7 @@
 # AutoTramita.es — DESIGN ROADMAP
+
+> **Current execution status (2026-11-24):** ADR-010 and ADR-011 are Accepted; Keycloak and shared Nextcloud supersede earlier OIDC/S3 references. [G6](../G6-EXECUTION-ORDER.md) is Accepted, including F1 tooling and rate limits. AT-03 reconciliation is required before F3a, not F1. F1 remains explicitly unauthorized. Historical review findings and proposed roadmap text below are retained for traceability; current accepted ADRs and G6 govern F1.
+
 2026-11-24 | AT-18 G4 | v1.0 proposed for owner review
 Authority: [Master Blueprint](../MASTER-BLUEPRINT.md), [Master Design Blueprint](MASTER-DESIGN-BLUEPRINT.md), [ADR register](../adr/ADR-REGISTER.md), [design index](README.md). All nine ADRs and confirmed decisions prevail. No implementation, migration, dependency installation or deployment authorized. Roadmap is dependency-based, not a calendar or budget estimate.
 
