@@ -241,8 +241,36 @@ def build_auth_router(
         elif flow.get("purpose") == "SECURITY_ACTION":
             response = _finish_security_action(request, rt, flow, identity, kc_action_status)
         else:
-            response = _finish_login(request, rt, flow, identity, client_type)
+            finished = _finish_login(request, rt, flow, identity, client_type)
+            if finished is None:  # a new flow with its own cookie replaces this one
+                return _reauthenticate(request, rt, flow)
+            response = finished
         cookies.clear_flow_cookie(response, rt.settings)
+        cookies.no_store(response)
+        return response
+
+    def _reauthenticate(request: Request, rt: AuthRuntime, flow: dict[str, Any]) -> Response:
+        """The provider session predates a password or e-mail change: ask for the password
+        again (once; a second stale answer is refused)."""
+        if flow.get("reauthentication"):
+            _reject(request, rt, "STALE_AUTHENTICATION")
+        origin, state, nonce, binder, _verifier, challenge = new_flow(
+            request,
+            rt,
+            purpose="LOGIN",
+            return_to=str(flow.get("return_to", "/")),
+            extra={"reauthentication": True},
+        )
+        url = rt.endpoints.authorization_url(
+            redirect_uri=rt.callback_uri(origin),
+            state=state,
+            nonce=nonce,
+            challenge=challenge,
+            prompt="login",
+            max_age=0,
+        )
+        response = RedirectResponse(url, status_code=302)
+        cookies.set_flow_cookie(response, rt.settings, binder)
         cookies.no_store(response)
         return response
 
@@ -252,7 +280,8 @@ def build_auth_router(
         flow: dict[str, Any],
         identity: VerifiedIdToken,
         client_type: ClientType,
-    ) -> Response:
+    ) -> Response | None:
+        """The redirect with the new session, or ``None``: authenticate again."""
         if not identity.email:
             _reject(request, rt, "TOKEN_EMAIL")
         prefix, family = request_facts(request, rt)
@@ -273,14 +302,23 @@ def build_auth_router(
                 ),
             )
             raise AccountDisabled()
-        if outcome.user_id and outcome.session_id and outcome.email:
-            recovery.after_sign_in(
+        if outcome.reauthenticate:
+            return None
+        user_id, session_id, address = outcome.user_id, outcome.session_id, outcome.email
+        if (
+            user_id
+            and session_id
+            and address
+            and not recovery.after_sign_in(
                 rt,
                 subject=identity.subject,
-                user_id=outcome.user_id,
-                email=outcome.email,
-                keep_session_id=outcome.session_id,
+                user_id=user_id,
+                email=address,
+                keep_session_id=session_id,
+                auth_time=identity.auth_time,
             )
+        ):
+            return None
         response = RedirectResponse(str(flow.get("return_to", "/")), status_code=302)
         remaining = int((outcome.absolute_expires_at - datetime.now(UTC)).total_seconds())
         cookies.set_session_cookie(response, rt.settings, outcome.secret, max_age_seconds=remaining)

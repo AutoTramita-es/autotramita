@@ -20,6 +20,7 @@ from app.audit.record import record
 from app.auth.idp import SECOND_FACTOR_TYPES, IdpAdminError, IdpCredential
 from app.auth.runtime import AuthRuntime
 from app.auth.security.notify import Notice, NoticeKind, send_quietly
+from app.auth.security.recovery import latest_password
 from app.auth.sessions import service as sessions
 from app.auth.sessions.models import RevokeReason
 from app.core.db import RequestContext, session_scope
@@ -84,6 +85,7 @@ def complete_action(
         ):
             reject("ACTION_SUBJECT")
         verified = False
+        found: list[IdpCredential] = []
         if kc_status == "success" and rt.admin is not None:
             try:
                 found = rt.admin.list_credentials(subject)
@@ -124,6 +126,10 @@ def complete_action(
             kind = NoticeKind.MFA_ENROLLED
         record(db, audit)
         email, absolute = resolved.user.email, resolved.session.absolute_expires_at
+    changed = latest_password(found)
+    if action is SecurityAction.PASSWORD_CHANGE and rt.markers is not None and changed:
+        # Another browser still signed in at the provider must authenticate again.
+        rt.markers.record_change(subject, changed)
     send_quietly(rt.notifier, Notice(kind, email, datetime.now(UTC)))
     return ActionResult(True, secret, absolute)
 

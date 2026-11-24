@@ -16,7 +16,7 @@ from uuid import UUID
 from app.audit.models import ActorType, AuditEvent, Outcome
 from app.audit.record import record
 from app.auth.errors import AuthNotConfigured
-from app.auth.idp import IdpAdminError
+from app.auth.idp import IdpAdminError, IdpCredential
 from app.auth.runtime import AuthRuntime
 from app.auth.security.notify import Notice, NoticeKind, send_quietly
 from app.auth.sessions import service as sessions
@@ -31,6 +31,8 @@ from fastapi import Request
 log = logging.getLogger(__name__)
 RECOVERY_ACTIONS = ("UPDATE_PASSWORD",)
 VERIFY_ACTIONS = ("VERIFY_EMAIL",)
+# Both times come from the identity provider; ``auth_time`` is truncated to whole seconds.
+AUTH_TIME_TOLERANCE_SECONDS = 2
 
 
 def limiter_of(request: Request) -> RateLimiter:
@@ -154,42 +156,74 @@ def process_verification_resend(rt: AuthRuntime, user_id: UUID, subject: str) ->
 
 
 def after_sign_in(
-    rt: AuthRuntime, *, subject: str, user_id: UUID, email: str, keep_session_id: UUID
-) -> None:
-    """If a recovery was started for this person and the password really changed since, end
-    every other session and say so (D20). Best effort: a provider outage only postpones it —
-    the marker stays, so the next sign-in tries again."""
+    rt: AuthRuntime,
+    *,
+    subject: str,
+    user_id: UUID,
+    email: str,
+    keep_session_id: UUID,
+    auth_time: int | None,
+) -> bool:
+    """React to a password change at sign-in (D20). ``False`` means this sign-in must not stand
+    because the person authenticated *before* the password changed.
+
+    The first sign-in after the change ends every other session and says so; if that sign-in
+    itself rests on the old authentication, it is ended as well. Later sign-ins on an old
+    authentication are ended on their own. Best effort: a provider outage only postpones the
+    check, the marker stays and the next sign-in tries again."""
     if rt.admin is None or rt.markers is None:
-        return
-    requested = rt.markers.get(subject)
-    if requested is None:
-        return
+        return True
+    marker = rt.markers.get(subject)
+    if marker is None:
+        return True
     try:
-        passwords = [c for c in rt.admin.list_credentials(subject) if c.type == "password"]
+        changed = latest_password(rt.admin.list_credentials(subject))
     except IdpAdminError:
         log.warning("password change check postponed")
-        return
-    changed = any(c.created_ms is not None and c.created_ms / 1000 >= requested for c in passwords)
-    if not changed:
-        return
+        return True
+    if changed is None or changed < marker.requested:
+        return True
+    stale = auth_time is None or auth_time < changed - AUTH_TIME_TOLERANCE_SECONDS
+    first = marker.handled is None or changed > marker.handled
+    if not first and not stale:
+        return True
     with session_scope(rt.factory, RequestContext(user_id=user_id)) as db:
-        sessions.revoke_others(
-            db, user_id, keep_session_id, reason=RevokeReason.PASSWORD_CHANGED, actor_user_id=None
+        if not first:
+            sessions.revoke(db, keep_session_id, reason=RevokeReason.PASSWORD_CHANGED)
+        else:
+            if stale:
+                sessions.DatabaseSessionRevoker().revoke_all(
+                    db, user_id, reason=RevokeReason.PASSWORD_CHANGED.value
+                )
+            else:
+                sessions.revoke_others(
+                    db, user_id, keep_session_id, reason=RevokeReason.PASSWORD_CHANGED,
+                    actor_user_id=None,
+                )  # fmt: skip
+            record(
+                db,
+                AuditEvent(
+                    action="security.password.changed",
+                    outcome=Outcome.SUCCESS,
+                    actor_type=ActorType.USER,
+                    actor_user_id=user_id,
+                    subject_user_id=user_id,
+                    actor_session_id=keep_session_id,
+                    details={},
+                ),
+            )
+    rt.markers.record_change(subject, changed)
+    if first:
+        send_quietly(
+            rt.notifier,
+            Notice(NoticeKind.PASSWORD_RESET_COMPLETED, email, datetime.now(UTC)),
         )
-        record(
-            db,
-            AuditEvent(
-                action="security.password.changed",
-                outcome=Outcome.SUCCESS,
-                actor_type=ActorType.USER,
-                actor_user_id=user_id,
-                subject_user_id=user_id,
-                actor_session_id=keep_session_id,
-                details={},
-            ),
-        )
-    rt.markers.clear(subject)
-    send_quietly(
-        rt.notifier,
-        Notice(NoticeKind.PASSWORD_RESET_COMPLETED, email, datetime.now(UTC)),
-    )
+    return not stale
+
+
+def latest_password(credentials: list[IdpCredential]) -> float | None:
+    """Creation time (seconds) of the newest password credential the provider lists."""
+    created = [
+        c.created_ms for c in credentials if c.type == "password" and c.created_ms is not None
+    ]
+    return max(created) / 1000 if created else None

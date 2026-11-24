@@ -128,12 +128,11 @@ class SmtpNotifier:
         submit it to the authenticated confirmation endpoint over HTTPS.
         """
         from app.auth.credentials import is_well_formed
+        from app.auth.security.email_change import prepare_new_address
 
-        if (
-            any(ch in to for ch in "\r\n")
-            or not is_well_formed(token)
-            or origin not in self._origins
-        ):
+        if prepare_new_address(to)[0] != to or not is_well_formed(token):
+            raise ValueError("invalid verification message")
+        if origin not in self._origins:
             raise ValueError("invalid verification message")
         fragment = urlencode({"id": str(operation_id), "token": token})
         link = f"{origin}/api/v1/auth/email-change-verification#{fragment}"

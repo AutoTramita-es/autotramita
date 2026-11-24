@@ -13,6 +13,7 @@ from uuid import UUID
 from app.audit.models import ActorType, AuditEvent, Outcome
 from app.audit.record import record
 from app.auth.runtime import AuthRuntime
+from app.auth.security import email_change
 from app.auth.sessions import repository as session_repository
 from app.auth.sessions import service as sessions
 from app.auth.sessions.models import ClientType, RevokeReason
@@ -32,6 +33,7 @@ class LoginOutcome:
     user_id: UUID | None = None
     session_id: UUID | None = None
     email: str | None = None
+    reauthenticate: bool = False  # the provider session predates a security change
 
 
 def complete_login(
@@ -55,6 +57,14 @@ def complete_login(
         ).user
         if user.status not in (UserStatus.ACTIVE, UserStatus.PENDING_VERIFICATION):
             return LoginOutcome("", datetime.now(UTC), disabled_user_id=user.id)
+        if email_change.requires_fresh_authentication(
+            db,
+            user_id=user.id,
+            kc_session_id=identity.session_id,
+            auth_time=identity.auth_time,
+            leeway_seconds=rt.settings.leeway_seconds,
+        ):
+            return LoginOutcome("", datetime.now(UTC), reauthenticate=True)
         level = level_from_acr(identity.acr)
         created = sessions.create_session(
             db,

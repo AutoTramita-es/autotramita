@@ -1,17 +1,31 @@
-"""Scoped D37 recovery. All identity changes are serialized by the operation row lock."""
+"""Scoped D37 recovery. All identity changes are serialized by the operation row lock.
+
+Fencing: a claim carries a lease id and expiry. The operation row stays locked while a worker
+reconciles it, every local write requires the live lease, and the external write is only started
+while enough of the lease remains. The identity provider offers no conditional update, so the
+write itself cannot be fenced there: it only ever sets the address the person confirmed.
+"""
 
 from __future__ import annotations
 
-import secrets
-import smtplib
+import logging
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from app.audit.models import ActorType, AuditEvent, Outcome
 from app.audit.record import record
 from app.auth.idp import IdentityProviderAdmin, IdpAdminError, IdpConflict
-from app.auth.security.email_change import classify_identity_state, release_recovery
-from app.auth.security.notify import SmtpNotifier
+from app.auth.security.email_change import (
+    LEASE,
+    MAX_ATTEMPTS,
+    MAX_UNRESOLVED,
+    claim_recovery,
+    classify_identity_state,
+    release_recovery,
+    retry_delay,
+)
+from app.auth.security.notify import Notice, NoticeKind, SmtpNotifier
 from app.auth.sessions import service as sessions
 from app.auth.sessions.models import RevokeReason
 from app.auth.users.repository import lock_email, update_email
@@ -20,9 +34,31 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
+log = logging.getLogger(__name__)
+# The external write is only started while at least this much of the lease remains; it is far
+# above the bounded provider timeouts (AUTH_ADMIN_TIMEOUT_SECONDS <= 20).
+WRITE_MARGIN = timedelta(seconds=60)
+MAX_OPERATIONS_PER_CYCLE = 25
+MAX_NOTICES_PER_CYCLE = 50
+
 
 class StaleLease(Exception):
     """The claim is no longer entitled to perform local changes."""
+
+
+def _require_write_window(db: Session, operation: UUID, lease: UUID) -> None:
+    """Right before the external write: this transaction still owns the claim (a lost database
+    connection fails here, before the provider is touched) and the lease does not end soon."""
+    row = db.execute(
+        text("""
+        SELECT 1 FROM email_change_operations WHERE id=:id AND status='APPLYING'
+            AND lease_id=:lease
+            AND lease_until > clock_timestamp() + make_interval(secs => :margin)
+    """),
+        {"id": operation, "lease": lease, "margin": WRITE_MARGIN.total_seconds()},
+    ).one_or_none()
+    if row is None:
+        raise StaleLease()
 
 
 def _manual(db: Session, operation: UUID, lease: UUID) -> None:
@@ -83,6 +119,7 @@ def apply_claim(db: Session, admin: IdentityProviderAdmin, operation: UUID, leas
         if owner is not None and owner.subject != row.auth_subject:
             _manual(db, operation, lease)
             return
+        _require_write_window(db, operation, lease)
         try:
             admin.set_verified_email(row.auth_subject, row.new_email)
         except IdpConflict:
@@ -148,10 +185,29 @@ def apply_claim(db: Session, admin: IdentityProviderAdmin, operation: UUID, leas
         )
 
 
+def _defer_operation(factory: sessionmaker[Session], operation: UUID, lease: UUID) -> None:
+    with session_scope(factory, RequestContext()) as db:
+        attempts = db.execute(
+            text("SELECT attempts FROM email_change_operations WHERE id=:id AND lease_id=:lease"),
+            {"id": operation, "lease": lease},
+        ).scalar_one_or_none()
+        if attempts is None:
+            return
+        release_recovery(
+            db,
+            operation_id=operation,
+            lease_id=lease,
+            retry_at=datetime.now(UTC) + retry_delay(int(attempts)),
+        )
+
+
 def process_claim(
     factory: sessionmaker[Session], admin: IdentityProviderAdmin, operation: UUID, lease: UUID
 ) -> bool:
-    """Attempt reconciliation; leave unknown outcomes durable for retry with bounded jitter."""
+    """Attempt reconciliation; leave unknown outcomes durable for retry with bounded jitter.
+
+    ``True`` means the claim was settled (completed or sent to manual review).
+    """
     try:
         with session_scope(factory, RequestContext()) as db:
             apply_claim(db, admin, operation, lease)
@@ -166,71 +222,58 @@ def process_claim(
             except StaleLease:
                 return False
         return False
-    except IdpAdminError:
-        with session_scope(factory, RequestContext()) as db:
-            attempts = db.execute(
-                text("""
-                SELECT attempts FROM email_change_operations WHERE id=:id AND lease_id=:lease
-            """),
-                {"id": operation, "lease": lease},
-            ).scalar_one_or_none()
-            if attempts is None:
-                return False
-            ceiling = min(3600, 30 * 2 ** min(int(attempts), 7))
-            delay = max(1, ceiling // 2 + secrets.randbelow(ceiling // 2 + 1))
-            release_recovery(
-                db,
-                operation_id=operation,
-                lease_id=lease,
-                retry_at=datetime.now(UTC) + timedelta(seconds=delay),
-            )
+    except Exception as exc:
+        # Provider timeout or error, lost connection, deadlock or a defect: the outcome is
+        # unknown, so the intent stays and the next attempt reads the provider again. Only the
+        # type is logged; messages may carry addresses.
+        kind = "provider" if isinstance(exc, IdpAdminError) else "internal"
+        log.warning("email change reconciliation deferred", extra={"fields": {"type": kind}})
+        _defer_operation(factory, operation, lease)
         return False
 
 
 def claim_notification(db: Session, *, now: datetime | None = None) -> tuple[UUID, UUID] | None:
     """Claim one notification; disabled SMTP must never call this function."""
-    from uuid import uuid4
-
     now = now or datetime.now(UTC)
+    limits = {"now": now, "deadline": now - MAX_UNRESOLVED, "max": MAX_ATTEMPTS}
+    db.execute(
+        text("""
+        WITH exhausted AS (
+            SELECT id FROM email_change_notifications
+            WHERE status='PENDING' AND (attempts >= :max OR created_at <= :deadline)
+              AND (lease_until IS NULL OR lease_until <= :now)
+            FOR UPDATE SKIP LOCKED
+        )
+        UPDATE email_change_notifications n
+        SET status='MANUAL_REVIEW', lease_id=NULL, lease_until=NULL, updated_at=:now
+        FROM exhausted WHERE n.id = exhausted.id
+    """),
+        limits,
+    )
     lease = uuid4()
     row = db.execute(
         text("""
         WITH candidate AS (
             SELECT id FROM email_change_notifications
-            WHERE status='PENDING' AND (next_attempt_at IS NULL OR next_attempt_at <= :now
-                 OR created_at <= :deadline OR attempts >= 10)
+            WHERE status='PENDING' AND attempts < :max AND created_at > :deadline
+              AND (next_attempt_at IS NULL OR next_attempt_at <= :now)
               AND (lease_until IS NULL OR lease_until <= :now)
             ORDER BY coalesce(next_attempt_at, created_at), id FOR UPDATE SKIP LOCKED LIMIT 1
         )
         UPDATE email_change_notifications n
-        SET status = CASE WHEN n.attempts >= 10 OR n.created_at <= :deadline
-                    THEN 'MANUAL_REVIEW' ELSE n.status END,
-            attempts = CASE WHEN n.attempts >= 10 OR n.created_at <= :deadline
-                    THEN n.attempts ELSE n.attempts + 1 END,
-            lease_id = CASE WHEN n.attempts >= 10 OR n.created_at <= :deadline
-                    THEN NULL ELSE :lease END,
-            lease_until = CASE WHEN n.attempts >= 10 OR n.created_at <= :deadline
-                    THEN NULL ELSE :until END
-        FROM candidate WHERE n.id = candidate.id RETURNING n.id, n.status
+        SET attempts = n.attempts + 1, lease_id = :lease, lease_until = :until,
+            updated_at = :now
+        FROM candidate WHERE n.id = candidate.id RETURNING n.id
     """),
-        {
-            "now": now,
-            "deadline": now - timedelta(hours=24),
-            "lease": lease,
-            "until": now + timedelta(minutes=2),
-        },
+        {**limits, "lease": lease, "until": now + LEASE},
     ).one_or_none()
-    if row is None or row.status == "MANUAL_REVIEW":
-        return None
-    return UUID(str(row.id)), lease
+    return None if row is None else (UUID(str(row.id)), lease)
 
 
 def deliver_notification(
     factory: sessionmaker[Session], notifier: SmtpNotifier, job: UUID, lease: UUID
 ) -> bool:
     """Deliver under a row lock; a crash may duplicate SMTP delivery but never loses the job."""
-    from app.auth.security.notify import Notice, NoticeKind
-
     try:
         with session_scope(factory, RequestContext()) as db:
             row = db.execute(
@@ -260,7 +303,9 @@ def deliver_notification(
         return True
     except StaleLease:
         return False
-    except (OSError, smtplib.SMTPException):
+    except Exception:
+        # SMTP errors and anything else: the job stays durable. No exception text is logged.
+        log.warning("email change notice deferred")
         with session_scope(factory, RequestContext()) as db:
             row = db.execute(
                 text("""
@@ -273,11 +318,9 @@ def deliver_notification(
             if row is None:
                 return False
             now = datetime.now(UTC)
-            ceiling = min(3600, 30 * 2 ** min(int(row.attempts), 7))
-            delay = max(1, ceiling // 2 + secrets.randbelow(ceiling // 2 + 1))
             status = (
                 "MANUAL_REVIEW"
-                if row.attempts >= 10 or row.created_at <= now - timedelta(hours=24)
+                if row.attempts >= MAX_ATTEMPTS or row.created_at <= now - MAX_UNRESOLVED
                 else "PENDING"
             )
             db.execute(
@@ -291,14 +334,21 @@ def deliver_notification(
                     "lease": lease,
                     "status": status,
                     "now": now,
-                    "retry": now + timedelta(seconds=delay),
+                    "retry": now + retry_delay(int(row.attempts)),
                 },
             )
         return False
 
 
 def cleanup(db: Session) -> None:
-    """Expire unconfirmed tokens and remove only resolved operational records after 30 days."""
+    """Expire unconfirmed tokens, drop addresses of replaced requests and remove only resolved
+    operational records after 30 days. Unresolved records stay until they are resolved."""
+    db.execute(
+        text("""
+        UPDATE email_change_operations SET old_email=NULL, new_email=NULL,
+            new_email_normalized=NULL WHERE status='CANCELLED' AND new_email IS NOT NULL
+    """)
+    )
     db.execute(
         text("""
         UPDATE email_change_operations SET status='EXPIRED', token_hash=NULL,
@@ -322,24 +372,45 @@ def cleanup(db: Session) -> None:
 
 
 def run_once(
-    factory: sessionmaker[Session], admin: IdentityProviderAdmin, notifier: SmtpNotifier | None
+    factory: sessionmaker[Session],
+    admin: IdentityProviderAdmin,
+    notifier: SmtpNotifier | None,
+    *,
+    should_stop: Callable[[], bool] = lambda: False,
 ) -> None:
-    """Run a bounded recovery sweep, safe for simultaneous workers in other instances."""
-    from app.auth.security.email_change import claim_recovery
-
+    """Run a bounded recovery sweep, safe for simultaneous workers in other instances. One
+    record that fails does not keep the others waiting."""
     with session_scope(factory, RequestContext()) as db:
         cleanup(db)
-    for _ in range(25):
+    for _ in range(MAX_OPERATIONS_PER_CYCLE):
+        if should_stop():
+            return
         with session_scope(factory, RequestContext()) as db:
             operation = claim_recovery(db)
         if operation is None:
             break
-        process_claim(factory, admin, *operation)
-    if notifier is None:
-        return  # O15 / disabled SMTP: jobs stay pending, with no attempt consumed
-    for _ in range(50):
-        with session_scope(factory, RequestContext()) as db:
-            job = claim_notification(db)
-        if job is None:
-            break
-        deliver_notification(factory, notifier, *job)
+        try:
+            process_claim(factory, admin, *operation)
+        except Exception:
+            log.warning("email change operation could not be released")
+    if notifier is not None:  # O15 / disabled SMTP: jobs stay pending, no attempt consumed
+        for _ in range(MAX_NOTICES_PER_CYCLE):
+            if should_stop():
+                return
+            with session_scope(factory, RequestContext()) as db:
+                job = claim_notification(db)
+            if job is None:
+                break
+            try:
+                deliver_notification(factory, notifier, *job)
+            except Exception:
+                log.warning("email change notice could not be released")
+    with session_scope(factory, RequestContext()) as db:
+        waiting = db.execute(
+            text("""
+            SELECT (SELECT count(*) FROM email_change_operations WHERE status='MANUAL_REVIEW')
+                 + (SELECT count(*) FROM email_change_notifications WHERE status='MANUAL_REVIEW')
+        """)
+        ).scalar_one()
+    if waiting:
+        log.warning("email change records need manual review", extra={"fields": {"count": waiting}})

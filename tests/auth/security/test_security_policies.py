@@ -215,7 +215,7 @@ def test_a_completed_reset_ends_other_sessions_at_the_next_sign_in_and_says_so(r
     first, second = rig.login(sid="s1"), rig.login(sid="s2")
     anonymous(rig).post(f"{API}/auth/password-recovery", json={"email": EMAIL})
     rig.admin.credentials[SUB] = [IdpCredential("c-pw", "password", int((NOW + 60) * 1000))]
-    third = rig.login(sid="s3")
+    third = rig.login(sid="s3", auth_time=int(NOW + 61))  # authenticated with the new password
     assert first.get(f"{API}/auth/session").status_code == 401
     assert second.get(f"{API}/auth/session").status_code == 401
     assert third.get(f"{API}/auth/session").status_code == 200
@@ -229,8 +229,61 @@ def test_a_completed_reset_ends_other_sessions_at_the_next_sign_in_and_says_so(r
     assert rig.web.rows(
         "SELECT details->>'revoked_reason' FROM audit_events WHERE action = 'session.revoked'"
     ) == [("CREDENTIAL_CHANGED",)]
-    rig.login(sid="s4")  # the marker is consumed: a later sign-in revokes nothing more
+    rig.login(sid="s4", auth_time=int(NOW + 62))  # handled: a later sign-in revokes nothing more
     assert third.get(f"{API}/auth/session").status_code == 200
+    assert [n.kind for n in rig.notifier.notices] == [NoticeKind.PASSWORD_RESET_COMPLETED]
+
+
+@pytest.mark.parametrize("first_after_reset", ["old_sso", "fresh"])
+def test_a_sign_on_session_older_than_the_new_password_cannot_open_the_application(
+    rig: Rig, first_after_reset: str
+) -> None:
+    """A single sign-on session that survived the reset must be asked for the password again,
+    whether it is the first to come back or comes after the owner already signed in."""
+    before = rig.login(sid="s1")
+    anonymous(rig).post(f"{API}/auth/password-recovery", json={"email": EMAIL})
+    rig.admin.credentials[SUB] = [IdpCredential("c-pw", "password", int((NOW + 60) * 1000))]
+    owner = None
+    if first_after_reset == "fresh":
+        owner = rig.login(sid="s2", auth_time=int(NOW + 61))
+    attacker = rig.web.client()
+    refused = rig.web.sign_in(attacker, sub=SUB, email=EMAIL, sid="s1")  # auth_time is old
+    assert refused.status_code == 302
+    location = urlparse(refused.headers["location"])
+    query = {k: v[0] for k, v in parse_qs(location.query).items()}
+    assert query["prompt"] == "login" and query["max_age"] == "0"
+    assert SESSION_COOKIE not in attacker.cookies
+    assert before.get(f"{API}/auth/session").status_code == 401
+    assert rig.live_sessions() == (1 if owner else 0)
+    if owner:
+        assert owner.get(f"{API}/auth/session").status_code == 200
+    # a second stale answer to the forced sign-in is refused, never looped
+    code = rig.web.code_for(query, sub=SUB, email=EMAIL, sid="s1")
+    again = attacker.get(f"{API}/auth/callback", params={"code": code, "state": query["state"]})
+    problem(again, 400, "AUTH_CALLBACK_REJECTED")
+    assert rig.live_sessions() == (1 if owner else 0)
+
+
+def test_the_forced_sign_in_with_the_new_password_succeeds(rig: Rig) -> None:
+    anonymous(rig).post(f"{API}/auth/password-recovery", json={"email": EMAIL})
+    rig.admin.credentials[SUB] = [IdpCredential("c-pw", "password", int((NOW + 60) * 1000))]
+    client = rig.web.client()
+    refused = rig.web.sign_in(client, sub=SUB, email=EMAIL, sid="s1")
+    query = {k: v[0] for k, v in parse_qs(urlparse(refused.headers["location"]).query).items()}
+    code = rig.web.code_for(query, sub=SUB, email=EMAIL, sid="s1", auth_time=int(NOW + 65))
+    done = client.get(f"{API}/auth/callback", params={"code": code, "state": query["state"]})
+    assert done.status_code == 302 and done.headers["location"] == "/"
+    assert client.get(f"{API}/auth/session").status_code == 200
+
+
+def test_asking_for_recovery_again_does_not_hide_a_change_that_already_happened(rig: Rig) -> None:
+    anonymous(rig).post(f"{API}/auth/password-recovery", json={"email": EMAIL})
+    rig.admin.credentials[SUB] = [IdpCredential("c-pw", "password", int((NOW + 60) * 1000))]
+    rig.web.clock.now = NOW + 120
+    anonymous(rig).post(f"{API}/auth/password-recovery", json={"email": EMAIL})
+    refused = rig.web.sign_in(rig.web.client(), sub=SUB, email=EMAIL, sid="s1")
+    assert "prompt=login" in refused.headers["location"]
+    assert rig.live_sessions() == 0
 
 
 def test_requesting_recovery_alone_does_not_end_anybodys_session(rig: Rig) -> None:

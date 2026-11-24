@@ -131,7 +131,7 @@ def _process_email_change_request(
                 return
         send = getattr(rt.notifier, "send_email_change_verification", None)
         if callable(send):
-            send(to=address.strip(), origin=origin, operation_id=operation, token=token)
+            send(to=address, origin=origin, operation_id=operation, token=token)
     except Exception:
         # No address, link, token, provider response or exception is recorded.
         logging.getLogger(__name__).warning("email change request processing failed")
@@ -390,7 +390,7 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
     ) -> Accepted:
         rt = _d37_runtime(request)
         try:
-            normalize_email(body.new_email)
+            address, _ = email_change.prepare_new_address(body.new_email)
         except ValueError:
             raise UnprocessableEntity("Invalid email address.") from None
         allowed = recovery.account_allowed(
@@ -400,10 +400,17 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
             limits.verification_resend_per_hour,
             str(principal.user.id),
         )
-        origin, _ = rt.site_for(request)
+        # The link opens the web confirmation page. A mobile caller reaches the API on another
+        # host, so it gets the configured web origin; a browser keeps the site it is using.
+        if principal.token is None:
+            origin = rt.site_for(request)[0]
+        elif rt.settings.web_origin:
+            origin = rt.settings.web_origin
+        else:
+            raise auth_errors.AuthNotConfigured("Email change is not configured.")
         if allowed:
             background.add_task(
-                _process_email_change_request, request, principal, rt, body.new_email, origin
+                _process_email_change_request, request, principal, rt, address, origin
             )
         response.headers["Cache-Control"] = "no-store"
         return Accepted()

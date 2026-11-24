@@ -24,10 +24,11 @@ from app.api.v1.guards import AccessKind, declared
 from app.audit.models import ActorType, AuditEvent, Outcome
 from app.audit.record import record_independent
 from app.auth.context import change_workspace
-from app.auth.errors import AccountDisabled, AmbiguousCredentials, AuthRequired
+from app.auth.errors import AccountDisabled, AmbiguousCredentials, AuthRequired, SessionRevoked
 from app.auth.mobile import service as mobile
 from app.auth.mobile.service import DeviceInfo
 from app.auth.runtime import AuthRuntime, runtime_of
+from app.auth.security import recovery
 from app.auth.security.notify import Notice, NoticeKind, send_quietly
 from app.auth.sessions import repository
 from app.auth.sessions import service as sessions
@@ -158,7 +159,18 @@ def build_sessions_router(
                 RequestContext(),
             )
             raise AccountDisabled()
+        if outcome.reauthenticate:
+            raise SessionRevoked()  # sign in again with the identity provider
         assert outcome.session is not None and outcome.user is not None  # noqa: S101
+        if not recovery.after_sign_in(
+            rt,
+            subject=token.subject,
+            user_id=outcome.user.id,
+            email=outcome.user.email,
+            keep_session_id=outcome.session.id,
+            auth_time=token.auth_time,
+        ):
+            raise SessionRevoked()
         response.status_code = 201 if outcome.created else 200
         return session_info(rt, sessions.Resolved(outcome.session, outcome.user), None)
 

@@ -38,6 +38,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 logger = logging.getLogger(__name__)
 _EMAIL_KEY = "users_email_normalized_key"
+_CLOCK_MARGIN_SECONDS = 60
 
 
 class SessionRevoker(Protocol):
@@ -175,9 +176,11 @@ def _sync(
             ),
             {"u": user.id},
         ).scalar_one()
-        # An old token can still carry the previous verified address after D37 completes.
+        # An old token can still carry the previous verified address after D37 completes. The
+        # two times come from different clocks, hence the margin (fail closed).
         if completed is not None and (
-            token_issued_at is None or token_issued_at <= completed.timestamp()
+            token_issued_at is None
+            or token_issued_at <= completed.timestamp() + _CLOCK_MARGIN_SECONDS
         ):
             raise IdentityProviderUnavailable()
         repository.lock_email(session, normalized)

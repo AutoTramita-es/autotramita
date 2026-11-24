@@ -19,6 +19,7 @@ from app.audit.models import ActorType, AuditEvent, Outcome
 from app.audit.record import record
 from app.auth.errors import SessionRevoked
 from app.auth.runtime import AuthRuntime
+from app.auth.security import email_change
 from app.auth.sessions import repository as session_repository
 from app.auth.sessions import service as sessions
 from app.auth.sessions.models import ClientType, UserSession
@@ -48,6 +49,7 @@ class MobileOutcome:
     user: User | None
     created: bool
     disabled_user_id: UUID | None = None
+    reauthenticate: bool = False  # the provider session predates a security change
 
 
 def open_session(
@@ -87,6 +89,14 @@ def open_session(
             raise SessionRevoked()
         if latest is not None and latest.is_live(moment):
             return MobileOutcome(latest, user, False)
+        if email_change.requires_fresh_authentication(
+            db,
+            user_id=user.id,
+            kc_session_id=token.session_id,
+            auth_time=token.auth_time,
+            leeway_seconds=rt.settings.leeway_seconds,
+        ):
+            return MobileOutcome(None, None, False, reauthenticate=True)
         level = level_from_acr(token.acr)
         try:
             with db.begin_nested():
