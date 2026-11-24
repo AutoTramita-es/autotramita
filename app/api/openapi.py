@@ -22,6 +22,8 @@ PROBLEM_RESPONSES: dict[int | str, dict[str, Any]] = {
         404: "Resource not found or not visible",
         409: "State conflict",
         412: "Precondition failed (stale version)",
+        413: "Payload too large",
+        415: "Unsupported media type",
         422: "Validation failed",
         428: "Precondition required (If-Match)",
         429: "Too many requests",

@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
-import re
 import uuid
 from contextvars import ContextVar
 
-_SAFE = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
 _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
 def new_request_id(incoming: str | None) -> str:
-    """Accept a well-formed incoming id, otherwise generate one (prevents log injection)."""
-    if incoming and _SAFE.fullmatch(incoming):
-        return incoming
-    return uuid.uuid4().hex
+    """Request ids are UUIDs: accept a well-formed incoming one, otherwise generate a UUID v4
+    (anything else could inject data into logs)."""
+    if incoming and len(incoming) <= 36:
+        try:
+            return str(uuid.UUID(incoming))
+        except ValueError:
+            pass
+    return str(uuid.uuid4())
 
 
 def set_request_id(value: str | None) -> None:

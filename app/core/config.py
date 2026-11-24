@@ -77,6 +77,12 @@ class Settings(BaseSettings):
         default=None, validation_alias="APP_DB_PLATFORM_PASSWORD"
     )
 
+    # HMAC key for pagination cursors (F1-T06). Optional here so that processes which never
+    # paginate need no extra secret; ``CursorCodec.from_settings`` fails closed without it.
+    cursor_signing_key: SecretStr | None = Field(
+        default=None, validation_alias="CURSOR_SIGNING_KEY"
+    )
+
     # May carry authentication data, hence a secret. Read it through ``redis_url``.
     redis_secret: SecretStr = Field(validation_alias="REDIS_URL")
 
@@ -112,6 +118,13 @@ class Settings(BaseSettings):
     def _optional_password_not_empty(cls, value: SecretStr | None) -> SecretStr | None:
         if value is not None and not value.get_secret_value():
             raise ValueError("password must not be empty when set")
+        return value
+
+    @field_validator("cursor_signing_key", mode="after")
+    @classmethod
+    def _cursor_key_strong(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and len(value.get_secret_value().encode("utf-8")) < 32:
+            raise ValueError("CURSOR_SIGNING_KEY must be at least 32 bytes")
         return value
 
     @field_validator("redis_secret", mode="after")

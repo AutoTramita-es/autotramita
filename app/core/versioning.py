@@ -24,12 +24,21 @@ def if_match_version(if_match: Annotated[str | None, Header()] = None) -> int:
         raise PreconditionRequired("Send If-Match with the current version of the resource.")
     match = _STRONG_ETAG.fullmatch(if_match.strip())
     if not match:
-        raise BadRequest("If-Match must be a quoted version number.", code="invalid_if_match")
+        raise BadRequest("If-Match must be a quoted version number.", code="INVALID_IF_MATCH")
     return int(match.group(1))
 
 
 def check_version(current: int, expected: int) -> None:
     if current != expected:
         raise PreconditionFailed(
-            "The resource changed; reload it and retry.", code="version_mismatch"
+            "The resource changed; reload it and retry.", code="VERSION_MISMATCH"
+        )
+
+
+def ensure_updated(rowcount: int) -> None:
+    """After ``UPDATE ... WHERE id = :id AND version = :expected``: zero rows means that
+    another writer changed the row first (the caller has already shown the row is visible)."""
+    if rowcount == 0:
+        raise PreconditionFailed(
+            "The resource changed; reload it and retry.", code="VERSION_MISMATCH"
         )

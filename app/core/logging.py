@@ -11,7 +11,7 @@ from app.core.request_context import get_request_id
 
 REDACTED = "[redacted]"
 _SENSITIVE_KEY = re.compile(
-    r"(authorization|cookie|password|passwd|secret|token|api[-_]?key|idempotency[-_]?key|"
+    r"(authorization|cookie|password|passwd|secret|token|api[-_]?key|signing[-_]?key|idempotency[-_]?key|"
     r"nif|nie|vin|iban|card|cvv)",
     re.IGNORECASE,
 )

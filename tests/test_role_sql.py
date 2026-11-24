@@ -13,9 +13,9 @@ from tests.conftest import RoleEnv, _sa_url
 from tests.test_roles_and_migrations import migrate
 
 RUNTIME = ("app", "worker", "platform")
-# Technical (non-business) tables allowed to exist after upgrade head. Any other table in
-# the public schema is a business table and must not appear in F1.
-NON_BUSINESS_TABLES = {"idempotency_keys"}
+# Technical (non-business) tables allowed to exist after upgrade head. F1 ships none (the
+# idempotency table is a test fixture); any table in public would be a business table.
+NON_BUSINESS_TABLES: set[str] = set()
 TABLE_PRIVS = "ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']"
 
 

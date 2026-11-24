@@ -87,7 +87,7 @@ class RateLimiter:
             if self._fail_open:
                 return Decision(True, policy.limit, policy.limit, policy.window_seconds)
             raise ServiceUnavailable(
-                "Request limiting is temporarily unavailable.", code="rate_limit_unavailable"
+                "Request limiting is temporarily unavailable.", code="RATE_LIMIT_UNAVAILABLE"
             ) from None
         remaining = max(policy.limit - int(count), 0)
         return Decision(int(count) <= policy.limit, policy.limit, remaining, int(ttl))

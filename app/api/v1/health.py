@@ -53,5 +53,5 @@ def readiness(request: Request) -> Health:
             failed.append("redis")
     if failed:
         log.error("readiness failed", extra={"fields": {"components": failed}})
-        raise ServiceUnavailable("Not ready.", code="not_ready")
+        raise ServiceUnavailable("Not ready.", code="NOT_READY")
     return Health()

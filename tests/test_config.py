@@ -35,7 +35,7 @@ ALL_ROLES = {
 }
 ROLES: tuple[DatabaseRole, ...] = ("owner", "app", "worker", "platform")
 SECRETS = (RUNTIME_PW, OWNER_PW, WORKER_PW, PLATFORM_PW, REDIS_PW)
-ALIASES = {*BASE, *ALL_ROLES, "POSTGRES_PORT"}
+ALIASES = {*BASE, *ALL_ROLES, "POSTGRES_PORT", "CURSOR_SIGNING_KEY"}
 
 
 def make(monkeypatch: pytest.MonkeyPatch, **extra: str) -> Settings:
@@ -393,3 +393,33 @@ def test_rate_limit_fail_open_current_default_is_unchanged(monkeypatch: pytest.M
     """Known deviation from O02 (fail closed); the behaviour change belongs to F1-T07."""
     monkeypatch.delenv("RATE_LIMIT_FAIL_OPEN", raising=False)
     assert RateLimitSettings().fail_open is True
+
+
+def test_cursor_signing_key_is_optional_secret_and_must_be_strong(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert make(monkeypatch).cursor_signing_key is None
+    key = "synthetic-cursor-key-abcdefghijklmnopqrstuv"
+    s = make(monkeypatch, CURSOR_SIGNING_KEY=key)
+    assert s.cursor_signing_key is not None
+    assert s.cursor_signing_key.get_secret_value() == key
+    assert key not in repr(s) + str(s) + s.model_dump_json()
+    text = error_text(monkeypatch, CURSOR_SIGNING_KEY="short-key-secret")
+    assert "short-key-secret" not in text
+
+
+def test_cursor_signing_key_does_not_leak_through_logs_or_redaction(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from app.core.logging import REDACTED, redact
+
+    key = "synthetic-cursor-key-abcdefghijklmnopqrstuv"
+    caplog.set_level(logging.DEBUG)
+    s = make(monkeypatch, CURSOR_SIGNING_KEY=key)
+    logging.getLogger("test").info("settings=%s %r", s, s.cursor_signing_key)
+    assert key not in caplog.text
+    assert key not in str(s.model_dump()) + repr(s.model_fields_set)
+    assert redact({"cursor_signing_key": key, "CURSOR_SIGNING_KEY": key}) == {
+        "cursor_signing_key": REDACTED,
+        "CURSOR_SIGNING_KEY": REDACTED,
+    }

@@ -144,7 +144,7 @@ def test_http_headers_429_and_exempt_route(limiter: RateLimiter) -> None:
     denied = client.get("/limited")
     assert denied.status_code == 429
     assert denied.headers["content-type"].startswith("application/problem+json")
-    assert denied.json()["code"] == "rate_limited"
+    assert denied.json()["code"] == "RATE_LIMIT_EXCEEDED"
     assert int(denied.headers["retry-after"]) >= 1
     assert denied.headers["ratelimit-remaining"] == "0"
     for _ in range(10):  # health-style routes without the dependency are never limited
@@ -163,7 +163,7 @@ def test_fail_open_allows_when_redis_is_down() -> None:
 def test_fail_closed_answers_503_when_redis_is_down() -> None:
     with pytest.raises(ServiceUnavailable) as err:
         closed_port_limiter(False).check(Policy("p", 1), "x")
-    assert err.value.code == "rate_limit_unavailable"
+    assert err.value.code == "RATE_LIMIT_UNAVAILABLE"
 
 
 class FakeRequest:

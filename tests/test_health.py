@@ -60,7 +60,7 @@ def test_readiness_failure_reveals_nothing(live_redis: redis.Redis) -> None:
     client = TestClient(create_app(RateLimiter(dead, namespace="x"), engine))
     r = client.get("/api/v1/health/ready")
     assert r.status_code == 503
-    assert r.json()["code"] == "not_ready"
+    assert r.json()["code"] == "NOT_READY"
     for secret in ("db-secret-host", "secretdb", "secret_user", "secret-password", "127.0.0.1"):
         assert secret not in r.text
     engine.dispose()
