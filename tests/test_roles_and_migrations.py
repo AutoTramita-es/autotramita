@@ -22,6 +22,13 @@ def alembic_config(
         expected_owner = engine.url.username
     if expected_owner is not None:
         cfg.attributes["expected_owner"] = expected_owner
+    # The disposable harness uses the project's explicit per-environment role names.
+    username = engine.url.username or ""
+    if username.endswith("_owner"):
+        base = username.removesuffix("_owner")
+        cfg.attributes["expected_runtime_roles"] = {
+            role: f"{base}_{role}" for role in ("app", "worker", "platform")
+        }
     cfg.set_main_option("script_location", str(ROOT / "migrations"))
     conn = engine.connect()
     cfg.attributes["connection"] = conn
@@ -324,3 +331,30 @@ def test_expected_owner_must_match_the_connected_role_exactly(role_env: RoleEnv)
             try_upgrade(owner, expected_owner=wrong)
     owner.dispose()
     assert_nothing_migrated(role_env)
+
+
+@pytest.mark.parametrize("case", ["missing", "wrong", "duplicate"])
+def test_f2_migration_requires_explicit_matching_runtime_roles(
+    role_env: RoleEnv, case: str
+) -> None:
+    owner = role_env.engine("owner")
+    migrate(owner, "upgrade", "0007")
+    cfg, conn = alembic_config(owner)
+    if case == "missing":
+        cfg.attributes.pop("expected_runtime_roles")
+    elif case == "wrong":
+        cfg.attributes["expected_runtime_roles"]["worker"] = "wrong_worker"
+    else:
+        cfg.attributes["expected_runtime_roles"]["worker"] = role_env.names.app
+    try:
+        with pytest.raises(RuntimeError, match="runtime role"):
+            command.upgrade(cfg, "head")
+    finally:
+        conn.close()  # type: ignore[attr-defined]
+    with role_env.admin_engine().connect() as db:
+        assert (
+            db.execute(
+                text("SELECT version_num FROM schema_migrations.alembic_version")
+            ).scalar_one()
+            == "0007"
+        )

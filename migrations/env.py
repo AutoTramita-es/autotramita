@@ -82,6 +82,12 @@ def run_migrations_online() -> None:
         _run(supplied, context.config.attributes.get("expected_owner"))
         return
     settings = get_settings()
+    # Names are explicitly configured, never discovered by suffix for security decisions.
+    context.config.attributes["expected_runtime_roles"] = {
+        "app": settings.postgres_user,
+        "worker": settings.worker_user,
+        "platform": settings.platform_user,
+    }
     engine = create_db_engine(settings, role="owner")
     try:
         with engine.connect() as connection:

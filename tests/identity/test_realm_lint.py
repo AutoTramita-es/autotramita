@@ -129,3 +129,17 @@ def test_linter_rejects_each_violation(label: str, change: Any, expected: str) -
 def test_blacklist_file_exists_and_has_only_long_entries() -> None:
     entries = (DIRECTORY / "blacklists" / "at-common-passwords.txt").read_text().split()
     assert entries and all(len(e) >= 12 for e in entries)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_token_scopes_and_optional_names_are_explicit(kind: str) -> None:
+    realm = load(kind)
+    for client_id in ("at-web", "at-mobile"):
+        client = _client(realm, client_id)
+        assert set(client["defaultClientScopes"]) == {"email", "acr", "basic"}
+        assert client["optionalClientScopes"] == [] and client["fullScopeAllowed"] is False
+    component = realm["components"]["org.keycloak.userprofile.UserProfileProvider"][0]
+    profile = json.loads(component["config"]["kc.user.profile.config"][0])
+    attrs = {attribute["name"]: attribute for attribute in profile["attributes"]}
+    assert "required" not in attrs["firstName"] and "required" not in attrs["lastName"]
+    assert attrs["email"]["required"] == {"roles": ["user"]}

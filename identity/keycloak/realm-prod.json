@@ -100,7 +100,14 @@
             "introspection.token.claim": "false"
           }
         }
-      ]
+      ],
+      "defaultClientScopes": [
+        "email",
+        "acr",
+        "basic"
+      ],
+      "optionalClientScopes": [],
+      "fullScopeAllowed": false
     },
     {
       "clientId": "at-mobile",
@@ -133,7 +140,14 @@
             "introspection.token.claim": "false"
           }
         }
-      ]
+      ],
+      "defaultClientScopes": [
+        "email",
+        "acr",
+        "basic"
+      ],
+      "optionalClientScopes": [],
+      "fullScopeAllowed": false
     },
     {
       "clientId": "at-admin-svc",
@@ -286,5 +300,18 @@
         "loa-max-age": "600"
       }
     }
-  ]
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"email\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"firstName\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}}],\"groups\":[],\"unmanagedAttributePolicy\":\"DISABLED\"}"
+          ]
+        }
+      }
+    ]
+  }
 }

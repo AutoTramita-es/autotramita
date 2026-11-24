@@ -172,7 +172,7 @@ def after_sign_in(
     changed = any(c.created_ms is not None and c.created_ms / 1000 >= requested for c in passwords)
     if not changed:
         return
-    with session_scope(rt.factory, RequestContext(user_id=user_id, auth_subject=subject)) as db:
+    with session_scope(rt.factory, RequestContext(user_id=user_id)) as db:
         sessions.revoke_others(
             db, user_id, keep_session_id, reason=RevokeReason.PASSWORD_CHANGED, actor_user_id=None
         )

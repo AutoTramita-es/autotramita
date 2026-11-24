@@ -32,10 +32,25 @@
   "eventsEnabled": true,
   "eventsExpiration": 604800,
   "enabledEventTypes": [
-    "LOGIN", "LOGIN_ERROR", "LOGOUT", "LOGOUT_ERROR", "REGISTER", "REGISTER_ERROR",
-    "UPDATE_PASSWORD", "UPDATE_PASSWORD_ERROR", "UPDATE_TOTP", "REMOVE_TOTP", "UPDATE_EMAIL",
-    "VERIFY_EMAIL", "RESET_PASSWORD", "RESET_PASSWORD_ERROR", "SEND_RESET_PASSWORD",
-    "REFRESH_TOKEN_ERROR", "CODE_TO_TOKEN_ERROR", "EXECUTE_ACTIONS", "UPDATE_CREDENTIAL",
+    "LOGIN",
+    "LOGIN_ERROR",
+    "LOGOUT",
+    "LOGOUT_ERROR",
+    "REGISTER",
+    "REGISTER_ERROR",
+    "UPDATE_PASSWORD",
+    "UPDATE_PASSWORD_ERROR",
+    "UPDATE_TOTP",
+    "REMOVE_TOTP",
+    "UPDATE_EMAIL",
+    "VERIFY_EMAIL",
+    "RESET_PASSWORD",
+    "RESET_PASSWORD_ERROR",
+    "SEND_RESET_PASSWORD",
+    "REFRESH_TOKEN_ERROR",
+    "CODE_TO_TOKEN_ERROR",
+    "EXECUTE_ACTIONS",
+    "UPDATE_CREDENTIAL",
     "REMOVE_CREDENTIAL"
   ],
   "adminEventsEnabled": true,
@@ -58,7 +73,11 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["__WEB_CALLBACK__", "__ADMIN_CALLBACK__", "__WEB_HOME__"],
+      "redirectUris": [
+        "__WEB_CALLBACK__",
+        "__ADMIN_CALLBACK__",
+        "__WEB_HOME__"
+      ],
       "webOrigins": [],
       "attributes": {
         "pkce.code.challenge.method": "S256",
@@ -81,7 +100,14 @@
             "introspection.token.claim": "false"
           }
         }
-      ]
+      ],
+      "defaultClientScopes": [
+        "email",
+        "acr",
+        "basic"
+      ],
+      "optionalClientScopes": [],
+      "fullScopeAllowed": false
     },
     {
       "clientId": "at-mobile",
@@ -93,7 +119,9 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["__MOBILE_REDIRECT__"],
+      "redirectUris": [
+        "__MOBILE_REDIRECT__"
+      ],
       "webOrigins": [],
       "attributes": {
         "pkce.code.challenge.method": "S256",
@@ -112,7 +140,14 @@
             "introspection.token.claim": "false"
           }
         }
-      ]
+      ],
+      "defaultClientScopes": [
+        "email",
+        "acr",
+        "basic"
+      ],
+      "optionalClientScopes": [],
+      "fullScopeAllowed": false
     },
     {
       "clientId": "at-admin-svc",
@@ -136,7 +171,11 @@
       "enabled": true,
       "serviceAccountClientId": "at-admin-svc",
       "clientRoles": {
-        "realm-management": ["manage-users", "view-users", "view-events"]
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "view-events"
+        ]
       }
     }
   ],
@@ -148,8 +187,22 @@
       "topLevel": true,
       "builtIn": false,
       "authenticationExecutions": [
-        {"authenticator": "auth-cookie", "authenticatorFlow": false, "requirement": "ALTERNATIVE", "priority": 10, "userSetupAllowed": false, "autheticatorFlow": false},
-        {"authenticatorFlow": true, "requirement": "ALTERNATIVE", "priority": 20, "flowAlias": "browser-loa-forms", "userSetupAllowed": false, "autheticatorFlow": true}
+        {
+          "authenticator": "auth-cookie",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticatorFlow": true,
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "flowAlias": "browser-loa-forms",
+          "userSetupAllowed": false,
+          "autheticatorFlow": true
+        }
       ]
     },
     {
@@ -159,8 +212,22 @@
       "topLevel": false,
       "builtIn": false,
       "authenticationExecutions": [
-        {"authenticatorFlow": true, "requirement": "CONDITIONAL", "priority": 10, "flowAlias": "browser-loa-1", "userSetupAllowed": false, "autheticatorFlow": true},
-        {"authenticatorFlow": true, "requirement": "CONDITIONAL", "priority": 20, "flowAlias": "browser-loa-2", "userSetupAllowed": false, "autheticatorFlow": true}
+        {
+          "authenticatorFlow": true,
+          "requirement": "CONDITIONAL",
+          "priority": 10,
+          "flowAlias": "browser-loa-1",
+          "userSetupAllowed": false,
+          "autheticatorFlow": true
+        },
+        {
+          "authenticatorFlow": true,
+          "requirement": "CONDITIONAL",
+          "priority": 20,
+          "flowAlias": "browser-loa-2",
+          "userSetupAllowed": false,
+          "autheticatorFlow": true
+        }
       ]
     },
     {
@@ -170,8 +237,23 @@
       "topLevel": false,
       "builtIn": false,
       "authenticationExecutions": [
-        {"authenticator": "conditional-level-of-authentication", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "authenticatorConfig": "loa1-condition", "userSetupAllowed": false, "autheticatorFlow": false},
-        {"authenticator": "auth-username-password-form", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 20, "userSetupAllowed": false, "autheticatorFlow": false}
+        {
+          "authenticator": "conditional-level-of-authentication",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "authenticatorConfig": "loa1-condition",
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "auth-username-password-form",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        }
       ]
     },
     {
@@ -181,13 +263,55 @@
       "topLevel": false,
       "builtIn": false,
       "authenticationExecutions": [
-        {"authenticator": "conditional-level-of-authentication", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "authenticatorConfig": "loa2-condition", "userSetupAllowed": false, "autheticatorFlow": false},
-        {"authenticator": "auth-otp-form", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 20, "userSetupAllowed": false, "autheticatorFlow": false}
+        {
+          "authenticator": "conditional-level-of-authentication",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "authenticatorConfig": "loa2-condition",
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        }
       ]
     }
   ],
   "authenticatorConfig": [
-    {"alias": "loa1-condition", "config": {"loa-condition-level": "1", "loa-store-in-user-session": "true", "loa-max-age": "43200"}},
-    {"alias": "loa2-condition", "config": {"loa-condition-level": "2", "loa-store-in-user-session": "true", "loa-max-age": "600"}}
-  ]
+    {
+      "alias": "loa1-condition",
+      "config": {
+        "loa-condition-level": "1",
+        "loa-store-in-user-session": "true",
+        "loa-max-age": "43200"
+      }
+    },
+    {
+      "alias": "loa2-condition",
+      "config": {
+        "loa-condition-level": "2",
+        "loa-store-in-user-session": "true",
+        "loa-max-age": "600"
+      }
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"email\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"firstName\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}},{\"name\":\"lastName\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]}}],\"groups\":[],\"unmanagedAttributePolicy\":\"DISABLED\"}"
+          ]
+        }
+      }
+    ]
+  }
 }

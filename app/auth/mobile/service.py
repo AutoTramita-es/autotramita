@@ -74,7 +74,7 @@ def open_session(
             found = user_repository.get_by_subject(db, token.subject, lock="share")
             if found is None:
                 raise BadRequest("The token carries no e-mail address.", code="INVALID_EMAIL")
-            apply_context(db, RequestContext(user_id=found.id, auth_subject=token.subject))
+            apply_context(db, RequestContext(user_id=found.id))
             user = found
         if user.status not in (UserStatus.ACTIVE, UserStatus.PENDING_VERIFICATION):
             return MobileOutcome(None, None, False, disabled_user_id=user.id)

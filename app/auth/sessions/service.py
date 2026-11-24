@@ -162,7 +162,7 @@ def resolve_web(
     found = repository.by_credential(db, digest, lock=lock)
     if found is None:
         raise SessionRequired()
-    apply_context(db, RequestContext(user_id=found.user_id, session_hash=digest))
+    apply_context(db, RequestContext(user_id=found.user_id))
     return _check(db, found, ua_family=ua_family, country_code=country_code, now=_now(now))
 
 
@@ -181,7 +181,7 @@ def resolve_mobile(
     user = users.get_by_subject(db, token.subject)
     if user is None:
         raise SessionRequired()
-    apply_context(db, RequestContext(user_id=user.id, auth_subject=token.subject))
+    apply_context(db, RequestContext(user_id=user.id))
     found = repository.by_kc_session(
         db, user.id, token.session_id, ClientType.MOBILE.value, lock=lock
     )

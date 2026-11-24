@@ -28,6 +28,10 @@ _FORBIDDEN = re.compile(
     r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}",
     re.IGNORECASE,
 )
+# Values in general audit fields may not smuggle full IPs around the prefix column.
+_RAW_IP = re.compile(r"(?:[0-9]{1,3}\.){3}[0-9]{1,3}|(?:[0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}", re.I)
+
+
 _REASON = re.compile(r"^[A-Z][A-Z0-9_]{0,59}$")
 
 
@@ -93,8 +97,16 @@ def validate(event: AuditEvent) -> dict[str, Any]:
     for key, value in event.details.items():
         _check_value(spec.details[key], value)
         safe[key] = str(value) if isinstance(value, uuid.UUID) else value
-        if _FORBIDDEN.search(key) or _FORBIDDEN.search(str(value)):
+        if (
+            _FORBIDDEN.search(key)
+            or _FORBIDDEN.search(str(value))
+            or _RAW_IP.search(key)
+            or _RAW_IP.search(str(value))
+        ):
             raise AuditValidationError("a detail looks like a secret or personal data")
+    for value in (event.target_type, event.ua_family, event.source_event_id):
+        if value is not None and (_FORBIDDEN.search(value) or _RAW_IP.search(value)):
+            raise AuditValidationError("audit metadata looks like personal data or a secret")
     if event.reason_code is not None and not _REASON.fullmatch(event.reason_code):
         raise AuditValidationError("reason_code must be UPPER_SNAKE_CASE")
     if event.target_type is not None and not _CODE.fullmatch(event.target_type):

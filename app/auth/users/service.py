@@ -131,7 +131,7 @@ def provision_or_link(
             user = repository.get_by_subject(session, subject, lock="share")
     if user is None:  # pragma: no cover - the row exists after a lost race
         raise RuntimeError("user row not found after provisioning")
-    apply_context(session, RequestContext(user_id=user.id, auth_subject=subject))
+    apply_context(session, RequestContext(user_id=user.id))
     if created:
         _audit(session, "identity.user.provisioned", user, {"status": user.status.value})
         return Provisioned(user, True)

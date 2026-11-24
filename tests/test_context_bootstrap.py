@@ -45,6 +45,21 @@ def test_subject_and_hash_types_are_checked() -> None:
             RequestContext(session_hash=bad)
 
 
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"auth_subject": "sub", "session_hash": HASH_1},
+        {"auth_subject": "sub", "user_id": uuid.uuid4()},
+        {"session_hash": HASH_1, "user_id": uuid.uuid4()},
+        {"auth_subject": "sub", "tenant_id": uuid.uuid4()},
+        {"session_hash": HASH_1, "branch_ids": (uuid.uuid4(),)},
+    ],
+)
+def test_bootstrap_and_authenticated_contexts_cannot_be_combined(kwargs: dict[str, object]) -> None:
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        RequestContext(**kwargs)  # type: ignore[arg-type]
+
+
 # --- AC-CTX-03 only the auth module may use the bootstrap fields (static) ---------------------
 def test_bootstrap_fields_are_used_nowhere_outside_the_auth_module_and_the_db_layer() -> None:
     pattern = re.compile(r"auth_subject\s*=|session_hash\s*=|app\.auth_subject|app\.session_hash")
@@ -74,8 +89,9 @@ def settings(env: RoleEnv, context: RequestContext, kind: str = "app") -> tuple[
 
 def test_functions_return_null_when_unset_and_the_values_when_set(env: RoleEnv) -> None:
     assert settings(env, RequestContext()) == (None, None)
-    subject, digest = settings(env, RequestContext(auth_subject="sub-1", session_hash=HASH_1))
-    assert subject == "sub-1" and bytes(digest) == HASH_1  # type: ignore[call-overload]
+    assert settings(env, RequestContext(auth_subject="sub-1")) == ("sub-1", None)
+    _, digest = settings(env, RequestContext(session_hash=HASH_1))
+    assert bytes(digest) == HASH_1  # type: ignore[call-overload]
 
 
 @pytest.mark.parametrize("kind", ["app", "worker", "platform"])
@@ -89,14 +105,14 @@ def test_bootstrap_context_does_not_leak_through_the_pool(env: RoleEnv) -> None:
     engine = create_engine(base.url, pool_size=1, max_overflow=0)
     factory = create_session_factory(engine)
     try:
-        with session_scope(factory, RequestContext(auth_subject="sub-1", session_hash=HASH_1)):
+        with session_scope(factory, RequestContext(auth_subject="sub-1")):
             pass
         with session_scope(factory, RequestContext()) as s:
             row = s.execute(text("SELECT app_auth_subject(), app_session_hash()")).one()
         assert tuple(row) == (None, None)
         with (
             pytest.raises(RuntimeError),
-            session_scope(factory, RequestContext(auth_subject="sub-2", session_hash=HASH_2)),
+            session_scope(factory, RequestContext(session_hash=HASH_2)),
         ):
             raise RuntimeError("rolled back")
         with session_scope(factory, RequestContext(user_id=uuid.uuid4())) as s:
@@ -134,8 +150,10 @@ def test_policy_on_the_helpers_reveals_only_matching_rows(env: RoleEnv) -> None:
     assert ids(RequestContext()) == []
     assert ids(RequestContext(auth_subject="sub-1")) == [1]
     assert ids(RequestContext(session_hash=HASH_2)) == [2]
-    assert ids(RequestContext(auth_subject="sub-1", session_hash=HASH_2)) == [1, 2]
-    assert ids(RequestContext(auth_subject="unknown", session_hash=bytes(32))) == []
+    assert ids(RequestContext(auth_subject="unknown")) == []
+    assert ids(RequestContext(session_hash=bytes(32))) == []
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        RequestContext(auth_subject="sub-1", session_hash=HASH_2)
     assert ids(RequestContext(user_id=uuid.uuid4(), tenant_id=uuid.uuid4())) == []
     with (
         pytest.raises(DBAPIError),

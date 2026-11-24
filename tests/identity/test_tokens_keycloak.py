@@ -105,3 +105,54 @@ def test_rotation_new_realm_key_is_picked_up_without_restart(env: Env, admin: Ad
     assert (
         httpx.get(f"{env.base_url}/realms/{REALM}/protocol/openid-connect/certs").status_code == 200
     )
+
+
+@pytest.mark.parametrize("client", ["at-web", "at-mobile"])
+def test_real_tokens_exclude_profile_and_role_claims(env: Env, admin: Admin, client: str) -> None:
+    from tests.identity.kc import decode_jwt
+
+    token, _ = _access_token(env, admin, client=client)
+    claims = decode_jwt(token)
+    assert {
+        "realm_access",
+        "resource_access",
+        "given_name",
+        "family_name",
+        "name",
+        "preferred_username",
+        "allowed-origins",
+    }.isdisjoint(claims)
+    assert claims["email"] and claims["email_verified"] is True
+
+
+def test_login_allows_optional_first_and_last_name(env: Env, admin: Admin) -> None:
+    import uuid
+
+    from tests.identity.kc import GOOD_PASSWORD, TestUser
+
+    email = f"noname-{uuid.uuid4().hex}@example.test"
+    created = admin.master(
+        "POST",
+        "/users",
+        json={
+            "username": email,
+            "email": email,
+            "enabled": True,
+            "emailVerified": True,
+            "credentials": [{"type": "password", "value": GOOD_PASSWORD, "temporary": False}],
+        },
+    )
+    assert created.status_code == 201, created.text
+    user = TestUser(
+        id=created.headers["Location"].rsplit("/", 1)[1], email=email, password=GOOD_PASSWORD
+    )
+    browser = Browser(env)
+    verifier, challenge = pkce_pair()
+    try:
+        page = browser.login(
+            user, client_id="at-mobile", redirect_uri=MOBILE_REDIRECT, challenge=challenge
+        )
+        tokens = browser.token("at-mobile", page.require_code(), MOBILE_REDIRECT, verifier=verifier)
+        assert _validator(env).validate(tokens["access_token"]).subject == user.id
+    finally:
+        browser.close()

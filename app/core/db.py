@@ -57,6 +57,12 @@ class RequestContext:
         ):
             raise TypeError("branch_ids must be a sequence of UUIDs")
         object.__setattr__(self, "branch_ids", tuple(self.branch_ids))
+        if self.auth_subject is not None and self.session_hash is not None:
+            raise ValueError("bootstrap identity proofs are mutually exclusive")
+        if (self.auth_subject is not None or self.session_hash is not None) and (
+            self.user_id is not None or self.tenant_id is not None or self.branch_ids
+        ):
+            raise ValueError("bootstrap and authenticated contexts are mutually exclusive")
         if self.auth_subject is not None:
             if not isinstance(self.auth_subject, str):
                 raise TypeError("auth_subject must be a string or None")

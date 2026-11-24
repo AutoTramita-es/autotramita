@@ -98,7 +98,7 @@ def revoke_for_logout(rt: AuthRuntime, verified: VerifiedLogout) -> None:
         user = user_repository.get_by_subject(db, verified.subject)
         if user is None:
             return
-        apply_context(db, RequestContext(user_id=user.id, auth_subject=verified.subject))
+        apply_context(db, RequestContext(user_id=user.id))
         condition = "user_id = :u"
         params: dict[str, Any] = {"u": user.id}
         if verified.session_id:
