@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 480" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><pattern id="dots" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="16" cy="16" r="2" fill="#005BCB" opacity=".16"/></pattern></defs><rect width="1440" height="480" fill="#EFF5FC"/><rect width="1440" height="480" fill="url(#dots)"/></svg>
