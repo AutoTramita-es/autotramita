@@ -1,7 +1,7 @@
 # AT-01 — Temelj sustava i infrastruktura
 
 - Verzija: 1.1, 2026-11-24
-- Status: PROPOSED — cjelovita specifikacija čeka završno odobrenje; O01/O02/O03/O18/O19 ACCEPTED
+- Status: APPROVED (2026-11-24) — vlasnik odobrio v1.1; O01/O02/O03/O18/O19 ACCEPTED; 15 odluka ostaje PROPOSED
 - Prihvaćene odluke ostaju Accepted; ovaj dokument ne autorizira F1, kod, migracije, provisioning ili deployment.
 
 ## 1. Izvori i prvenstvo
@@ -114,4 +114,4 @@ Shared host/DB/Nextcloud/Traefik predstavljaju zajednički blast radius; odvojen
 Financijski utjecaj: reuse smanjuje dodatne servise, ali offsite backup, SMTP, monitoring i kapacitet mogu imati trošak; nema odobrenog budžeta ili procjene. AT-01 ne autorizira plaćanja.
 
 ## 12. Sljedeći korak
-Vlasnik pregledava i zasebno odobrava cjelovitu specifikaciju; pet F1 odluka je potvrđeno. F1 zahtijeva zasebnu eksplicitnu autorizaciju prema G6. Nema automatskog deploymenta. Dokumentacijska revizija nije live audit niti provjera koda/testova. Postojeći ADR-ovi nisu izmijenjeni; G6 se usklađuje s §10a bez proširenja opsega.
+Vlasnik je 2026-11-24 odobrio cjelovitu specifikaciju v1.1; pet F1 odluka je potvrđeno, preostalih 15 ostaje otvoreno. Slijedi priprema naloga za Claude Code, bez izvršavanja. F1 zahtijeva zasebnu eksplicitnu autorizaciju prema G6. Nema automatskog deploymenta. Dokumentacijska revizija nije live audit niti provjera koda/testova. Postojeći ADR-ovi nisu izmijenjeni; G6 je usklađen s §10a bez proširenja opsega.
