@@ -19,6 +19,7 @@ from app.auth.security.notify import NoticeKind
 from app.auth.web.csrf import csrf_token
 from tests.identity.kc import (
     Admin,
+    BackchannelSink,
     Browser,
     Env,
     SmtpSink,
@@ -435,3 +436,42 @@ def test_d37_recovers_real_keycloak_change_after_interruption(
     assert process_claim(worker, client, *retried)
     assert rig.rows("SELECT email FROM users") == [(f"recover-{user.email}",)]
     assert rig.rows("SELECT count(*) FROM email_change_notifications") == [(2,)]
+
+
+def test_recovery_records_if_keycloak_sends_a_backchannel_logout(
+    rig: Rig, env: Env, admin: Admin, smtp: SmtpSink, backchannel: BackchannelSink
+) -> None:
+    from tests.identity.kc import decode_jwt
+
+    user = admin.create_user()
+    assert rig.sign_in(user).status_code == 302
+    session_id = rig.rows("SELECT kc_session_id FROM user_sessions")[0][0]
+    response = rig.another_client().post(
+        f"{API}/auth/password-recovery", json={"email": user.email}
+    )
+    assert response.status_code == 202
+    set_new_password(env, mail_link(smtp, user.email))
+    deadline = time.monotonic() + 4
+    token = None
+    while time.monotonic() < deadline:
+        for body in backchannel.bodies:
+            if "logout_token" in body:
+                candidate = body["logout_token"][0]
+                if decode_jwt(candidate).get("sid") == session_id:
+                    token = candidate
+                    break
+        if token:
+            break
+        time.sleep(0.2)
+    record_result("T09.reset_logout_token_present", token is not None)
+    record_result(
+        "T09.app_session_before_logout_delivery", rig.api.get(f"{API}/auth/session").status_code
+    )
+    if token is not None:
+        assert (
+            rig.api.post(
+                f"{API}/auth/oidc/backchannel-logout", data={"logout_token": token}
+            ).status_code
+            == 204
+        )
+        assert rig.api.get(f"{API}/auth/session").status_code == 401

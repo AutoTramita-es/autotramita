@@ -190,6 +190,7 @@ def test_missing_kid_is_rejected(rig: Rig) -> None:
 
     token = jwt.encode(rig.idp.claims(), rig.idp.rsa["rsa-1"], algorithm="RS256")
     assert reject(rig, token) is TokenRejection.UNKNOWN_KEY
+    assert rig.idp.fetches == 0  # a token that names no key never costs a refresh
 
 
 def test_provider_down_without_cache_fails_closed_with_503(rig: Rig) -> None:
