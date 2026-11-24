@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 import redis
-from app.core.errors import ServiceUnavailable
+from app.core.errors import Problem, ServiceUnavailable
 from app.core.ratelimit import RateLimiter
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
@@ -20,12 +20,20 @@ class Health(BaseModel):
     status: str = "ok"
 
 
-@router.get("/health", summary="Liveness: the process is running")
+@router.get(
+    "/health",
+    summary="Liveness: the process is running",
+    responses={500: {"model": Problem, "description": "Internal error"}},
+)
 def liveness() -> Health:
     return Health()
 
 
-@router.get("/health/ready", summary="Readiness: configured dependencies answer")
+@router.get(
+    "/health/ready",
+    summary="Readiness: configured dependencies answer",
+    responses={503: {"model": Problem, "description": "A dependency is not ready"}},
+)
 def readiness(request: Request) -> Health:
     # Only configured components are checked. Failures are logged by component name and
     # reported to the caller as a plain 503, without hosts, users or error text.
