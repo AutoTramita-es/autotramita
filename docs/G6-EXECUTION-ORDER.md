@@ -7,6 +7,8 @@ Status: ACCEPTED (2026-11-24) — pravila izvršavanja i detaljni redoslijed F1 
 - [x] ADR-010 Accepted — Keycloak.
 - [x] ADR-011 Accepted — Nextcloud, bez MinIO/S3.
 - [x] G6 — detaljni redoslijed izvršavanja potvrđen (Accepted).
+- [x] AT-01 O01/O02/O03/O18/O19 — potvrđeno 2026-11-24.
+- [ ] Završno odobrenje cjelovite AT-01 specifikacije.
 - [ ] Izričita autorizacija F1 od vlasnika projekta.
 
 ## Pravila
@@ -17,6 +19,7 @@ Status: ACCEPTED (2026-11-24) — pravila izvršavanja i detaljni redoslijed F1 
 5. Deployment zahtijeva zasebno odobrenje.
 
 ## Izvori
+- [AT-01 specifikacija v1.1, §10a — potvrđene F1 odluke](specifications/AT-01-foundation-infrastructure.md#10a-potvrđene-f1-odluke--accepted-2026-11-24)
 - [ADR register](adr/ADR-REGISTER.md)
 - [ADR-008](adr/ADR-008-delivery-governance.md)
 - [AT-03 potvrđene odluke](specifications/AT-03-decisions.md)
@@ -32,13 +35,13 @@ Izvorni plan faza pronađen je u design dokumentima, ne u zasebnom G6 dokumentu:
 **Zabranjeno:** `app/auth`, `app/tenants`, `app/customers`, `app/cases`, `app/documents`, `app/billing`, `app/credit` i ostali poslovni moduli; frontend i Flutter; Keycloak, Nextcloud, Celery i poslovni poslovi (Redis samo za rate limiting, korak 6); promjene `docker-compose*.yml`, `.secrets/`, Traefik/Cloudflare; pokretanje `scripts/provision-postgres.py` nad zajedničkim PostgreSQL-om; deployment.
 
 **Redoslijed (svaki korak završava testom i malim commitom na grani, bez automatskog nastavka):**
-1. Alati: Python 3.12 i `uv` s lockfileom (potvrđeno); Ruff, mypy, pytest; verzije pinirane. Instalacija tek nakon autorizacije.
+1. Alati: Python 3.12 i `uv` s lockfileom (potvrđeno); Ruff, mypy, pytest; verzije pinirane. Instalacija tek nakon autorizacije. O01: Python 3.12.x, PostgreSQL 16.x, Redis 7.x; točne kompatibilne patch verzije i uv zaključati, odvojiti dev/runtime, CI uv sync --locked; Dependabot bez auto-mergea, izvan dopuštenih putanja samo uz zasebno odobrenje.
 2. Konfiguracija: Pydantic v2 settings iz okoline, bez tajni u repou; odvojeni DB URL-ovi za owner/app/worker/platform.
 3. Sloj baze: **sinkroni** SQLAlchemy 2.x i psycopg 3; `app.user_id`/`app.tenant_id` kroz `set_config(..., true)` na istoj konekciji i transakciji (ADR-002).
 4. Alembic baseline: owner rola izvodi migracije; SQL za role u `scripts/db/` idempotentan, aplikacijske role nisu vlasnici (G5-01).
 5. RLS test harness na pravom PostgreSQL 16 (ne SQLite): probna tablica samo u testovima; testovi: izostavljen kontekst vraća 0 redaka, krivotvoreni `tenant_id` pada na `WITH CHECK`, `FORCE ROW LEVEL SECURITY` aktivan, app rola nije vlasnik i nema `BYPASSRLS`, cross-tenant join i composite FK odbijeni, kontekst ne curi između konekcija iz pool-a, `SET ROLE` zaobilaženje odbijeno, worker uspostavlja vlastiti kontekst.
-6. API konvencije (G5-08): `application/problem+json` (RFC 9457) sa stabilnim `code`; cursor paginacija bez izmišljenog ukupnog broja; `Idempotency-Key` s retencijom 24 h; `If-Match`/verzija za izmjene; rate limiting preko Redisa (korak 6a); request ID i zapisnici bez tajni i osobnih podataka.
-6a. Rate limiting: Redis kao centralni mehanizam; limiti konfigurabilni iz okoline, ne tvrdo kodirani. Početne vrijednosti: javni API 60 zahtjeva/min po IP-u; autentificirani API 300/min po korisniku; tenant 3.000/min; upload 30/min po korisniku; izvoz 5/min po korisniku; interni health check (`/api/v1/health`) izuzet. U F1 samo mehanizam, konfiguracija i testovi (limit, reset, izuzeće, ključevi odvojeni po tenantu). Brute-force zaštita prijave (5 neuspjelih u 15 min) i oporavak lozinke (3/h po računu) konfigurira se u Keycloaku u F2; F1 samo rezervira konfiguracijske ključeve. Limiti poslovnih modula definiraju se u njihovim fazama.
+6. API konvencije (G5-08): `application/problem+json` (RFC 9457) sa stabilnim `code`; cursor paginacija bez izmišljenog ukupnog broja; `Idempotency-Key` s retencijom 24 h; `If-Match`/verzija za izmjene; rate limiting preko Redisa (korak 6a); request ID i zapisnici bez tajni i osobnih podataka. O03/O19: primijeniti detaljne ugovore iz AT-01 §10a (scope actor/tenant/operation/key, SHA-256, 24 h, replay/409/400, ponovna autorizacija, cursor 25/1/100, ETag/If-Match, 412/428); PostgreSQL poslovna atomska perzistencija kasnije, F1 samo testne strukture i zajednički mehanizam.
+6a. Rate limiting: Redis kao centralni mehanizam; limiti konfigurabilni iz okoline, ne tvrdo kodirani. Početne vrijednosti: javni API 60 zahtjeva/min po IP-u; autentificirani API 300/min po korisniku; tenant 3.000/min; upload 30/min po korisniku; izvoz 5/min po korisniku; interni health check (`/api/v1/health`) izuzet. U F1 samo mehanizam, konfiguracija i testovi (limit, reset, izuzeće, ključevi odvojeni po tenantu). Brute-force zaštita prijave (5 neuspjelih u 15 min) i oporavak lozinke (3/h po računu) konfigurira se u Keycloaku u F2; F1 samo rezervira konfiguracijske ključeve. Limiti poslovnih modula definiraju se u njihovim fazama. O02/O18: približni Sliding Window Counter, atomska Lua obrada, Redis vrijeme, svi primjenjivi limiti; 429 i Retry-After prema blokirajućim limitima; fail closed 503 RATE_LIMIT_UNAVAILABLE, Retry-After 5 s, connect/operation timeout po 500 ms, bez retryja ili lokalnog fallbacka. Trusted proxy provjera i spoofing testovi; konkretne adrese prije deploymenta.
 7. Zdravlje: `/api/v1/health` bez detalja o infrastrukturi; OpenTelemetry samo kao priključna točka.
 8. OpenAPI: izvoz ugovora, contract test, provjera da se TypeScript i Dart klijenti generiraju (generiranje u CI, generirani klijenti se ne commitaju u F1).
 9. CI na GitHub Actions: Ruff, mypy, pytest s PostgreSQL 16 i Redis service containerima, migration up/down, skeniranje tajni i ovisnosti.
@@ -48,6 +51,9 @@ Izvorni plan faza pronađen je u design dokumentima, ne u zasebnom G6 dokumentu:
 **Izvješće nakon F1:** promijenjene datoteke, migracije, naredbe i rezultati testova, neuspjesi, rizici, rollback, sljedeća ovisnost. Prihvaćanje vlasnika odvojeno je od merge-a i deploymenta.
 
 **Potvrđene tehničke odluke (2026-11-24):** sinkroni sloj baze (SQLAlchemy 2.x, psycopg 3); Python 3.12 i `uv`; GitHub Actions kao CI; Redis za rate limiting s gore navedenim početnim limitima. Vlasnik projekta izričito je potvrdio G6 i sve četiri tehničke odluke, uključujući osam početnih limita. F1 nije autoriziran; potrebna je zasebna izričita autorizacija.
+
+## Dodatak — potvrda AT-01.03 (2026-11-24)
+O01, O02, O03, O18 i O19 izričito potvrđeni. Normativni detalji u AT-01 §10a; testirati prema tamošnjim kriterijima uz postojeće G6 sigurnosne testove. Ostalih 15 odluka ostaje PROPOSED. Nema proširenja dopuštenih putanja ni autorizacije F1/deploymenta. Ako detalj fingerprinta, cursora ili testne perzistencije zahtijeva novu arhitektonsku odluku, stati prema G6.
 
 ## F2 i F3a — samo okvir
 F2 (AT-02 identitet/sesije, minimalni AT-17): `users`, `user_sessions`, validacija konteksta, opoziv, `audit_events`, `platform_grants`; prije toga zaseban detalj i autorizacija. F3a (AT-03 tenant/poslovnica/članstvo/pozivnica/verifikacija, minimalni AT-09): tek nakon AT-03 usklađivanja (pravilo 4). Detaljni redoslijed za F2 i F3a piše se kad F1 završi.
