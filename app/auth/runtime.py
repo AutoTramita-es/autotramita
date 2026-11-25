@@ -37,6 +37,7 @@ from app.auth.web.oidc_flow import (
     http_token_exchanger,
 )
 from app.core.db import RequestContext, create_session_factory
+from app.core.pagination import CursorCodec
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.requests import Request
@@ -66,6 +67,10 @@ class AuthRuntime:
     markers: RecoveryMarkers | None = None
     # D37 is fail-closed until its recovery and durable delivery worker is wired.
     email_change_ready: bool = False
+    # F2-T10: the platform database role (platform grants) and the signed list cursors. Without
+    # them every platform route answers 503; no other role ever stands in.
+    platform_factory: sessionmaker[Session] | None = None
+    cursor_codec: CursorCodec | None = None
 
     def record_anonymous(
         self,
@@ -97,6 +102,8 @@ class AuthRuntime:
         *,
         namespace: str,
         trusted_proxies: Sequence[IPNetwork] = (),
+        platform_engine: Engine | None = None,
+        cursor_codec: CursorCodec | None = None,
     ) -> AuthRuntime:
         jwks = JwksCache(
             http_jwks_fetcher(settings.jwks_endpoint, settings.jwks_timeout_seconds),
@@ -120,6 +127,10 @@ class AuthRuntime:
             admin=KeycloakAdmin(settings) if settings.admin_client_secret else None,
             notifier=build_notifier(settings),
             markers=RecoveryMarkers(redis_client, namespace=namespace),
+            platform_factory=(
+                create_session_factory(platform_engine) if platform_engine is not None else None
+            ),
+            cursor_codec=cursor_codec,
         )
 
     # --- origins: which of our sites a request belongs to --------------------------------------

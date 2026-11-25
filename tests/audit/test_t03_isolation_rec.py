@@ -190,9 +190,12 @@ def test_another_persons_events_of_the_same_tenant_stay_invisible(env: RoleEnv) 
     assert actors == [one]
     with session_scope(factory, RequestContext(tenant_id=tenant)) as db:  # a tenant alone
         assert db.execute(text("SELECT count(*) FROM audit_events")).scalar_one() == 0
-    for kind in ("worker", "platform"):
-        with env.engine(kind).connect() as db, pytest.raises(DBAPIError):
-            db.execute(text("SELECT count(*) FROM audit_events"))
+    with env.engine("worker").connect() as db, pytest.raises(DBAPIError):
+        db.execute(text("SELECT count(*) FROM audit_events"))
+    platform = create_session_factory(env.engine("platform"))
+    for person in (one, two):  # F2-T10: the platform role reads only with PLATFORM_AUDIT_VIEW
+        with session_scope(platform, RequestContext(user_id=person)) as db:
+            assert db.execute(text("SELECT count(*) FROM audit_events")).scalar_one() == 0
 
 
 # --- R03: every way of naming a branch the request does not hold -------------------------------

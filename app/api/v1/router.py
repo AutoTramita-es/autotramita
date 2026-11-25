@@ -6,6 +6,7 @@ from app.api.openapi import PROBLEM_RESPONSES
 from app.api.v1 import health
 from app.api.v1.auth import build_auth_router
 from app.api.v1.me import build_me_router
+from app.api.v1.platform_grants import build_platform_grants_router
 from app.api.v1.sessions import build_sessions_router
 from app.auth.settings import AuthLimitSettings
 from app.core.config import RateLimitSettings
@@ -40,6 +41,12 @@ def build_v1_router(
     )
     limited.include_router(
         build_me_router(auth_limits or AuthLimitSettings(), settings.trusted_proxy_networks),
+        responses=PROBLEM_RESPONSES,
+    )
+    limited.include_router(
+        build_platform_grants_router(
+            auth_limits or AuthLimitSettings(), settings.trusted_proxy_networks
+        ),
         responses=PROBLEM_RESPONSES,
     )
     router.include_router(limited)

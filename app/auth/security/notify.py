@@ -30,6 +30,7 @@ class NoticeKind(StrEnum):
     SESSIONS_REVOKED = "SESSIONS_REVOKED"
     EMAIL_CHANGED = "EMAIL_CHANGED"
     PASSWORD_RESET_COMPLETED = "PASSWORD_RESET_COMPLETED"  # noqa: S105 - a notice name
+    PLATFORM_GRANT_CHANGED = "PLATFORM_GRANT_CHANGED"  # F2-T10: granted or revoked
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +72,10 @@ _WHAT = {
     NoticeKind.SESSIONS_REVOKED: (
         "Se han cerrado sesiones de tu cuenta",
         "se cerraron sesiones activas de tu cuenta",
+    ),
+    NoticeKind.PLATFORM_GRANT_CHANGED: (
+        "Han cambiado tus permisos de administración",
+        "se concedió o retiró un permiso de administración de la plataforma en tu cuenta",
     ),
 }  # fmt: skip
 

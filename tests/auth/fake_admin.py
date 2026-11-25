@@ -98,6 +98,11 @@ class FakeAdmin:
         self._check("obligation")
         return subject in self.obliged
 
+    def set_factor_mandatory(self, subject: str) -> None:
+        self._check("set_mandatory")
+        self.mandatory.add(subject)
+        self.obliged.add(subject)
+
 
 @dataclass
 class RecordingNotifier:

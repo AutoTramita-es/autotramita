@@ -91,7 +91,7 @@ No change needed a new mechanism, a fork or the removal of a protection.
 - **Not trusted:** the browser, every form field and parameter, single sign-on state, and the application's status parameters (the application reads the credentials back).
 - **`at_mfa_required` and `at_mfa_mandatory`:** user-profile attributes that only administrators can see or change. Writers:
   - `at_mfa_required`: the provider (set) and the switch-off (lift).
-  - `at_mfa_mandatory`: T10 (platform grants). Nothing sets it today.
+  - `at_mfa_mandatory`: T10 (platform grants), before a grant takes effect; T10 never lifts it (T11 operator interface).
 
 ## Fail-closed behaviour
 
@@ -103,7 +103,7 @@ No change needed a new mechanism, a fork or the removal of a protection.
 
 ## Dependencies on T10 and T11
 
-- **T10:** set and clear `at_mfa_mandatory` with platform grants; grant holders must have a factor; authority for the controlled recovery of a locked account.
+- **T10 (implemented, [CP10 report](../../../docs/design/F2-CP10-REPORT.md)):** sets `at_mfa_mandatory` with platform grants (lifting it is T11); grant holders must have a permanent factor; authority for the controlled recovery of a locked account (interface T11).
 - **T11:**
   - the interface for that recovery and for operators;
   - ingestion of `CUSTOM_REQUIRED_ACTION_ERROR`, `UPDATE_TOTP` and `UPDATE_CREDENTIAL` events (notices for changes made on Keycloak's pages);

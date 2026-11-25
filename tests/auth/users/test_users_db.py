@@ -262,10 +262,15 @@ def test_nobody_can_delete_and_platform_has_no_access_until_its_grants_exist(env
     for kind in ("app", "worker", "platform"):
         with env.engine(kind).connect() as c, pytest.raises(DBAPIError):
             c.execute(text("DELETE FROM users"))
+    # F2-T10: the platform role reads and changes status only through a grant (0010); without
+    # one it sees no row and changes none (tests/platform/test_platform_grants_db.py).
+    platform = create_session_factory(env.engine("platform"))
+    for context in (RequestContext(), RequestContext(user_id=uuid.uuid4())):
+        with session_scope(platform, context) as s:
+            assert s.execute(text("SELECT count(*) FROM users")).scalar_one() == 0
+            assert s.execute(text("UPDATE users SET status = 'BLOCKED' RETURNING id")).all() == []
     with env.engine("platform").connect() as c, pytest.raises(DBAPIError):
-        c.execute(text("SELECT count(*) FROM users"))  # F2-T10 adds the grant-based policy
-    with env.engine("platform").connect() as c, pytest.raises(DBAPIError):
-        c.execute(text("UPDATE users SET status = 'BLOCKED'"))
+        c.execute(text("UPDATE users SET email = 'x@example.test'"))  # not a status column
 
 
 def test_worker_may_change_status_but_nothing_else(env: RoleEnv) -> None:

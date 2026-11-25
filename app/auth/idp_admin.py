@@ -200,6 +200,20 @@ class KeycloakAdmin:
             raise IdpAdminError("invalid identity state")
         return attributes.get(FACTOR_MANDATORY_ATTRIBUTE) == ["true"]
 
+    def set_factor_mandatory(self, subject: str) -> None:
+        # The whole representation goes back, so no other attribute (or the obligation the
+        # provider set with the first factor) is lost; only the two marks are added.
+        user = self._user(subject)
+        attributes = user.get("attributes") or {}
+        if not isinstance(attributes, dict):
+            raise IdpAdminError("invalid identity state")
+        attributes[FACTOR_MANDATORY_ATTRIBUTE] = ["true"]
+        attributes[FACTOR_OBLIGATION_ATTRIBUTE] = ["true"]
+        user["attributes"] = attributes
+        self._call("PUT", f"/users/{self._id(subject)}", json=user)
+        if not (self.is_factor_mandatory(subject) and self.has_factor_obligation(subject)):
+            raise IdpAdminError("the mark was not stored")
+
     def _user(self, subject: str) -> dict[str, Any]:
         try:
             user = self._call("GET", f"/users/{self._id(subject)}").json()

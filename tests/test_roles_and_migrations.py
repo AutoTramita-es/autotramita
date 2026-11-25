@@ -486,7 +486,7 @@ def _security_catalog(env: RoleEnv) -> list[tuple[object, ...]]:
         return [tuple(row) for row in db.execute(text(query))]
 
 
-@pytest.mark.parametrize("target", ["0006", "0007"])
+@pytest.mark.parametrize("target", ["0006", "0007", "0009"])  # 0009: back from T10's 0010
 def test_rec_migrations_downgrade_to_exactly_what_was_there_and_back(
     role_env: RoleEnv, target: str
 ) -> None:

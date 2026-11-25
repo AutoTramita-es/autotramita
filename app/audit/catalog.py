@@ -80,6 +80,7 @@ CATALOG: dict[str, ActionSpec] = {
     # platform grants
     "authz.platform_grant.requested": _spec(Z, grant_type="code", grant_id="uuid"),
     "authz.platform_grant.approved": _spec(Z, grant_type="code", grant_id="uuid"),
+    "authz.platform_grant.rejected": _spec(Z, grant_type="code", grant_id="uuid"),  # T10
     "authz.platform_grant.activated": _spec(Z, grant_type="code", grant_id="uuid"),
     "authz.platform_grant.revoked": _spec(Z, grant_type="code", grant_id="uuid"),
     "authz.platform_grant.used": _spec(Z, grant_type="code", grant_id="uuid"),

@@ -21,6 +21,7 @@ SPEC_ACTIONS = {  # AT-02 section 9.2, expanded
     "security.mfa.disabled",
     "security.step_up.succeeded", "security.step_up.failed", "security.settings.changed",
     "authz.platform_grant.requested", "authz.platform_grant.approved",
+    "authz.platform_grant.rejected",  # F2-T10: a four-eyes request turned down (AT-02 8.3.4)
     "authz.platform_grant.activated", "authz.platform_grant.revoked",
     "authz.platform_grant.used", "authz.platform_grant.expired", "authz.denied",
     "admin.audit.viewed", "admin.user.searched",

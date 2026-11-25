@@ -216,6 +216,8 @@ Događaji: promjena lozinke, promjena e-maila (stara i nova adresa), MFA dodan/u
 Deny by default; least privilege; ovlasti čitane iz baze na svaki zahtjev (opoziv trenutačan); platformske i tenant ovlasti u odvojenim tablicama/putevima koji se ne miješaju; nijedna platformska ovlast ne omogućuje pristup tenant podacima izvan izričito opisanog opsega (F3a: verifikacijski zapisi; podrška: AT-03 #20 `SupportAccessGrant`, izvan F2); zabrana arbitrarnog prebacivanja između tenanta (ADR-002).
 
 ### 8.2 Model `platform_grants` (D28, D29)
+> **Implementation note (F2-T10, 2026-11-25, [CP10 report](../design/F2-CP10-REPORT.md) §4):** migration 0010. `platform_has_grant()` stays SECURITY INVOKER; because a policy of `platform_grants` cannot call it (recursion), the rows of other people are visible to the platform role only after the service verified and share-locked the caller's own grant administrator grant (`app.grant_authority`, two-step context as G5-02); every write is checked against `platform_has_grant()` again. §8.3.2 is applied as: a type the requester holds and that needs no four eyes takes effect at once, every other request waits for a second grant administrator. A grant takes effect only for an active account with a one-time code or passkey, after the identity provider marked it `at_mfa_mandatory`. Rejection is a revocation with reason `REJECTED`; the approver is neither requester nor beneficiary; any grant administrator revokes, except the last.
+
 | Stupac | Pravilo |
 |---|---|
 | `id`, `user_id` | uuid; `user_id` FK `users` |

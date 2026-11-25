@@ -491,6 +491,13 @@ EXPECTED_ACCESS = {
     ("POST", "/api/v1/me/security/mfa-enrollment-requests"): AccessKind.USER,
     ("POST", "/api/v1/me/security/mfa-disable-requests"): AccessKind.USER,
     ("DELETE", "/api/v1/me/security/second-factors/{credential_id}"): AccessKind.USER,
+    # F2-T10: the grant is read in the handler's platform transaction (platform_scope)
+    ("GET", "/api/v1/platform/grant-types"): AccessKind.PLATFORM,
+    ("GET", "/api/v1/platform/grants"): AccessKind.PLATFORM,
+    ("POST", "/api/v1/platform/grants"): AccessKind.PLATFORM,
+    ("POST", "/api/v1/platform/grants/{grant_id}/approve"): AccessKind.PLATFORM,
+    ("POST", "/api/v1/platform/grants/{grant_id}/reject"): AccessKind.PLATFORM,
+    ("POST", "/api/v1/platform/grants/{grant_id}/revoke"): AccessKind.PLATFORM,
 }
 
 
@@ -513,7 +520,11 @@ def test_anonymous_callers_are_refused_before_anything_else_on_every_protected_r
     for (method, path), kind in EXPECTED_ACCESS.items():
         if kind is AccessKind.PUBLIC:
             continue
-        url = path.replace("{session_id}", str(uuid.uuid4())).replace("{credential_id}", "c1")
+        url = (
+            path.replace("{session_id}", str(uuid.uuid4()))
+            .replace("{credential_id}", "c1")
+            .replace("{grant_id}", str(uuid.uuid4()))
+        )
         response = anonymous.request(method, url, json={} if method in ("POST", "PATCH") else None)
         assert response.status_code == 401 and response.json()["code"] == "AUTH_REQUIRED", (
             method,

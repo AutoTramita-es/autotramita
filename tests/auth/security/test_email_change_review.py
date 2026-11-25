@@ -111,14 +111,29 @@ def test_nobody_may_decide_until_an_authority_is_wired(
 
 def test_no_route_command_or_task_reaches_the_review(env: RoleEnv) -> None:
     """F-4: no temporary administration endpoint. The interface arrives with T11 and grants."""
-    users = [
-        path.relative_to(ROOT).as_posix()
+    files = [
+        (path.relative_to(ROOT).as_posix(), path.read_text())
         for folder in ("app", "scripts", "migrations")
         for path in (ROOT / folder).rglob("*.py")
-        if "email_change_review" in path.read_text()
-        and path.name not in ("email_change_review.py", "0009_email_change_review.py")
+    ]
+    users = [
+        name
+        for name, source in files
+        if "email_change_review" in source
+        and name
+        not in (
+            "app/auth/security/email_change_review.py",
+            "migrations/versions/0009_email_change_review.py",
+            "app/platform/authz.py",  # F2-T10: supplies the authority, calls nothing
+        )
     ]
     assert users == []
+    callers = [
+        name
+        for name, source in files
+        if "resolve_review(" in source and name != "app/auth/security/email_change_review.py"
+    ]
+    assert callers == []  # still no route, command or task reaches it (interface: T11)
 
 
 # --- retry -----------------------------------------------------------------------------------------

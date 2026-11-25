@@ -441,8 +441,11 @@ def test_privileges_per_role(env: RoleEnv) -> None:
     for kind in ("app", "worker", "platform"):
         with env.engine(kind).connect() as c, pytest.raises(DBAPIError):
             c.execute(text("DELETE FROM user_sessions"))
+    with session_scope(factory(env, "platform"), RequestContext(user_id=user)) as db:
+        # F2-T10: only through PLATFORM_USER_ADMIN (0010); without it no row, not even its own
+        assert db.execute(text("SELECT count(*) FROM user_sessions")).scalar_one() == 0
     with env.engine("platform").connect() as c, pytest.raises(DBAPIError):
-        c.execute(text("SELECT count(*) FROM user_sessions"))  # grants arrive with F2-T10
+        c.execute(text("UPDATE user_sessions SET context_version = 9"))  # revocation columns only
     with pytest.raises(DBAPIError), session_scope(factory(env, "worker"), RequestContext()) as db:
         db.execute(text("UPDATE user_sessions SET context_version = 9"))
     with pytest.raises(DBAPIError), session_scope(factory(env, "worker"), RequestContext()) as db:

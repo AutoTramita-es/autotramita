@@ -18,6 +18,7 @@ from app.auth.security.recovery_worker import EmailChangeRecoveryWorker
 from app.auth.settings import AuthLimitSettings, AuthSettings
 from app.core.config import RateLimitSettings, Settings
 from app.core.db import create_db_engine, create_session_factory
+from app.core.pagination import CursorCodec
 from app.core.ratelimit import RateLimiter, create_redis
 from fastapi import FastAPI
 from pydantic import ValidationError
@@ -63,6 +64,11 @@ def create_app_from_settings(settings: Settings) -> FastAPI:
     redis_client = create_redis(settings.redis_url)
     limiter = RateLimiter(redis_client, namespace=settings.environment)
     engine = create_db_engine(settings)
+    # F2-T10: platform routes use their own least-privilege role; without it they answer 503.
+    platform_engine = (
+        create_db_engine(settings, role="platform") if settings.platform_user else None
+    )
+    codec = CursorCodec.from_settings(settings) if settings.cursor_signing_key else None
     auth: AuthRuntime | None = None
     try:
         auth = AuthRuntime.build(
@@ -71,6 +77,8 @@ def create_app_from_settings(settings: Settings) -> FastAPI:
             engine,
             namespace=settings.environment,
             trusted_proxies=limits.trusted_proxy_networks,
+            platform_engine=platform_engine,
+            cursor_codec=codec,
         )
     except ValidationError:
         logging.getLogger(__name__).warning("authentication is not configured; sign-in disabled")

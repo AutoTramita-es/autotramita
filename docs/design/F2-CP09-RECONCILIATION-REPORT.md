@@ -507,7 +507,7 @@ Keycloak Security Upgrade (26.8.2): no test removed, skipped or weakened.
 
 ## 11. Remaining T10–T13 obligations
 
-- **T10:** set `at_mfa_mandatory` for grant holders (the switch-off is then refused, enforcement tested); authority for the controlled recovery of a locked account (marked, no factor left); platform grants and mandatory level two for grant holders with an already enrolled factor (AC-PLT, AC-POL-09, AC-AUTHZ-03, platform parts of AC-USR-06 and AC-SES-07); five-minute window for grant changes; the F-4 authority; migrations from 0010.
+- **T10 (implemented 2026-11-25, [CP10 report](F2-CP10-REPORT.md); `at_mfa_mandatory` is set, never lifted, by T10):** set `at_mfa_mandatory` for grant holders (the switch-off is then refused, enforcement tested); authority for the controlled recovery of a locked account (marked, no factor left); platform grants and mandatory level two for grant holders with an already enrolled factor (AC-PLT, AC-POL-09, AC-AUTHZ-03, platform parts of AC-USR-06 and AC-SES-07); five-minute window for grant changes; the F-4 authority; migrations from 0010.
 - **T11:** interface for the controlled recovery and for setting `at_mfa_required`; notices for factors added on Keycloak's pages (`UPDATE_TOTP`, `UPDATE_CREDENTIAL`); administration, durable outbox and Celery, Keycloak events (AC-AUD-08/10, AC-MOB-04, changes made on Keycloak's pages), ending Keycloak sessions, the F-4 interface, country notice if a source is decided.
 - **T12:** frozen API contract (AC-API).
 - **T13:** final acceptance and traceability test.

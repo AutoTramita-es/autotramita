@@ -40,7 +40,7 @@ The realm file lists every required action. Passkey registration (`webauthn-regi
 ## `at_mfa_required` and `at_mfa_mandatory`
 User-profile attributes visible and changeable by **administrators only**.
 - `at_mfa_required=true`: the account must never fall back to the password alone. The provider sets it with the first permanent factor, in the same transaction; the controlled switch-off lifts it, only together with every factor. A marked account without any usable factor, and any account holding recovery codes only, is locked until a controlled recovery (T10/T11).
-- `at_mfa_mandatory=true`: the second factor may not be switched off (platform grants). T10 sets it; nothing does today. The application and the provider both refuse the switch-off when it is set.
+- `at_mfa_mandatory=true`: the second factor may not be switched off (platform grants). The platform-grant module (T10) sets it, together with `at_mfa_required`, before a grant takes effect, through `at-admin-svc`; it never lifts it (that is the T11 operator interface). The application and the provider both refuse the switch-off when it is set.
 
 ## Switching the second factor off
 The application's `POST /me/security/mfa-disable-requests` (explicit confirmation, fresh second factor) sends the person to `kc_action=at-disable-mfa`: a fresh sign-in with a one-time code or passkey, then a confirmation page. The provider removes every permanent factor and recovery code and the obligation in one transaction and ends every other session; the application then ends every application session.
@@ -69,3 +69,7 @@ The application caches JWKS for 10 minutes and refetches at most once a minute o
 
 ## Not covered here
 Compose import mount, hiding the admin console and `/realms/master` (D43), SMTP settings for dev/prod, production password blacklist. The Keycloak upgrade, its backup and rollback: [keycloak/UPGRADE-26.8.2.md](keycloak/UPGRADE-26.8.2.md).
+
+## First platform grant administrator (DEV/CI only, F2-T10, D30)
+
+`uv run python scripts/identity/bootstrap_platform_admin.py --email <person> [--days 90]` with the database **owner** credentials (`APP_DB_OWNER_USER`/`APP_DB_OWNER_PASSWORD` and the `POSTGRES_*` settings) and the `AUTH_*` settings of `at-admin-svc` in the environment. `ENVIRONMENT=prod` is refused. The person must already exist in the application (signed in once), be active and hold a one-time code or passkey; the command marks the account `at_mfa_mandatory`, gives one `PLATFORM_GRANT_ADMIN` grant for at most 90 days and records it (`actor_type=SYSTEM`). Four-eyes approvals need two grant administrators, so bootstrap two people. A production bootstrap needs its own owner approval.

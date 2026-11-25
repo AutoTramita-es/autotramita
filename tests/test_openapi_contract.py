@@ -163,6 +163,11 @@ F2_AUTH_PATHS = [
     "/api/v1/me/security/mfa-disable-requests",
     "/api/v1/me/security/password-change-requests",
     "/api/v1/me/security/second-factors/{credential_id}",
+    "/api/v1/platform/grant-types",  # F2-T10
+    "/api/v1/platform/grants",
+    "/api/v1/platform/grants/{grant_id}/approve",
+    "/api/v1/platform/grants/{grant_id}/reject",
+    "/api/v1/platform/grants/{grant_id}/revoke",
 ]
 
 
@@ -171,7 +176,7 @@ def test_only_the_documented_routes_are_exposed_and_nothing_else() -> None:
     paths = sorted(json.loads(render())["paths"])
     assert paths == sorted(
         [*F2_AUTH_PATHS, "/api/v1/health"]
-    )  # F1 health; F2: T06 web sign-in, T07 mobile and sessions, T08 profile, T09 security
+    )  # F1 health; F2: T06 web, T07 mobile and sessions, T08 profile, T09 security, T10 grants
     plain = [getattr(route, "path", None) for route in app.routes]
     assert {p for p in plain if p} <= {"/openapi.json"}  # no hidden docs or test routes
 
@@ -187,6 +192,9 @@ def test_common_response_models(spec: dict[str, Any]) -> None:
         "RecoveryAccepted",
         "RecoveryRequest", "SecondFactor", "SecurityOverview",
         "EmailChangeRequest", "EmailChangeConfirmation",
+        # F2-T10 platform grants
+        "PlatformGrant", "CursorPage_PlatformGrant_", "GrantRequest", "GrantTypeInfo",
+        "RevokeRequest", "GrantType", "GrantStatus", "ScopeKind", "RevokeReason",
     }  # fmt: skip
     assert set(schemas["Problem"]["required"]) == {"type", "title", "status", "code"}
     assert set(schemas["Problem"]["properties"]) == {

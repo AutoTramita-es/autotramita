@@ -80,7 +80,7 @@ def test_table_privilege_matrix(env: RoleEnv) -> None:
     expected = {
         "app": {"SELECT", "INSERT"},
         "worker": {"INSERT"},
-        "platform": set(),
+        "platform": {"SELECT", "INSERT"},  # F2-T10: behind PLATFORM_AUDIT_VIEW / own grant use
         "owner": None,  # the owner holds everything as table owner; not asserted here
     }
     with env.admin_engine().connect() as c:
@@ -130,10 +130,12 @@ def test_forced_rls_and_per_person_visibility(env: RoleEnv) -> None:
     assert visible(USER_A) == ["auth.login.succeeded"]
     assert sorted(visible(USER_B)) == ["auth.login.succeeded"]  # B sees only the own login
     assert visible(uuid.uuid4()) == []
-    for kind in ("worker", "platform"):  # neither role can read (no privilege, no policy)
-        engine = env.engine(kind)
-        with engine.connect() as c, pytest.raises(DBAPIError):
-            c.execute(text("SELECT count(*) FROM audit_events"))
+    with env.engine("worker").connect() as c, pytest.raises(DBAPIError):
+        c.execute(text("SELECT count(*) FROM audit_events"))  # no privilege, no policy
+    platform = create_session_factory(env.engine("platform"))
+    for person in (None, USER_A):  # F2-T10: only with PLATFORM_AUDIT_VIEW (0010)
+        with session_scope(platform, RequestContext(user_id=person)) as s:
+            assert s.execute(text("SELECT count(*) FROM audit_events")).scalar_one() == 0
 
 
 # --- AC-AUD-03 scope check, no foreign keys ---------------------------------------------------

@@ -2,6 +2,8 @@
 
 Datum: 2026-11-24 | Status: **ACCEPTED uz CP00 (2026-11-24)** | Povezano: [Execution order](F2-EXECUTION-ORDER.md) · [Plan §4](F2-IMPLEMENTATION-PLAN.md) · [AT-02](../specifications/AT-02-identity-security.md) · [Registar](F2-DECISION-REGISTER.md)
 
+> **F2-T10 (2026-11-25):** AC-PLT-01…12, AC-POL-09, AC-AUTHZ-03 and the platform parts of AC-USR-06 and AC-SES-07 have evidence in the [CP10 report §7](F2-CP10-REPORT.md#7-acceptance-criteria-t10) (PASS, subject to CP10 acceptance); AC-AUD-08 gains the grant part and stays PARTIAL (T11). CP10 is not accepted.
+>
 > **F2-CP09 accepted (2026-11-25, D47):** the owner accepted CP09 on `b24da2a`; the T01–T09 results of the [CP09 matrix](F2-CP09-RECONCILIATION-REPORT.md#8-acceptance-matrix-t01t13) are accepted as recorded there. Only F2-T10 is authorized; AC-PLT-12 uses migration **0010** (the next free number after 0001–0009).
 >
 > **F2-T09-REC Keycloak Security Upgrade (2026-11-25, D45):** Keycloak 26.8.2 umjesto 26.4.7; AC-CTX-01 preformuliran (očuvana F1 sigurnosna jamstva umjesto doslovno nepromijenjenih testova); izvor geolokacije za AC-SES-10 odgođen do T11.

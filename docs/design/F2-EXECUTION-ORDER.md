@@ -1,6 +1,6 @@
 # F2 — Redoslijed izvršavanja (execution order)
 
-Datum: 2026-11-24, stanje 2026-11-25 | Status: **CP00–CP09 prihvaćeni (CP09: 2026-11-25, verificirani SHA `b24da2a`); F2-T09 COMPLETED / ACCEPTED; autoriziran samo F2-T10** | T11–T13 nisu autorizirani
+Datum: 2026-11-24, stanje 2026-11-25 | Status: **CP00–CP09 prihvaćeni (CP09: 2026-11-25, verificirani SHA `b24da2a`); F2-T09 COMPLETED / ACCEPTED; autoriziran samo F2-T10 — IMPLEMENTATION COMPLETED / READY FOR INDEPENDENT SECURITY REVIEW (CP10 nije prihvaćen)** | T11–T13 nisu autorizirani
 [Plan](F2-IMPLEMENTATION-PLAN.md) · [Specifikacija AT-02](../specifications/AT-02-identity-security.md) · [Registar odluka](F2-DECISION-REGISTER.md) · [Kriteriji](F2-ACCEPTANCE-CRITERIA.md) · [G6 (F1 obrazac)](../G6-EXECUTION-ORDER.md)
 
 **Sažetak:** 13 paketa (F2-T01…T13), 14 checkpointova (F2-CP00 planiranje, CP01…CP12 po paketu, CP13 završno prihvaćanje).
@@ -413,7 +413,7 @@ Završni status: "F2-T10 — IMPLEMENTATION COMPLETED / READY FOR INDEPENDENT SE
 | F2-CP07 | T07 | **PRIHVAĆEN 2026-11-24**: mobilni tok | CI run 45469542994 (kod 850316b) |
 | F2-CP08 | T08 | **PRIHVAĆEN 2026-11-24**: pipeline konteksta, port AT-03, cross-tenant | CI run 45472663659 (kod dd7f492) |
 | F2-CP09 | T09-REC | **PRIHVAĆEN 2026-11-25** na verificiranom SHA `b24da2a` (vlasnik prihvaća neovisnu verifikaciju, AC-POL-10, AC-CTX-01, dokumentirana odstupanja i ograničenja dokaza); Keycloak 26.8.2 (D45); KC-SP-12 PASS uz vremenski ograničeno prihvaćanje vlasnika (`cfbc8f7`); IR-05/06 → INFRA-CI-02 (IR-05 uključuje obvezno vezivanje ozbiljnosti, D47); IR-07 obavezni produkcijski blocker | [Izvještaj CP09](F2-CP09-RECONCILIATION-REPORT.md) §1.0; GitHub run 45673597875, lokalni FULL CI `20261125-181014-774b23` (1.706 testova, 1.889 izvođenja, 0 failures/errors/skipped); neovisni pregled `F2-CP09-INDEPENDENT-ACCEPTANCE-REVIEW.md` (izvan repozitorija) |
-| F2-CP10 | T10 | `platform_grants`, eskalacije, bootstrap | CI run, pregled migracije (sljedeći slobodan broj, od 0009) |
+| F2-CP10 | T10 | `platform_grants`, eskalacije, bootstrap — **IMPLEMENTIRANO 2026-11-25, NIJE PRIHVAĆEN** (čeka neovisnu sigurnosnu reviziju i vlasnika) | [Izvještaj CP10](F2-CP10-REPORT.md); migracija 0010; konačni SHA, lokalni FULL CI i GitHub run u izvještaju vlasniku |
 | F2-CP11 | T11 | Admin korisnika, outbox, KC događaji | CI run, pregled migracije (sljedeći slobodan broj) |
 | F2-CP12 | T12 | Zamrznuti API ugovor | CI run, OpenAPI diff, klijenti |
 | **F2-CP13** | T13 | **Završno prihvaćanje F2** (AC matrica, rizici, preostale odluke) | `F2-FINAL-ACCEPTANCE-EVIDENCE.md`, CI run na točnom SHA |
@@ -438,3 +438,5 @@ D37 koristi 0007; 0008 zatvara nalaze konteksta/audita. Sve migracije dodjeljuju
 **Stanje 2026-11-25 (F2-CP09-REC):** odluke evidentirane u `0035e8c` prije koda (D46); testovi `4792291` (IR-01 deterministički, oba puta; IR-02 provjera autoriziranih prihvaćanja); dokumentacija IR-03/IR-04 u ovom commitu. Provider, realmovi, workflow i `scan_gate.py` nepromijenjeni. Lokalni FULL CI i GitHub run konačnog SHA-a navedeni su u izvještaju vlasniku (commit ne može zapisati vlastiti run). CP09 se ne prihvaća samostalno; T10 nije započet.
 
 **Stanje 2026-11-25 (F2-CP09 prihvaćen, F2-T10 autoriziran):** vlasnik je prihvatio CP09 na `b24da2a` i autorizirao samo F2-T10; zapis je u ovom docs commitu prije koda T10. T10 koristi migraciju 0010 (stvarna povijest: 0001–0009). T11–T13 nisu autorizirani.
+
+**Stanje 2026-11-25 (F2-T10):** zapis autorizacije `1be3d0d` prije koda; implementacija u jednom commitu nakon njega ([izvještaj CP10](F2-CP10-REPORT.md)): migracija 0010, `app/platform/**`, rute `/platform/grant-types` i `/platform/grants…`, bootstrap DEV/CI, autoriteti za F-4 i kontrolirani oporavak (sučelja T11). Status **F2-T10 — IMPLEMENTATION COMPLETED / READY FOR INDEPENDENT SECURITY REVIEW**; CP10 se ne prihvaća samostalno; T11 nije započet. Datoteke izvan popisa putanja T10 navedene su u izvještaju CP10 §5.

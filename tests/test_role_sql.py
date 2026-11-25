@@ -23,6 +23,7 @@ NON_BUSINESS_TABLES: set[str] = {
     "user_sessions",
     "email_change_operations",
     "email_change_notifications",
+    "platform_grants",  # F2-T10 (0010)
 }
 TABLE_PRIVS = "ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']"
 
@@ -210,17 +211,44 @@ def test_runtime_roles_cannot_run_ddl_or_escalate(role_env: RoleEnv, kind: str) 
 
 
 def test_platform_has_no_table_privileges(role_env: RoleEnv) -> None:
+    """No blanket platform access: on a new table nothing, and on the migrated schema exactly the
+    table privileges F2-T10 (0010) reviewed, each behind its grant-checking policy (F1 guarantee
+    kept and made exact; AC-CTX-01 equivalence in the CP10 report)."""
     migrate(role_env.engine("owner"), "upgrade", "head")
     with role_env.engine("owner").begin() as c:
         c.execute(text("CREATE TABLE t04 (id int primary key)"))
-    count = scalar(
-        role_env,
-        "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace, "
-        f"unnest({TABLE_PRIVS}) p WHERE n.nspname = 'public' AND c.relkind IN ('r','p') "
-        "AND has_table_privilege(:r, c.oid, p)",
-        r=role_env.names.platform,
-    )
-    assert count == 0
+    found = {
+        (str(r[0]), str(r[1]))
+        for r in rows(
+            role_env,
+            "SELECT c.relname, p FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace, "
+            f"unnest({TABLE_PRIVS}) p WHERE n.nspname = 'public' AND c.relkind IN ('r','p') "
+            "AND has_table_privilege(:r, c.oid, p)",
+            r=role_env.names.platform,
+        )
+    }
+    assert found == {
+        ("platform_grants", "SELECT"), ("platform_grants", "INSERT"),
+        ("users", "SELECT"), ("user_sessions", "SELECT"),
+        ("audit_events", "SELECT"), ("audit_events", "INSERT"),
+    }  # fmt: skip
+    columns = {
+        (str(r[0]), str(r[1]))
+        for r in rows(
+            role_env,
+            "SELECT c.relname, a.attname FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid "
+            "JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' "
+            "AND a.attnum > 0 AND has_column_privilege(:r, c.oid, a.attnum, 'UPDATE')",
+            r=role_env.names.platform,
+        )
+    }
+    assert columns == {
+        *(("platform_grants", c) for c in ("status", "approved_by", "activated_at", "revoked_at",
+                                           "revoked_by", "revoke_reason", "version")),
+        *(("users", c) for c in ("status", "status_reason", "status_changed_at",
+                                 "status_changed_by", "updated_at", "version")),
+        *(("user_sessions", c) for c in ("revoked_at", "revoked_reason", "revoked_by", "version")),
+    }  # fmt: skip
 
 
 # --- Alembic: owner only, up / down / up, no business tables -------------------------------
@@ -250,6 +278,11 @@ def test_upgrade_downgrade_upgrade_and_schema_contents(role_env: RoleEnv) -> Non
     assert {"app_auth_subject", "app_session_hash", "audit_events_append_only"} <= functions_up
     assert {"users_guard", "users_never_deleted"} <= functions_up
     assert {"user_sessions_guard", "user_sessions_never_deleted"} <= functions_up
+    assert {
+        "platform_has_grant",
+        "app_grant_authority",
+        "platform_grants_update_guard",
+    } <= functions_up
     assert (
         scalar(
             role_env,
