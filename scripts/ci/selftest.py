@@ -185,6 +185,13 @@ class Redaction(unittest.TestCase):
         for secret in ("pw-value-123", "url-secret-9", token, "d" * 30, ":zzz@"):
             self.assertNotIn(secret, text)
 
+    def test_token_identifiers_in_keycloak_event_lines_are_removed(self) -> None:
+        line = 'type="X", token_id="id-1", refresh_token_id="id-2", refresh_token_sub="id-3"'
+        text = report.Redactor([])(line + ', code_id="id-4", realmName="kept"')
+        for identifier in ("id-1", "id-2", "id-3", "id-4"):
+            self.assertNotIn(identifier, text)
+        self.assertIn('realmName="kept"', text)
+
 
 class Snapshots(unittest.TestCase):
     def setUp(self) -> None:

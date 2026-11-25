@@ -16,6 +16,8 @@ _PATTERNS = (
     (re.compile(r"(?i)\b(bearer\s+)[A-Za-z0-9._~+/=-]{16,}"), r"\1[REDACTED]"),
     (re.compile(r"([a-z][a-z0-9+.-]*://[^\s/:@'\"]*:)[^\s/@'\"]+(@)"), r"\1[REDACTED]\2"),
     (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*"), "[REDACTED-PRIVATE-KEY]"),
+    # Keycloak event lines: identifiers of tokens and codes, which secret scanners report.
+    (re.compile(r'\b((?:refresh_)?token_(?:id|sub)|code_id)="[^"]*"'), r'\1="[REDACTED]"'),
 )
 
 
