@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 import pytest
 from app.auth.web.csrf import csrf_token
+from tests.auth.fake_admin import FakeAdmin
 from tests.auth.fake_idp import NOW
 from tests.auth.web_harness import ORIGIN_WEB, SESSION_COOKIE, SID, SUBJECT, Web, build_web
 from tests.conftest import RoleEnv
@@ -24,6 +25,7 @@ SID_B = "sid-device-b"
 def web(role_env: RoleEnv, redis_url: str) -> Iterator[Web]:
     migrate(role_env.engine("owner"), "upgrade", "head")
     harness = build_web(role_env, redis_url)
+    harness.runtime.admin = FakeAdmin()  # "sign out everywhere" asks for second factors (F-3)
     yield harness
     harness.close()
 

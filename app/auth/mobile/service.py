@@ -22,12 +22,12 @@ from app.auth.runtime import AuthRuntime
 from app.auth.security import email_change
 from app.auth.sessions import repository as session_repository
 from app.auth.sessions import service as sessions
-from app.auth.sessions.models import ClientType, UserSession
+from app.auth.sessions.models import AuthLevel, ClientType, UserSession
 from app.auth.tokens import VerifiedToken
 from app.auth.users import repository as user_repository
 from app.auth.users import service as users
 from app.auth.users.models import User, UserStatus
-from app.auth.web.stepup import level_from_acr
+from app.auth.web.stepup import second_factor_time
 from app.core.db import RequestContext, apply_context, session_scope
 from app.core.errors import BadRequest
 from sqlalchemy.exc import IntegrityError
@@ -97,7 +97,13 @@ def open_session(
             leeway_seconds=rt.settings.leeway_seconds,
         ):
             return MobileOutcome(None, None, False, reauthenticate=True)
-        level = level_from_acr(token.acr)
+        proven = second_factor_time(
+            token.acr,
+            token.second_factor_at,
+            now=datetime.fromtimestamp(rt.clock(), tz=UTC),
+            leeway_seconds=rt.settings.leeway_seconds,
+        )
+        level = AuthLevel.LOA2 if proven else AuthLevel.LOA1
         try:
             with db.begin_nested():
                 created = sessions.create_session(
@@ -108,6 +114,7 @@ def open_session(
                     auth_time=datetime.fromtimestamp(token.auth_time or token.issued_at, tz=UTC),
                     policy=rt.policy,
                     auth_level=level,
+                    step_up_at=proven,
                     device_label=device.label,
                     device_platform=device.platform,
                     app_version=device.app_version,

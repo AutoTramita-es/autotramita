@@ -12,6 +12,7 @@ application session (T05) is looked up afterwards, on every request.
 from __future__ import annotations
 
 import hmac
+import json
 import logging
 import threading
 import time
@@ -133,6 +134,7 @@ class VerifiedToken:
     acr: str | None
     email: str | None  # only for first-login provisioning (D08); never for authorization
     email_verified: bool | None
+    second_factor_at: int | None = None  # when a second factor was last proven (``loa_map``)
 
 
 def verify_signed(token: object, jwks: JwksCache, *, max_bytes: int) -> dict[str, Any]:
@@ -262,10 +264,37 @@ class TokenValidator:
             acr=acr if isinstance(acr, str) else None,
             email=email if isinstance(email, str) else None,
             email_verified=verified if isinstance(verified, bool) else None,
+            second_factor_at=_second_factor_time(claims.get(LOA_TIMES_CLAIM)),
         )
 
 
 _is_number = _number
+
+
+# The realm maps the provider's session note "loa-map" ({"<level>": <time of its last real
+# authentication>}) into this claim. Level 2 is reached only by proving (or first setting up) a
+# second factor. Neither single sign-on nor a token refresh moves the time (verified against
+# Keycloak in tests/identity), unlike ``auth_time``, which a password-only sign-in renews.
+LOA_TIMES_CLAIM = "loa_map"
+_SECOND_FACTOR_LEVEL = "2"
+_MAX_LOA_TIMES_LENGTH = 512
+
+
+def _second_factor_time(value: object) -> int | None:
+    """The level-two time of the ``loa_map`` claim, or ``None`` for anything unexpected."""
+    if isinstance(value, str):
+        if len(value) > _MAX_LOA_TIMES_LENGTH:
+            return None
+        try:
+            value = json.loads(value)
+        except (ValueError, RecursionError):
+            return None
+    if not isinstance(value, dict):
+        return None
+    moment = value.get(_SECOND_FACTOR_LEVEL)
+    if not isinstance(moment, int) or isinstance(moment, bool) or not 0 < moment < 10**11:
+        return None
+    return moment
 
 
 @dataclass(frozen=True, slots=True)
@@ -279,6 +308,7 @@ class VerifiedIdToken:
     acr: str | None
     email: str | None
     email_verified: bool | None
+    second_factor_at: int | None = None
 
 
 class IdTokenValidator:
@@ -338,6 +368,7 @@ class IdTokenValidator:
             acr=acr if isinstance(acr, str) else None,
             email=email if isinstance(email, str) else None,
             email_verified=verified if isinstance(verified, bool) else None,
+            second_factor_at=_second_factor_time(claims.get(LOA_TIMES_CLAIM)),
         )
 
 

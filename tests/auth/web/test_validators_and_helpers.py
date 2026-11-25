@@ -269,7 +269,7 @@ T = datetime(2026, 11, 24, 12, 0, tzinfo=UTC)
 
 def test_authorization_parameters_per_purpose() -> None:
     mfa = authorization_params(StepUpPurpose.MFA)
-    assert (mfa.acr_values, mfa.prompt, mfa.max_age) == ("loa2", None, None)
+    assert (mfa.acr_values, mfa.prompt, mfa.max_age) == ("loa2", "login", 0)
     reauth = authorization_params(StepUpPurpose.REAUTHENTICATE)
     assert (reauth.acr_values, reauth.prompt, reauth.max_age) == ("loa1", "login", 0)
     assert level_from_acr("loa2") is AuthLevel.LOA2

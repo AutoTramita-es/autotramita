@@ -10,7 +10,7 @@ import base64
 import hashlib
 import logging
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, NoReturn
 from urllib.parse import parse_qs
 
@@ -28,6 +28,7 @@ from app.auth.errors import (
 )
 from app.auth.runtime import AuthRuntime, runtime_of
 from app.auth.security import actions, recovery
+from app.auth.security.step_up import window_seconds
 from app.auth.sessions import service as sessions
 from app.auth.sessions.models import AuthLevel, ClientType, RevokeReason, UserSession
 from app.auth.settings import AuthLimitSettings
@@ -42,7 +43,7 @@ from app.auth.web.oidc_flow import (
     pkce_pair,
 )
 from app.auth.web.redirects import safe_return_to
-from app.auth.web.stepup import StepUpPurpose, authorization_params, level_from_acr
+from app.auth.web.stepup import StepUpPurpose, authorization_params, second_factor_time
 from app.core.db import RequestContext, session_scope
 from app.core.errors import TooManyRequests, UnprocessableEntity
 from app.core.ratelimit import IPNetwork, Policy, by_ip, rate_limit
@@ -331,18 +332,31 @@ def build_auth_router(
         identity: VerifiedIdToken,
         kc_status: str | None,
     ) -> Response:
+        now = datetime.fromtimestamp(rt.clock(), tz=UTC)
+        proven = second_factor_time(
+            identity.acr,
+            identity.second_factor_at,
+            now=now,
+            leeway_seconds=rt.settings.leeway_seconds,
+        )
+        window = timedelta(seconds=window_seconds(rt, 600))
         outcome = actions.complete_action(
             rt,
             credential=request.cookies.get(rt.settings.cookie_name, ""),
             flow=flow,
             subject=identity.subject,
             kc_status=kc_status,
+            factor_proven=proven is not None and now - proven <= window,
             reject=lambda reason: _reject(request, rt, reason),
         )
         target = str(flow.get("return_to", "/"))
         joiner = "&" if "?" in target else "?"
         status = "success" if outcome.succeeded else "cancelled"
+        if outcome.unproven:
+            status = "reauthentication_required"
         response = RedirectResponse(f"{target}{joiner}security_action={status}", status_code=302)
+        if outcome.unproven:
+            cookies.clear_session_cookie(response, rt.settings)
         if outcome.succeeded and outcome.secret and outcome.absolute_expires_at:
             remaining = int((outcome.absolute_expires_at - datetime.now(UTC)).total_seconds())
             cookies.set_session_cookie(
@@ -405,12 +419,26 @@ def build_auth_router(
     ) -> Response:
         credential = request.cookies.get(rt.settings.cookie_name, "")
         purpose = StepUpPurpose(str(flow.get("step_up_purpose", "REAUTHENTICATE")))
-        achieved = level_from_acr(identity.acr)
-        fresh = identity.auth_time is not None and (
-            identity.auth_time >= int(flow["created"]) - rt.settings.leeway_seconds
+        now = datetime.fromtimestamp(rt.clock(), tz=UTC)  # the clock token times are read by
+        since = int(flow["created"]) - rt.settings.leeway_seconds
+        # Only an authentication made for *this* request counts: a provider answer from single
+        # sign-on carries older times and is refused (F-2).
+        proven = second_factor_time(
+            identity.acr,
+            identity.second_factor_at,
+            now=now,
+            leeway_seconds=rt.settings.leeway_seconds,
         )
-        failed = purpose is StepUpPurpose.MFA and achieved is not AuthLevel.LOA2
-        failed = failed or (purpose is StepUpPurpose.REAUTHENTICATE and not fresh)
+        if proven is not None and proven.timestamp() < since:
+            proven = None
+        signed_in: datetime | None = None
+        if identity.auth_time is not None and identity.auth_time >= since:
+            signed_in = min(datetime.fromtimestamp(identity.auth_time, tz=UTC), now)
+        achieved = AuthLevel.LOA2 if proven else AuthLevel.LOA1
+        authenticated_at = proven or signed_in
+        failed = (purpose is StepUpPurpose.MFA and proven is None) or (
+            purpose is StepUpPurpose.REAUTHENTICATE and signed_in is None
+        )
         secret = ""
         absolute = datetime.now(UTC)
         with session_scope(rt.factory, RequestContext()) as db:
@@ -438,7 +466,9 @@ def build_auth_router(
                 )
             else:
                 secret = (
-                    sessions.record_step_up(db, resolved.session.id, level=achieved, rotate=True)
+                    sessions.record_step_up(
+                        db, resolved.session.id, level=achieved, rotate=True, now=authenticated_at
+                    )
                     or ""
                 )
                 record(

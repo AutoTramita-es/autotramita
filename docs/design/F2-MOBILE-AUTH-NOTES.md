@@ -31,7 +31,7 @@ Contract: [OpenAPI](../../openapi/openapi.json) · [AT-02 §6.5](../specificatio
 | 401 `SESSION_REQUIRED` | valid token, no application session | call `POST /auth/mobile/session` |
 | 401 `SESSION_REVOKED` | the session was ended (here or elsewhere), or this Keycloak sign-in is older than a password or e-mail change | **sign in again with `prompt=login`** (a silent single sign-on is refused again); do not retry `POST /auth/mobile/session` with the same token |
 | 401 `SESSION_EXPIRED` | idle (7 days) or absolute (30 days) limit | call `POST /auth/mobile/session` (works while the Keycloak session lives) |
-| 401 `STEP_UP_REQUIRED` | a sensitive action needs a fresh authentication | re-authenticate with Keycloak (`prompt=login`; `acr_values=loa2` for MFA), then retry with the new token |
+| 401 `STEP_UP_REQUIRED` | a sensitive action needs a fresh authentication; the challenge names `acr_values` (`loa2` whenever the person has a second factor, F-3) | re-authenticate with Keycloak with `prompt=login` and the named `acr_values`, then retry with the new token. A refresh does not help: the window (10 min) counts from the authentication, for `loa2` from the `loa_map` claim (F-2) |
 | 403 `ACCOUNT_DISABLED` | account blocked or deactivated | show the generic message; no retry |
 | 403 `EMAIL_NOT_VERIFIED` (later routes) | e-mail not verified | send the person to verify |
 | 429 / 503 | limits / dependency down | back off using `Retry-After` |

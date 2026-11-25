@@ -86,6 +86,7 @@ class FakeIdp:
             "email_verified": True,
         }
         base.update(overrides)
+        _level_times(base, overrides)
         return {k: v for k, v in base.items() if v is not _DROP}
 
     def token(
@@ -128,6 +129,7 @@ class FakeIdp:
             "email_verified": True,
         }
         base.update(overrides)
+        _level_times(base, overrides)
         return {k: v for k, v in base.items() if v is not _DROP}
 
     @staticmethod
@@ -167,6 +169,16 @@ class FakeIdp:
         body = _b64(json.dumps(self.claims()).encode())
         signature = hmac.new(public_pem, f"{header}.{body}".encode(), hashlib.sha256).digest()
         return f"{header}.{body}.{_b64(signature)}"
+
+
+def _level_times(claims: dict[str, Any], overrides: Mapping[str, Any]) -> None:
+    """As the realm's mapper does: a level-two token says when the second factor was proven
+    (here: at ``auth_time``). A test overrides or drops ``loa_map`` to say otherwise."""
+    if claims.get("acr") != "loa2" or "loa_map" in overrides:
+        return
+    moment = claims.get("auth_time")
+    if isinstance(moment, int):
+        claims["loa_map"] = json.dumps({"1": moment, "2": moment})
 
 
 _DROP = object()

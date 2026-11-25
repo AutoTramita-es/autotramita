@@ -73,6 +73,7 @@ def create_session(
     auth_time: datetime,
     policy: SessionPolicy,
     auth_level: AuthLevel = AuthLevel.LOA1,
+    step_up_at: datetime | None = None,
     device_label: str | None = None,
     device_platform: str | None = None,
     app_version: str | None = None,
@@ -82,7 +83,12 @@ def create_session(
     now: datetime | None = None,
 ) -> CreatedSession:
     """Open a session for a user that may sign in. The request context must already carry
-    ``user_id`` (policy). Evicts the oldest live sessions beyond the per-user cap."""
+    ``user_id`` (policy). Evicts the oldest live sessions beyond the per-user cap.
+
+    A level-two session needs ``step_up_at``: when the second factor was proven, never the time
+    the session was opened (F-2)."""
+    if auth_level is AuthLevel.LOA2 and step_up_at is None:
+        raise ValueError("a level-two session needs the time its second factor was proven")
     moment = _now(now)
     status = repository.lock_user_for_new_session(db, user_id)
     if status not in _MAY_SIGN_IN:
@@ -115,7 +121,7 @@ def create_session(
             "kc_session_id": kc_session_id,
             "auth_time": auth_time,
             "auth_level": auth_level.value,
-            "step_up_at": moment if auth_level is AuthLevel.LOA2 else None,
+            "step_up_at": step_up_at if auth_level is AuthLevel.LOA2 else None,
             "device_label": device_label,
             "platform": device_platform,
             "app_version": app_version,
@@ -255,7 +261,8 @@ def rotate_credential(db: Session, session_id: UUID) -> str:
 def record_step_up(
     db: Session, session_id: UUID, *, level: AuthLevel, rotate: bool, now: datetime | None = None
 ) -> str | None:
-    """Store the achieved level and time; for web sessions also rotate the credential."""
+    """Store the achieved level and when that authentication happened (``now``; for ``LOA2`` the
+    time the second factor was proven); for web sessions also rotate the credential."""
     secret, digest = credentials.new_credential() if rotate else (None, None)
     if not repository.mark_step_up(db, session_id, digest, level.value, _now(now)):
         raise SessionRevoked()

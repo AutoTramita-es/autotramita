@@ -4961,7 +4961,7 @@
             }
           }
         },
-        "summary": "Start adding a second factor (needs a fresh authentication)",
+        "summary": "Start adding a second factor (fresh authentication, with an existing one if any)",
         "tags": [
           "me"
         ]
@@ -5210,7 +5210,7 @@
             }
           }
         },
-        "summary": "Start a password change (needs a fresh authentication)",
+        "summary": "Start a password change (fresh authentication, with the second factor if any)",
         "tags": [
           "me"
         ]
@@ -6172,7 +6172,7 @@
             }
           }
         },
-        "summary": "Sign out all my sessions, this one included (needs a fresh authentication)",
+        "summary": "Sign out all my sessions, this one included (fresh authentication, F-3)",
         "tags": [
           "sessions"
         ]

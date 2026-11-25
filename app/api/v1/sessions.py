@@ -13,29 +13,34 @@ from typing import Annotated
 from uuid import UUID
 
 from app.api.v1.authn import (
-    AuthContext,
     SessionInfo,
     authenticated,
     bearer_token,
     request_facts,
     session_info,
+    validate_bearer,
 )
-from app.api.v1.guards import AccessKind, declared
+from app.api.v1.guards import AccessKind, declared, record_denied_workspace
 from app.audit.models import ActorType, AuditEvent, Outcome
 from app.audit.record import record_independent
 from app.auth.context import change_workspace
-from app.auth.errors import AccountDisabled, AmbiguousCredentials, AuthRequired, SessionRevoked
+from app.auth.errors import (
+    AccountDisabled,
+    AmbiguousCredentials,
+    AuthRequired,
+    SessionRevoked,
+    WorkspaceNotFound,
+)
 from app.auth.mobile import service as mobile
 from app.auth.mobile.service import DeviceInfo
-from app.auth.runtime import AuthRuntime, runtime_of
-from app.auth.security import recovery
+from app.auth.runtime import runtime_of
+from app.auth.security import recovery, step_up
 from app.auth.security.notify import Notice, NoticeKind, send_quietly
 from app.auth.sessions import repository
 from app.auth.sessions import service as sessions
 from app.auth.sessions.models import AuthLevel, RevokeReason, UserSession
 from app.auth.settings import AuthLimitSettings
 from app.auth.web import cookies
-from app.auth.web.stepup import require_step_up, require_token_step_up
 from app.core.db import RequestContext
 from app.core.errors import NotFound, Problem
 from app.core.pagination import CursorPage
@@ -104,15 +109,6 @@ def _summary(item: UserSession, current: UUID) -> SessionSummary:
     )
 
 
-def _step_up_for_all(rt: AuthRuntime, ctx: AuthContext) -> None:
-    window = rt.settings.step_up_window_minutes * 60
-    now = datetime.now(UTC)
-    if ctx.token is not None:
-        require_token_step_up(ctx.token, level=AuthLevel.LOA1, max_age_seconds=window, now=now)
-    else:
-        require_step_up(ctx.resolved.session, level=AuthLevel.LOA1, max_age_seconds=window, now=now)
-
-
 def build_sessions_router(
     limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
 ) -> APIRouter:
@@ -141,7 +137,7 @@ def build_sessions_router(
         raw = bearer_token(request)
         if raw is None:
             raise AuthRequired()
-        token = rt.access_validator.validate(raw)
+        token = validate_bearer(request, rt, raw)
         prefix, _family = request_facts(request, rt)
         device = DeviceInfo(body.device.label, body.device.platform, body.device.app_version)
         outcome = mobile.open_session(rt, token, device, ip_prefix=prefix)
@@ -238,15 +234,26 @@ def build_sessions_router(
 
     @router.post(
         "/sessions/revoke-all",
-        summary="Sign out all my sessions, this one included (needs a fresh authentication)",
+        summary="Sign out all my sessions, this one included (fresh authentication, F-3)",
         response_model=Revoked,
         responses={401: {"model": Problem, "description": "Step-up required (RFC 9470)"}},
         dependencies=[Depends(session_access)],
     )
     def revoke_all(request: Request, response: Response) -> Revoked:
         rt = runtime_of(request)
+        with authenticated(request, rt, lock=False, touch=False) as ctx:
+            subject = ctx.resolved.user.auth_subject
+        # Asked outside the transaction that locks the sessions.
+        enrolled = step_up.second_factor_enrolled(rt, subject)
         with authenticated(request, rt, lock=True, touch=False) as ctx:
-            _step_up_for_all(rt, ctx)
+            step_up.enforce(
+                rt,
+                session=ctx.resolved.session,
+                token=ctx.token,
+                level=AuthLevel.LOA2 if enrolled else AuthLevel.LOA1,
+                max_age_seconds=rt.settings.step_up_window_minutes * 60,
+                now=datetime.now(UTC),
+            )
             count = sessions.DatabaseSessionRevoker().revoke_all(
                 ctx.db,
                 ctx.resolved.user.id,
@@ -278,17 +285,25 @@ def build_sessions_router(
         expected: Annotated[int, Depends(if_match_version)],
     ) -> SessionInfo:
         rt = runtime_of(request)
-        with authenticated(request, rt, lock=False) as ctx:
-            updated = change_workspace(
-                ctx.db,
-                rt.membership,
-                ctx.resolved.session,
-                ctx.resolved.user,
-                tenant_id=body.tenant_id,
-                branch_id=body.branch_id,
-                expected_version=expected,
-            )
-            info = session_info(rt, sessions.Resolved(updated, ctx.resolved.user), ctx.credential)
+        actor: tuple[UUID, UUID] | None = None
+        try:
+            with authenticated(request, rt, lock=False) as ctx:
+                actor = (ctx.resolved.user.id, ctx.resolved.session.id)
+                updated = change_workspace(
+                    ctx.db,
+                    rt.membership,
+                    ctx.resolved.session,
+                    ctx.resolved.user,
+                    tenant_id=body.tenant_id,
+                    branch_id=body.branch_id,
+                    expected_version=expected,
+                )
+                resolved = sessions.Resolved(updated, ctx.resolved.user)
+                info = session_info(rt, resolved, ctx.credential)
+        except WorkspaceNotFound:
+            assert actor is not None  # noqa: S101 - raised after the session was validated
+            record_denied_workspace(request, rt, *actor)
+            raise
         response.headers["ETag"] = format_etag(updated.context_version)
         return info
 

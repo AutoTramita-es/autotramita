@@ -14,7 +14,13 @@ from uuid import UUID
 
 from app.api.v1.auth import new_flow
 from app.api.v1.authn import UserSummary
-from app.api.v1.guards import Principal, request_scope, require_step_up, require_user
+from app.api.v1.guards import (
+    Principal,
+    request_scope,
+    require_account_step_up,
+    require_step_up,
+    require_user,
+)
 from app.auth import errors as auth_errors
 from app.auth.email import normalize_email
 from app.auth.errors import AuthorizationUnavailable
@@ -36,9 +42,10 @@ from sqlalchemy.exc import IntegrityError
 
 # A person whose e-mail is not verified yet may still read and fix their profile.
 ANYONE = require_user(allow_unverified=True)
-# D23: changing the password or a second factor needs a fresh authentication (10 minutes);
+# D23/F-3: changing the e-mail address, the password or a second factor needs a fresh
+# authentication (10 minutes) that proves the second factor whenever the person has one;
 # taking a second factor away needs the second factor itself (LoA2).
-FRESH = require_step_up(AuthLevel.LOA1, 600)
+ACCOUNT = require_account_step_up(600)
 SECOND_FACTOR = require_step_up(AuthLevel.LOA2, 600)
 DisplayName = Annotated[str, StringConstraints(pattern=r"^[^\x00-\x1f\x7f]{1,120}$")]
 Language = Annotated[str, StringConstraints(pattern=r"^[a-z]{2}(-[A-Z]{2})?$")]
@@ -267,6 +274,7 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
                 "security_action": action.value,
                 "session_id": str(principal.session.id),
                 "subject": principal.user.auth_subject,
+                "second_factor": principal.second_factor,
             },
         )
         url = rt.endpoints.authorization_url(
@@ -275,6 +283,8 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
             nonce=nonce,
             challenge=challenge,
             kc_action=actions.SPECS[action].kc_action,
+            # The provider is asked for level two; the callback checks that it was proven.
+            acr_values="loa2" if principal.second_factor else None,
         )
         cookies.set_flow_cookie(response, rt.settings, binder)
         cookies.no_store(response)
@@ -336,14 +346,14 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
 
     @router.post(
         "/me/security/password-change-requests",
-        summary="Start a password change (needs a fresh authentication)",
+        summary="Start a password change (fresh authentication, with the second factor if any)",
         response_model=ActionStart,
     )
     def password_change_request(
         request: Request,
         response: Response,
         body: PasswordChange,
-        principal: Annotated[Principal, Depends(FRESH)],
+        principal: Annotated[Principal, Depends(ACCOUNT)],
     ) -> ActionStart:
         return _start_action(
             request, response, principal, actions.SecurityAction.PASSWORD_CHANGE, body.return_to
@@ -351,14 +361,14 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
 
     @router.post(
         "/me/security/mfa-enrollment-requests",
-        summary="Start adding a second factor (needs a fresh authentication)",
+        summary="Start adding a second factor (fresh authentication, with an existing one if any)",
         response_model=ActionStart,
     )
     def mfa_enrollment_request(
         request: Request,
         response: Response,
         body: MfaEnrollment,
-        principal: Annotated[Principal, Depends(FRESH)],
+        principal: Annotated[Principal, Depends(ACCOUNT)],
     ) -> ActionStart:
         action = (
             actions.SecurityAction.MFA_TOTP
@@ -386,7 +396,7 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
         response: Response,
         background: BackgroundTasks,
         body: EmailChangeRequest,
-        principal: Annotated[Principal, Depends(FRESH)],
+        principal: Annotated[Principal, Depends(ACCOUNT)],
     ) -> Accepted:
         rt = _d37_runtime(request)
         try:
@@ -425,7 +435,7 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
         request: Request,
         response: Response,
         body: EmailChangeConfirmation,
-        principal: Annotated[Principal, Depends(FRESH)],
+        principal: Annotated[Principal, Depends(ACCOUNT)],
     ) -> Accepted:
         _d37_runtime(request)
         limiter = recovery.limiter_of(request)

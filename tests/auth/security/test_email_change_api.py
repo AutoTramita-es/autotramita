@@ -130,4 +130,6 @@ def test_account_lookup_and_delivery_are_deferred_after_generic_response(
         json={"new_email": "new@example.test"},
     )
     assert response.status_code == 202
-    assert rig.admin.calls == [] and deferred == ["new@example.test"]
+    # Before the answer only the caller's own second factors are read (F-3 step-up); nothing
+    # about the requested address is looked up or mailed until afterwards.
+    assert rig.admin.calls == ["credentials"] and deferred == ["new@example.test"]

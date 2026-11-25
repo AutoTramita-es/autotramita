@@ -16,12 +16,12 @@ from app.auth.runtime import AuthRuntime
 from app.auth.security import email_change
 from app.auth.sessions import repository as session_repository
 from app.auth.sessions import service as sessions
-from app.auth.sessions.models import ClientType, RevokeReason
+from app.auth.sessions.models import AuthLevel, ClientType, RevokeReason
 from app.auth.tokens import VerifiedIdToken, VerifiedLogout
 from app.auth.users import repository as user_repository
 from app.auth.users import service as users
 from app.auth.users.models import UserStatus
-from app.auth.web.stepup import level_from_acr
+from app.auth.web.stepup import second_factor_time
 from app.core.db import RequestContext, apply_context, session_scope
 
 
@@ -65,7 +65,13 @@ def complete_login(
             leeway_seconds=rt.settings.leeway_seconds,
         ):
             return LoginOutcome("", datetime.now(UTC), reauthenticate=True)
-        level = level_from_acr(identity.acr)
+        proven = second_factor_time(
+            identity.acr,
+            identity.second_factor_at,
+            now=datetime.fromtimestamp(rt.clock(), tz=UTC),
+            leeway_seconds=rt.settings.leeway_seconds,
+        )
+        level = AuthLevel.LOA2 if proven else AuthLevel.LOA1
         created = sessions.create_session(
             db,
             user_id=user.id,
@@ -74,6 +80,7 @@ def complete_login(
             auth_time=datetime.fromtimestamp(identity.auth_time or rt.clock(), tz=UTC),
             policy=rt.policy,
             auth_level=level,
+            step_up_at=proven,
             ua_family=ua_family,
             ip_prefix=ip_prefix,
         )

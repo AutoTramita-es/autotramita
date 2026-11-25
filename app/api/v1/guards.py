@@ -8,7 +8,9 @@ Every route declares what it needs, and a test refuses a route that does not:
                           PENDING with ``allow_unverified``);
 * ``require_workspace``   additionally an active tenant context, checked against the person's
                           *current* membership through the AT-03 port;
-* ``require_step_up``     additionally a sufficiently fresh and strong authentication.
+* ``require_step_up``     additionally a sufficiently fresh and strong authentication;
+* ``require_account_step_up``  the same, with the level the account itself demands: a second
+                          factor whenever the person has one (F-3).
 
 A guard validates the session and sets ``request.state.principal_id`` / ``tenant_id`` (used by
 the rate limiter) from the validated result only. Handlers that touch the database open
@@ -19,22 +21,23 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
+from uuid import UUID
 
-from app.api.v1.authn import authenticated, bearer_token
+from app.api.v1.authn import authenticated, bearer_token, record_attempt, request_facts
+from app.audit.models import ActorType, AuditEvent, Outcome
 from app.auth import context as workspace_context
 from app.auth.errors import AuthRequired, EmailNotVerified, WorkspaceRequired
 from app.auth.membership import Workspace
 from app.auth.runtime import AuthRuntime, runtime_of
+from app.auth.security import step_up
 from app.auth.sessions.models import AuthLevel, UserSession
 from app.auth.tokens import VerifiedToken
 from app.auth.users.models import User, UserStatus
-from app.auth.web.stepup import require_step_up as check_step_up
-from app.auth.web.stepup import require_token_step_up
-from app.core.db import apply_context
+from app.core.db import RequestContext, apply_context
 from fastapi import Request
 from fastapi.routing import APIRoute
 from sqlalchemy.orm import Session
@@ -59,6 +62,7 @@ class Requirement:
     kind: AccessKind
     allow_unverified: bool = False
     step_up: StepUp | None = None
+    account_step_up_seconds: int | None = None  # the level follows from the account (F-3)
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +73,7 @@ class Principal:
     token: VerifiedToken | None
     credential: str | None
     requirement: Requirement
+    second_factor: bool = False  # set by ``require_account_step_up`` only
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,22 +113,37 @@ def _enforce(
     if requirement.kind is AccessKind.WORKSPACE and ctx_principal.workspace is None:
         raise WorkspaceRequired()
     if requirement.step_up is not None:
-        window = requirement.step_up.max_age_seconds
-        now = datetime.now(UTC)
-        if ctx_principal.token is not None:
-            require_token_step_up(
-                ctx_principal.token,
-                level=requirement.step_up.level,
-                max_age_seconds=window,
-                now=now,
-            )
-        else:
-            check_step_up(
-                ctx_principal.session,
-                level=requirement.step_up.level,
-                max_age_seconds=window,
-                now=now,
-            )
+        step_up.enforce(
+            rt,
+            session=ctx_principal.session,
+            token=ctx_principal.token,
+            level=requirement.step_up.level,
+            max_age_seconds=requirement.step_up.max_age_seconds,
+            now=datetime.now(UTC),
+        )
+
+
+def record_denied_workspace(
+    request: Request, rt: AuthRuntime, user_id: UUID, session_id: UUID
+) -> None:
+    """A workspace the person may not use (any more) was asked for. The record names the person
+    and the session, never the tenant the client sent."""
+    prefix, family = request_facts(request, rt)
+    record_attempt(
+        rt,
+        AuditEvent(
+            action="authz.denied",
+            outcome=Outcome.DENIED,
+            actor_type=ActorType.USER,
+            actor_user_id=user_id,
+            subject_user_id=user_id,
+            actor_session_id=session_id,
+            ip_prefix=prefix,
+            ua_family=family,
+            details={"reason": "WORKSPACE", "resource_type": "workspace"},
+        ),
+        RequestContext(user_id=user_id),
+    )
 
 
 def _guard(requirement: Requirement) -> Callable[[Request], Principal]:
@@ -143,7 +163,25 @@ def _guard(requirement: Requirement) -> Callable[[Request], Principal]:
                 ctx.credential,
                 requirement,
             )
+            lost = (
+                requirement.kind is AccessKind.WORKSPACE
+                and workspace is None
+                and ctx.resolved.session.active_tenant_id is not None
+            )
+            if lost:
+                record_denied_workspace(request, rt, principal.user.id, principal.session.id)
             _enforce(rt, ctx.db, principal, requirement)
+        if requirement.account_step_up_seconds is not None:
+            # After the transaction: no database lock is held while the provider is asked.
+            enrolled = step_up.enforce_for_account(
+                rt,
+                subject=principal.user.auth_subject,
+                session=principal.session,
+                token=principal.token,
+                max_age_seconds=requirement.account_step_up_seconds,
+                now=datetime.now(UTC),
+            )
+            principal = replace(principal, second_factor=enrolled)
         # Only values the validated session produced reach the rate limiter (no client input).
         request.state.principal_id = principal.user.id
         request.state.tenant_id = workspace.tenant_id if workspace else None
@@ -169,6 +207,10 @@ def require_step_up(
 ) -> Callable[[Request], Principal]:
     kind = AccessKind.WORKSPACE if workspace else AccessKind.USER
     return _guard(Requirement(kind, False, StepUp(level, max_age_seconds)))
+
+
+def require_account_step_up(max_age_seconds: int) -> Callable[[Request], Principal]:
+    return _guard(Requirement(AccessKind.USER, account_step_up_seconds=max_age_seconds))
 
 
 @contextmanager

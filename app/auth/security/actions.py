@@ -4,7 +4,13 @@ enrolment run on Keycloak's own pages (``kc_action``), started from a fresh auth
 The browser only comes back with ``kc_action_status=success``, which anybody could type, so the
 application never trusts it: it asks the identity provider for the credential and requires one
 that was created after the flow started. Only then sessions are ended, the audit record is
-written and the notice is sent."""
+written and the notice is sent.
+
+A person who has a second factor is sent to the provider asking for level two (F-3). The
+provider itself refuses to add or remove factors without it, but it does not guard its password
+form, and the browser can drop the parameter. So the return must also show a second factor
+proven within the window; a change that happened without it ends every session of the person,
+this one included."""
 
 from __future__ import annotations
 
@@ -53,6 +59,7 @@ class ActionResult:
     succeeded: bool
     secret: str = ""
     absolute_expires_at: datetime | None = None
+    unproven: bool = False  # the change happened without the existing second factor
 
 
 def _created_since(credentials: list[IdpCredential], types: frozenset[str], since: float) -> bool:
@@ -69,6 +76,7 @@ def complete_action(
     flow: dict[str, Any],
     subject: str,
     kc_status: str | None,
+    factor_proven: bool,
     reject: Callable[[str], NoReturn],
 ) -> ActionResult:
     action = SecurityAction(str(flow["security_action"]))
@@ -97,12 +105,30 @@ def complete_action(
         if not verified:
             return ActionResult(False)
         secret = ""
-        if action is SecurityAction.PASSWORD_CHANGE:
+        unproven = bool(flow.get("second_factor")) and not factor_proven
+        if unproven:
+            record(
+                db,
+                AuditEvent(
+                    action="security.step_up.failed",
+                    outcome=Outcome.FAILURE,
+                    actor_type=ActorType.USER,
+                    actor_user_id=user,
+                    subject_user_id=user,
+                    actor_session_id=resolved.session.id,
+                    details={"level": "LOA1"},
+                ),
+            )
+            sessions.DatabaseSessionRevoker().revoke_all(
+                db, user, reason=RevokeReason.SECURITY_POLICY.value, actor_user_id=user
+            )
+        elif action is SecurityAction.PASSWORD_CHANGE:
             sessions.revoke_others(
                 db, user, resolved.session.id, reason=RevokeReason.PASSWORD_CHANGED,
                 actor_user_id=user,
             )  # fmt: skip
             secret = sessions.rotate_credential(db, resolved.session.id)
+        if action is SecurityAction.PASSWORD_CHANGE:
             audit = AuditEvent(
                 action="security.password.changed",
                 outcome=Outcome.SUCCESS,
@@ -131,6 +157,8 @@ def complete_action(
         # Another browser still signed in at the provider must authenticate again.
         rt.markers.record_change(subject, changed)
     send_quietly(rt.notifier, Notice(kind, email, datetime.now(UTC)))
+    if unproven:
+        return ActionResult(False, unproven=True)
     return ActionResult(True, secret, absolute)
 
 

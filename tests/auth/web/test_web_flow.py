@@ -485,7 +485,7 @@ def test_mfa_step_up_reaches_loa2_only_with_a_second_factor(web: Web) -> None:
     client = web.client()
     web.sign_in(client)
     query = start_step_up(web, client, "MFA")
-    assert query["acr_values"] == "loa2" and "prompt" not in query
+    assert (query["acr_values"], query["prompt"], query["max_age"]) == ("loa2", "login", "0")
     old = client.cookies[SESSION_COOKIE]
     refused = finish_step_up(web, client, query, acr="loa1")  # password only: not enough
     problem(refused, 400, "AUTH_CALLBACK_REJECTED")

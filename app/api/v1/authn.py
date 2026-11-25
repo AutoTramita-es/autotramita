@@ -4,6 +4,7 @@ which a cookie (web) or bearer (mobile) session is validated and the handler wor
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ from app.auth.errors import (
     AuthRequired,
     CsrfInvalid,
     SessionSecurityViolation,
+    TokenInvalid,
 )
 from app.auth.runtime import AuthRuntime
 from app.auth.sessions import service as sessions
@@ -26,8 +28,10 @@ from app.core.db import RequestContext, session_scope
 from app.core.ratelimit import client_ip
 from fastapi import Request
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+log = logging.getLogger(__name__)
 BEARER = "bearer "
 
 
@@ -85,6 +89,38 @@ def bearer_token(request: Request) -> str | None:
     return None
 
 
+def validate_bearer(request: Request, rt: AuthRuntime, raw: str) -> VerifiedToken:
+    """Validate an access token. A refused one is recorded (AT-02 4.3) by its reason only,
+    never the token; the record is best effort so the answer stays the same 401."""
+    try:
+        return rt.access_validator.validate(raw)
+    except TokenInvalid as rejected:
+        prefix, family = request_facts(request, rt)
+        record_attempt(
+            rt,
+            AuditEvent(
+                action="auth.token.invalid",
+                outcome=Outcome.DENIED,
+                actor_type=ActorType.ANONYMOUS,
+                ip_prefix=prefix,
+                ua_family=family,
+                details={"reason": rejected.reason.value},
+            ),
+        )
+        raise
+
+
+def record_attempt(
+    rt: AuthRuntime, event: AuditEvent, context: RequestContext | None = None
+) -> None:
+    """Record a refused attempt in its own transaction. The refusal stands even when the audit
+    store cannot take the record; that is logged without any identifier."""
+    try:
+        record_independent(rt.factory, event, context or RequestContext())
+    except SQLAlchemyError:
+        log.warning("a refused attempt could not be recorded")
+
+
 @contextmanager
 def authenticated(
     request: Request, rt: AuthRuntime, *, lock: bool, touch: bool = True
@@ -125,7 +161,7 @@ def authenticated(
         raw = bearer_token(request)
         if raw is None:
             raise AuthRequired()
-        token = rt.access_validator.validate(raw)
+        token = validate_bearer(request, rt, raw)
     resolved: sessions.Resolved | None = None
     try:
         with session_scope(rt.factory, RequestContext()) as db:

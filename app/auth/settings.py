@@ -101,8 +101,8 @@ class AuthSettings(AuthLimitSettings):
     mobile_absolute_days: int = Field(
         default=30, ge=1, validation_alias="AUTH_MOBILE_ABSOLUTE_DAYS"
     )
-    step_up_window_minutes: int = Field(
-        default=10, ge=1, validation_alias="AUTH_STEP_UP_WINDOW_MINUTES"
+    step_up_window_minutes: int = Field(  # D23: never longer than ten minutes
+        default=10, ge=1, le=10, validation_alias="AUTH_STEP_UP_WINDOW_MINUTES"
     )
     max_sessions_per_user: int = Field(
         default=10, ge=1, le=100, validation_alias="AUTH_MAX_SESSIONS_PER_USER"
