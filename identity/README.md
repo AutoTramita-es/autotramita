@@ -14,7 +14,7 @@ realm import are live prerequisites needing separate authorization).
 | `keycloak/UPGRADE-26.8.2.md` | Upgrade from 26.4.7: changes that concern AutoTramita, rehearsal results, production steps and rollback |
 | `keycloak/upgrade-rehearsal-26.8.2.json` | Result of `scripts/identity/upgrade_rehearsal.py` (disposable containers only) |
 | `keycloak/provider/` | The security provider ([its README](keycloak/provider/README.md): invariants, concurrency, upgrade, rollback, image scan) |
-| `keycloak/vulnerability-acceptances.json` | Owner acceptances of CRITICAL/HIGH image findings (time-limited; empty) |
+| `keycloak/vulnerability-acceptances.json` | Owner acceptances of CRITICAL/HIGH image findings (time-limited, owner only; six since 2026-11-25, tested against the authorized list) |
 | `keycloak/vulnerability-review-26.8.2.json` | Reviewed findings of the current image, one by one, with a recommendation for the owner (nothing accepted) |
 | `keycloak/vulnerability-review-26.4.7.json` | Findings of the image before the upgrade, kept for comparison |
 
