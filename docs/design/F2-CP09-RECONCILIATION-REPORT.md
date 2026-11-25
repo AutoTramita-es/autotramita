@@ -8,9 +8,11 @@ Date: 2026-11-25 (revised after the Keycloak Security Upgrade). **Status: F2-T09
 |---|---|
 | Start of the Keycloak Security Upgrade | `ad693c50cf7d7e1c860520017d663d69ad3c606b` |
 | Owner decisions recorded before the code | `77caf18` (D45, ADR-008, execution order) |
-| **Final implementation SHA** | recorded in the results commit that follows it (§1 of the next revision) |
-| **Local FULL CI on that SHA** | recorded in the results commit |
-| **GitHub CI on that SHA** | recorded in the results commit |
+| **Final implementation SHA** | `d9b9aba70f123dc5b805c01fe8c426da16a2c998` (code `abe7916`, documentation `d9b9aba`); this table was filled in by the results commit that follows it |
+| **Local FULL CI on that SHA** | run `20261125-152202-af5d5c`, clean tree (`c4614eafc4e71c5bc76f9d784fede4e7fba33705`), 401.2 s: **every test job PASS**; `image-scan` **FAIL** at its gate (6 HIGH, §2.0), so the run is FAIL |
+| **GitHub CI on that SHA** | [45645703628](https://github.com/AutoTramita-es/autotramita/actions/runs/45645703628): every test job **success**, `image-scan` **failure** at its gate (the same 6 HIGH, the same databases `1581858e…` / `538098aa…`), 444 s; `compare-github.sh`: **EQUIVALENT** (same steps and results, 1,437 + 257 tests, DEV and PROD realm import, 545 commits scanned) |
+| Main tests | **1,437 passed**, 0 failed, 0 errors, 0 skipped (one more than before: the new linter case) |
+| Keycloak tests | **257 passed** (one node, two nodes on one database, the application), 0 failed, 0 errors, 0 skipped. **Total 1,694** distinct tests; all invocations **1,877** |
 | Keycloak | **26.8.2**, `quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3` (index; amd64 `sha256:75b5c435…`), RHEL 9.9, OpenJDK 21.0.13.1 |
 | Provider | **1.1.1**, jar SHA-256 `d61ac28e362008f530b3ab6b5642fbbb892eda5f0137669d5be96b935b7c574a` (built twice per build, identical; decision table 2,048 cases) |
 | Image scan | Trivy 0.76.2 (pinned by digest); vulnerability DB schema 2 updated 2026-11-25T13:07Z (`1581858e…`), Java DB schema 1 updated 2026-11-25T00:58Z (`538098aa…`), the same databases as the 26.4.7 scan; **0 CRITICAL, 6 HIGH**, none accepted |
@@ -308,7 +310,7 @@ Summary: DEFERRED: 34; PARTIAL: 7; PASS: 80; PASS with accepted deviation: 5; to
 | Criterion | Status | Implementation | Test(s) | Result (local run, same SHA) | Deviation / dependency |
 |---|---|---|---|---|---|
 | AC-KC-01 | PASS | `identity/keycloak/realm-template.json` | `test_keycloak_spike::test_s07_realm_import_resolves_env_secrets_and_service_account_is_least_privilege` | 1/1 pass (K) | CI identity job imports the test realm into a fresh container; a separate step imports DEV and PROD |
-| AC-KC-02 | PASS | `tests/identity/realm_lint.py` | `test_realm_lint::test_linter_rejects_each_violation`<br>`test_realm_lint::test_committed_realms_comply_with_policy`<br>`test_realm_lint::test_every_second_factor_the_application_knows_is_proven_at_level_two` | 55/55 pass (M) | also fixes the exact authentication flows, the refused password grant, the level map and the `loa_map` mapper |
+| AC-KC-02 | PASS | `tests/identity/realm_lint.py` | `test_realm_lint::test_linter_rejects_each_violation`<br>`test_realm_lint::test_committed_realms_comply_with_policy`<br>`test_realm_lint::test_every_second_factor_the_application_knows_is_proven_at_level_two` | 56/56 pass (M) | also fixes the exact authentication flows, the refused password grant, the level map and the `loa_map` mapper |
 | AC-KC-03 | PASS | `identity/keycloak/realm-template.json` | `test_realm_lint::test_dev_and_prod_share_nothing_environment_specific` | 1/1 pass (M) | DEV/PROD import with flow and mapper assertions: CI step, no test-case id |
 | AC-KC-04 | PASS | spike report | `test_keycloak_spike::test_s01_temporary_lockout_expires_with_short_test_window`<br>`test_keycloak_spike::test_s02_direct_recovery_url_is_denied_when_reset_is_disabled`<br>`test_keycloak_spike::test_s03_max_age_zero_requires_fresh_login`<br>`test_reconciliation_keycloak::test_s03_level_two_expires_after_its_configured_age`<br>`test_reconciliation_keycloak::test_s03_a_passkey_enrolled_earlier_is_the_second_level` | 5/5 pass (K) | S1 expiry and S3 age use shortened windows (committed 900 s / 600 s asserted); the T01/REC S3 WebAuthn finding is superseded: a passkey is proven at level two (registration stays off) |
 | AC-KC-05 | PASS | `identity/keycloak/realm-template.json` | `test_tokens_keycloak::test_rotation_new_realm_key_is_picked_up_without_restart`<br>`test_keycloak_spike::test_kc05_key_rotation_new_key_published_and_old_kept` | 2/2 pass (K) | — |
