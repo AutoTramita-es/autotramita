@@ -305,6 +305,27 @@ Ostalo: ponovni pregled F-0/F-1, usklađivanje 7 PARTIAL kriterija unutar T01–
 Zabranjeno izričito: nove grane, force push, merge u main, deployment, izmjene produkcijske infrastrukture, migracije na trajnoj bazi, produkcijska pošta, promjena vidljivosti repozitorija, INFRA-CI-02, T10–T13. D42 i R10 zadržavaju status. CP09 se ne prihvaća samostalno.
 ```
 
+```
+F2-T09-REC — Final MFA Security Decision | 2026-11-25 | Referentni HEAD 213e37c
+Prethodno predloženi zahtjevi koje vlasnik prihvaća ("Odobravam opciju A i svih osam predloženih zahtjeva, uz sljedeće obavezne dopune."):
+ (1) Tko ima drugi faktor (TOTP, passkey ili recovery kod) potvrđuje ga pri svakoj prijavi lozinkom, na webu i mobilnom.
+ (2) Vrijedi i prije promjene lozinke, dodavanja ili uklanjanja faktora i svake zaostale obavezne radnje; jedna potvrda dovoljna je za LoA2.
+ (3) Za korisnike bez drugog faktora ništa se ne mijenja.
+ (4) Oporavak zaboravljene lozinke radi, zadržava faktor i gasi sesije; ne smije poslužiti postavljanju faktora bez provjere postojećeg; ima vlastiti test.
+ (5) DEV, TEST i PROD realm, linter i CI provjera usklađeni; vjerodajnice se ne brišu; registracija passkeya ostaje isključena.
+ (6) Oba test_open_finding_* testa pretvaraju se u testove zaštite na stvarnom Keycloaku, uz pozitivne i negativne slučajeve.
+ (7) ADR-008 i D23 dopunjuju se; autorizacija se evidentira prije izmjena koda.
+ (8) Vrijede ograničenja prethodnog naloga.
+Obavezne dopune (doslovno, izvaci):
+ 1. "Zadržati funkcionalnost recovery kodova." "Generiranje i regeneriranje recovery kodova dopušteno je samo nakon svježe uspješne verifikacije postojećeg TOTP ili WebAuthn faktora." "Recovery kodovi služe kao rezervni način autentifikacije." "Spriječiti nastanak novih računa kojima su recovery kodovi jedini drugi faktor." "Spriječiti uklanjanje posljednjeg trajnog faktora ako bi račun time ostao samo s recovery kodovima."
+ 2. Postojeći računi samo s recovery kodovima sigurno se obrađuju: "Ne brisati postojeće vjerodajnice automatski." "Omogućiti siguran prijelaz na trajni drugi faktor nakon dokazivanja posjedovanja postojećeg faktora." "Iskorištavanje posljednjeg recovery koda ne smije automatski pretvoriti MFA račun u račun zaštićen samo lozinkom." "Napuštanje obavezne radnje, prekid sesije, istek sesije ili resetiranje lozinke ne smiju ukloniti obvezu MFA autentifikacije." "Ako korisnik više nema nijedan upotrebljiv faktor, račun mora ostati u sigurnom stanju koje zahtijeva kontrolirani oporavak." Ovisnost o T10/T11 evidentira se; "Ne uvoditi nezaštićeno privremeno rješenje."
+ 3. Trajna MFA obveza: istražiti može li Keycloak pouzdano razlikovati nikad aktiviran MFA od MFA bez upotrebljive vjerodajnice; ako realm konfiguracija nije dovoljna, predložiti minimalno trajno sigurnosno stanje provedivo i na izravnim Keycloak putovima. "Nemoj uvoditi novu arhitekturnu komponentu bez zasebnog obrazloženja i autorizacije."
+ 4. Integracijski testovi na stvarnom Keycloaku, najmanje: TOTP + recovery; WebAuthn + recovery; samo recovery; zadnji kod; napuštena obavezna radnja nakon zadnjeg koda; ponovna prijava samo lozinkom; reset lozinke; dodavanje i uklanjanje faktora; paralelne autentifikacijske sesije; izravni Account Console putovi; web i mobilna autentifikacija; korisnici koji nikad nisu aktivirali MFA. "Dokazati da poznavanje same lozinke nije dovoljno za preuzimanje prethodno MFA-zaštićenog računa."
+ 5. "Ne odobravam spuštanje F-1R-B s P1 na P2 dok postoji mogućnost preuzimanja računa." "F-3K zatvoriti isključivo ako integracijski testovi potvrde zaštitu." Ažurirati ADR-008, D23 i D41.
+Ograničenja: samo dev; lokalni FAST i ciljani testovi tijekom razvoja; završni FULL lokalni CI; GitHub CI na istom završnom SHA; nula failures, errors i skipped; bez deploymenta, bez migracija na trajnoj bazi, bez T10–T13, bez samostalnog prihvaćanja CP09.
+STOP: ako zahtjevi nisu ostvarivi postojećom arhitekturom, dostaviti konkretan tehnički blocker i prijedlog minimalnog rješenja. Cilj: F2-CP09 — READY FOR OWNER ACCEPTANCE bez otvorenih P0/P1.
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
