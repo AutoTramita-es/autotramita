@@ -132,9 +132,14 @@ class Account:
     def offered(self, browser: Browser, page: Page) -> set[str]:
         """Every method Keycloak offers for this question (none besides the asked one when
         there is no "try another way")."""
+        return self.choices(browser, page)[0]
+
+    def choices(self, browser: Browser, page: Page) -> tuple[set[str], Page]:
+        """``offered`` and the page to continue from: looking at the options moves the
+        sign-in to Keycloak's selection page, so the page shown before is no longer valid."""
         if shown(page) != "select":
             if "tryAnotherWay" not in page.text:
-                return {shown(page)}
+                return {shown(page)}, page
             fields = {**hidden_inputs(page.text), "tryAnotherWay": "on"}
             page = browser.submit(page, fields, action=form_action(page.text))
         assert shown(page) == "select", page.summary
@@ -144,7 +149,7 @@ class Account:
             found.add(shown(asked))
             back = {**hidden_inputs(asked.text), "tryAnotherWay": "on"}
             page = browser.submit(asked, back, action=form_action(asked.text))
-        return found
+        return found, page
 
     def answer_code(self, browser: Browser, page: Page, code: str) -> Page:
         fields = hidden_inputs(page.text)

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import html
 import re
+import time
 
 import httpx
 import pytest
@@ -153,18 +154,83 @@ def test_recovery_codes_are_generated_only_after_a_permanent_factor(
     assert who.credential_id(CODES) != before
 
 
+def _new_codes_after_single_sign_on(
+    env: Env, admin: Admin, signed_in_with: str, *, same_second: bool
+) -> tuple[Account, Browser, Page]:
+    """Sign in with ``signed_in_with``, then ask for new recovery codes from that single sign-on.
+
+    ``max_auth_age`` 0 is counted by Keycloak in whole seconds: a request within the second of
+    the sign-in is a step-up of it, a later one is a forced re-authentication (password again).
+    Both paths are reached on purpose. For the re-authentication the test waits until the
+    sign-in's second is over (the sign-in cannot be later than the moment its answer arrived).
+    For the step-up it answers the factor right at the start of a second; if the machine is so
+    slow that the second still ends in between, Keycloak's answer says so (it asks for the
+    password) and the attempt is repeated with a new account, never accepted as the other path.
+    """
+    for _ in range(3):
+        who = account(admin, OTP, CODES)
+        browser = Browser(env)
+        page = who.select(browser, browser.login(who.user), signed_in_with)
+        if same_second:
+            time.sleep(1 - time.time() % 1 + 0.01)
+        who.answer(browser, page, signed_in_with).require_code()
+        signed_at = time.time()
+        if not same_second:
+            time.sleep(max(0.0, int(signed_at) + 1.05 - time.time()))
+        page = browser.authorize("at-web", WEB_REDIRECT, kc_action=NEW_CODES)
+        asked_password = shown(page) == "password"
+        if asked_password != same_second:
+            return who, browser, page
+        assert same_second, f"no fresh sign-in a second after the sign-in: {page.summary}"
+        browser.close()
+    pytest.fail("the request for new codes never came within the second of the sign-in")
+
+
 @pytest.mark.parametrize("signed_in_with", [OTP, CODES])
 def test_new_recovery_codes_from_single_sign_on_need_the_permanent_factor_again(
     env: Env, admin: Admin, signed_in_with: str
 ) -> None:
-    who = account(admin, OTP, CODES)
-    browser = Browser(env)
-    who.sign_in(browser, signed_in_with).require_code()
-    page = browser.authorize("at-web", WEB_REDIRECT, kc_action=NEW_CODES)
-    page = browser.sign_in_again(page, who.user)
-    assert page.code is None and who.offered(browser, page) == {OTP}, page.summary
+    """Within the second of the sign-in: a step-up, which never takes a recovery code."""
+    who, browser, page = _new_codes_after_single_sign_on(
+        env, admin, signed_in_with, same_second=True
+    )
+    before = who.credential_id(CODES)
+    offered, page = who.choices(browser, page)
+    assert page.code is None and offered == {OTP}, page.summary
     page = who.prove(browser, page, OTP)
     assert shown(page) == "codes-setup", page.summary  # one question, not two
+    who.codes, done = set_up_codes(browser, page)
+    done.require_code()
+    assert who.credential_id(CODES) != before
+
+
+@pytest.mark.parametrize("answer_with", [CODES, OTP])
+@pytest.mark.parametrize("signed_in_with", [OTP, CODES])
+def test_new_recovery_codes_after_the_fresh_sign_in_need_the_permanent_factor(
+    env: Env, admin: Admin, signed_in_with: str, answer_with: str
+) -> None:
+    """Later than that second: Keycloak asks to sign in again and may offer a recovery code
+    (owner decision D46, IR-01). The code signs the person in, but new codes still need the
+    permanent factor; the permanent factor answered first is enough on its own."""
+    who, browser, page = _new_codes_after_single_sign_on(
+        env, admin, signed_in_with, same_second=False
+    )
+    before = who.credential_id(CODES)
+    page = password_again(browser, page, who)
+    offered, page = who.choices(browser, page)
+    assert page.code is None and offered == {OTP, CODES}, page.summary
+    page = who.prove(browser, page, answer_with)
+    if answer_with == CODES:
+        assert page.code is None, "a recovery code was enough for new recovery codes"
+        assert shown(page) != "codes-setup", page.summary
+        assert who.credential_id(CODES) == before  # nothing issued yet
+        offered, page = who.choices(browser, page)
+        assert offered == {OTP}, page.summary
+        page = who.prove(browser, page, OTP)
+    assert shown(page) == "codes-setup", page.summary
+    who.codes, done = set_up_codes(browser, page)
+    done.require_code()
+    assert who.credential_id(CODES) != before
 
 
 def test_a_step_up_of_an_existing_session_never_takes_a_recovery_code(

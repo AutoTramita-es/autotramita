@@ -22,6 +22,7 @@ def cache(
     vuln_age: timedelta = timedelta(hours=2),
     java_age: timedelta = timedelta(days=1),
     schemas: tuple[int, int] = (2, 1),
+    at: datetime = NOW,
 ) -> Path:
     folder = tmp / "cache"
     for name, file, age, schema in (
@@ -30,7 +31,7 @@ def cache(
     ):
         (folder / name).mkdir(parents=True)
         (folder / name / file).write_bytes(b"database")
-        updated = (NOW - age).strftime("%Y-%m-%dT%H:%M:%S.123456789Z")
+        updated = (at - age).strftime("%Y-%m-%dT%H:%M:%S.123456789Z")
         meta = {"Version": schema, "UpdatedAt": updated, "DownloadedAt": updated}
         (folder / name / "metadata.json").write_text(json.dumps(meta))
     return folder
@@ -128,11 +129,104 @@ def test_no_acceptance_can_be_made_up(tmp_path: Path, change: dict[str, Any]) ->
     assert result["gate"] == "FAIL", result
 
 
-def test_the_committed_acceptances_accept_nothing() -> None:
-    committed = json.loads(
-        (ROOT / "identity" / "keycloak" / "vulnerability-acceptances.json").read_text()
+# The owner's time-limited acceptances of 2026-11-25 (commit cfbc8f7, recorded in the F2
+# decision register): exactly these finding/package pairs, with exactly these expiry dates.
+# Any other entry, an extended date or a second copy is an acceptance nobody authorized.
+AUTHORIZED = {
+    ("CVE-2026-102554", "com.google.guava:guava"): "2026-12-31",
+    ("CVE-2026-91403", "java-21-openjdk-headless"): "2027-02-22",
+    ("CVE-2026-119373", "sqlite-libs"): "2027-02-22",
+    ("CVE-2026-119374", "sqlite-libs"): "2027-02-22",
+    ("CVE-2026-119379", "sqlite-libs"): "2027-02-22",
+    ("CVE-2026-119586", "sqlite-libs"): "2027-02-22",
+}
+OWNER_DECISION = "owner authorization 2026-11-25"
+REVIEW = ROOT / "identity" / "keycloak" / "vulnerability-review-26.8.2.json"
+COMMITTED = ROOT / "identity" / "keycloak" / "vulnerability-acceptances.json"
+
+
+def committed_entries() -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = json.loads(COMMITTED.read_text())["acceptances"]
+    return entries
+
+
+def test_the_committed_acceptances_are_exactly_the_authorized_ones() -> None:
+    entries = committed_entries()
+    pairs = [(entry["id"], entry["package"]) for entry in entries]
+    assert len(pairs) == len(set(pairs)), "an acceptance is listed twice"
+    assert {(e["id"], e["package"]): e["expires"] for e in entries} == AUTHORIZED
+    for entry in entries:
+        assert entry["accepted_by"] == "owner", entry
+        assert OWNER_DECISION in entry["decision"], entry
+        assert REVIEW.name in entry["decision"], entry  # the analysis it rests on
+        assert str(entry.get("reason", "")).strip(), entry
+
+
+def test_every_committed_acceptance_rests_on_the_review_and_its_dates() -> None:
+    review = json.loads(REVIEW.read_text())
+    findings = {(f["id"], f["package"]): f for f in review["findings"]}
+    proposed = {
+        (p["id"], p["package"]): p["expires"]
+        for p in review["proposed_acceptances_for_the_owner"]["entries"]
+    }
+    for entry in committed_entries():
+        key = (entry["id"], entry["package"])
+        assert key in findings and key in proposed, entry
+        assert findings[key]["severity"] == "HIGH", entry  # nothing CRITICAL is accepted
+        assert date.fromisoformat(entry["expires"]) <= date.fromisoformat(
+            findings[key]["recommended_expiry"]
+        ), entry
+        assert entry["expires"] == proposed[key], entry
+
+
+def committed_findings(tmp: Path, *extra: tuple[str, str, str]) -> Path:
+    six = [(cve, package, "HIGH") for cve, package in AUTHORIZED]
+    return report(tmp, [*six, *extra])
+
+
+@pytest.mark.parametrize(
+    ("moment", "expired"),
+    [
+        (NOW, []),
+        (datetime(2026, 12, 31, 23, 0, tzinfo=UTC), []),  # the last day still counts
+        (datetime(2027, 1, 1, 0, 30, tzinfo=UTC), ["CVE-2026-102554"]),
+        (
+            datetime(2027, 2, 23, 0, 30, tzinfo=UTC),
+            sorted(cve for cve, _ in AUTHORIZED),
+        ),
+    ],
+    ids=["today", "last_day_of_guava", "guava_expired", "all_expired"],
+)
+def test_the_committed_acceptances_pass_their_findings_only_until_they_expire(
+    tmp_path: Path, moment: datetime, expired: list[str]
+) -> None:
+    result = scan_gate.gate(
+        committed_findings(tmp_path), cache(tmp_path, at=moment), COMMITTED, IMAGE, now=moment
     )
-    assert committed["acceptances"] == []
+    assert sorted(str(r["id"]) for r in result["blocking"]) == expired, result
+    assert result["gate"] == ("FAIL" if expired else "PASS"), result
+    if expired:
+        assert any("invalid or expired entry" in reason for reason in result["reasons"])
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        ("CVE-2026-0001", "sqlite-libs", "HIGH"),  # another finding of an accepted package
+        ("CVE-2026-102554", "com.example:other", "HIGH"),  # the accepted id in another package
+        ("CVE-2026-0002", "com.google.guava:guava", "CRITICAL"),
+    ],
+    ids=["other_finding", "other_package", "critical_in_accepted_package"],
+)
+def test_the_committed_acceptances_let_nothing_else_through(
+    tmp_path: Path, extra: tuple[str, str, str]
+) -> None:
+    result = scan_gate.gate(
+        committed_findings(tmp_path, extra), cache(tmp_path), COMMITTED, IMAGE, now=NOW
+    )
+    blocked = [(r["id"], r["package"]) for r in result["blocking"]]
+    assert result["gate"] == "FAIL" and blocked == [extra[:2]], result
+    assert len(result["accepted"]) == len(AUTHORIZED)
 
 
 @pytest.mark.parametrize(
