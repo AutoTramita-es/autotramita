@@ -372,9 +372,16 @@ jobs:
           else:
               realm.raise_for_status()
               user = admin.create_user()
-              page = Browser(env).login(user)
+              browser = Browser(env)
+              page = browser.authorize("at-web", "http://127.0.0.1:18080/api/v1/auth/callback")
               assert page.code is None, "a sign-in succeeded without the security provider"
-              print("sign-in refused without the provider:", page.status)
+              if 'name="password"' in page.text:
+                  page = browser.submit(
+                      page, {"username": user.email, "password": user.password, "credentialId": ""}
+                  )
+                  assert page.code is None, "a sign-in succeeded without the security provider"
+              assert 'name="password"' not in page.text or "Invalid" in page.text, page.summary
+              print("sign-in refused without the provider:", page.status, page.summary[:80])
           PYGUARD
           docker rm -f keycloak-without-provider > /dev/null
       - name: Spike observations
