@@ -292,6 +292,19 @@ F-1 (b), kako je predloženo ondje: isključiti obje akcije registracije passkey
 Okvir nepromijenjen: samo dev; bez T10–T13, mergea, deploymenta, zajedničke infrastrukture, trajnih migracija i produkcijske pošte. CP09 nije unaprijed prihvaćen.
 ```
 
+```
+F2-T09-REC završni nalog (F-1R, F-2, F-3, F-4 i dovršenje) | 2026-11-25 | Referentni HEAD ef36c87
+Tekst vlasnika (doslovno, izvaci):
+"Autoriziram nastavak i završetak F2-T09-REC."
+"INFRA-CI-01 uvjetno se prihvaća za razvojnu uporabu uz dokumentirana ograničenja LCI-04 i LCI-05. Repozitorij ostaje Public do zasebne odluke vlasnika. INFRA-CI-02 se odgađa."
+F-1R: "Opcija D — APPROVED. Autoriziram sigurnu integraciju TOTP-a, recovery kodova i WebAuthn vjerodajnica u LoA2 autentifikacijski tok." Zahtjevi: korisnik s registriranim drugim faktorom ne smije postići LoA2 samo lozinkom; postojeći faktor verificira se prije dodavanja ili uklanjanja faktora; recovery kodovi jednokratni; bez zaobilaženja MFA-a kod računa samo s recovery kodovima; bez napadačeve registracije TOTP-a samo s ukradenom lozinkom; bez neovlaštenog uklanjanja vjerodajnica; sigurne kombinacije TOTP/recovery/WebAuthn; usklađeni DEV, TEST i PROD realm; postojeće vjerodajnice ne brišu se automatski; registracija passkeya ostaje isključena do dokaza i zasebne odluke; pozitivni i negativni testovi na stvarnom Keycloaku; "AC-POL-10 ne smije ostati BOUNDED zbog poznate P1 ranjivosti."
+F-2: "APPROVED. Maksimalno trajanje je 10 minuta od stvarne uspješne autentifikacije odgovarajućim faktorom." SSO sesija ne produljuje prozor; ponovno izdavanje tokena ne obnavlja step-up; stroži limit od 5 minuta ostaje gdje je definiran.
+F-3: "APPROVED." Bez MFA: svježa autentifikacija lozinkom. S MFA: svježa autentifikacija uz provjeru postojećeg drugog faktora. Primjena: promjena e-maila, autentificirana promjena lozinke, dodavanje i uklanjanje MFA, ostale postojeće step-up operacije. Oporavak lozinke i računa ostaju zasebni tokovi; bez downgradea sigurnosti.
+F-4: "APPROVED." Minimalni siguran mehanizam za D37 MANUAL_REVIEW: stanje u Keycloaku po sub, lokalno stanje i rezervacija, idempotentno razrješenje, kontrolirani retry, otkazivanje samo kad vanjska promjena potvrđeno nije izvršena, bez prepisivanja adresa, obavezni audit, bez PII i tokena u logovima, zaštita od paralelnosti, bez zaobilaženja budućeg Platform Grants modela, bez privremenog nezaštićenog admin endpointa; privilegirano sučelje može biti ovisnost T10/T11. D37 ostaje isključen u produkciji (O15).
+Ostalo: ponovni pregled F-0/F-1, usklađivanje 7 PARTIAL kriterija unutar T01–T09, pregled migracija 0001–0008 bez izvršavanja na trajnoj bazi, puni lokalni CI, commit i push na dev, GitHub CI na istom SHA, dokumentacija i matrica svih 126 kriterija. "Ako naiđeš na stvarni arhitekturni blocker, dokumentiraj ga i nastavi s ostalim neovisnim zadacima."
+Zabranjeno izričito: nove grane, force push, merge u main, deployment, izmjene produkcijske infrastrukture, migracije na trajnoj bazi, produkcijska pošta, promjena vidljivosti repozitorija, INFRA-CI-02, T10–T13. D42 i R10 zadržavaju status. CP09 se ne prihvaća samostalno.
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
