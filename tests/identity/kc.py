@@ -320,13 +320,15 @@ class Browser:
         return body
 
     def refresh(self, client_id: str, refresh_token: str) -> dict[str, Any]:
+        data = {
+            "grant_type": "refresh_token",
+            "client_id": client_id,
+            "refresh_token": refresh_token,
+        }
+        if client_id == "at-web":
+            data["client_secret"] = self.env.web_secret
         r = self.http.post(
-            f"{self.env.base_url}/realms/{REALM}/protocol/openid-connect/token",
-            data={
-                "grant_type": "refresh_token",
-                "client_id": client_id,
-                "refresh_token": refresh_token,
-            },
+            f"{self.env.base_url}/realms/{REALM}/protocol/openid-connect/token", data=data
         )
         body: dict[str, Any] = r.json()
         body["_status"] = r.status_code

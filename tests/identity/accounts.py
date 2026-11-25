@@ -44,6 +44,7 @@ def shown(page: Page) -> str:
         ('id="webauth"', PASSKEY),
         ('name="authenticationExecution"', "select"),
         ('name="password"', "password"),
+        ("Access denied", "denied"),
     ):
         if marker in page.text:
             return name
@@ -64,6 +65,12 @@ def registration_allowed(admin: Admin, kind: str) -> Iterator[None]:
         admin.master("PUT", path, json=committed).raise_for_status()
 
 
+# How many 30-second steps ahead of the clock the disposable test realm accepts (see the
+# ``admin`` fixture), so that tests need not wait for the next step before every sign-in. A code
+# is still accepted only once. The committed realms keep Keycloak's own window.
+CODE_WINDOW_STEPS = 30
+
+
 @dataclass
 class OtpDevice:
     secret: str
@@ -73,7 +80,7 @@ class OtpDevice:
         """A code Keycloak has not accepted yet (codes are single use)."""
         while True:
             step = max(int(time.time() // 30), self.used + 1)
-            if step <= int(time.time() // 30) + 1:
+            if step <= int(time.time() // 30) + CODE_WINDOW_STEPS - 5:
                 self.used = step
                 return totp(self.secret, at=step * 30)
             time.sleep(1)
@@ -145,11 +152,14 @@ class Account:
         fields["recoveryCodeInput"] = code
         return browser.submit(page, fields, action=form_action(page.text))
 
-    def next_code(self, page: Page) -> str:
-        """The recovery code Keycloak asks for by number."""
+    def asked_number(self, page: Page) -> int:
         asked = re.search(r"#\s*(\d+)", page.summary)
         assert asked, page.summary
-        return self.codes[int(asked.group(1)) - 1]
+        return int(asked.group(1))
+
+    def next_code(self, page: Page) -> str:
+        """The recovery code Keycloak asks for by number."""
+        return self.codes[self.asked_number(page) - 1]
 
     def prove(self, browser: Browser, page: Page, kind: str | None = None) -> Page:
         """Answer the second-factor question with ``kind`` (default: whatever is asked)."""
@@ -168,6 +178,51 @@ class Account:
         key = self.keys.get(kind) or next(iter(self.keys.values()))
         return authenticate(browser, page, browser.env.base_url, key)
 
+    def permanent(self) -> str | None:
+        """The permanent factor this account holds, if any (as it is asked at sign-in)."""
+        for kind in (OTP, PASSKEY, PASSWORDLESS):
+            if kind in self.kinds():
+                return kind
+        return None
+
+    def sign_in(self, browser: Browser, kind: str | None = None, **kw: str) -> Page:
+        """The password and, when asked, a factor (default: the permanent one, so no recovery
+        code is spent). Returns the page that follows."""
+        page = browser.login(self.user, **kw)
+        return self.answer(browser, page, kind)
+
+    def answer(self, browser: Browser, page: Page, kind: str | None = None) -> Page:
+        """Answer factor questions until something else is shown. Keycloak asks twice where
+        two proofs are needed; the second one is never a recovery code."""
+        wanted = kind or self.permanent()
+        for _ in range(3):
+            if shown(page) not in (OTP, CODES, PASSKEY, "select"):
+                return page
+            page = self.prove(browser, page, wanted)
+            wanted = self.permanent()
+        return page
+
+    def spend_codes(self, keep: int) -> None:
+        """Sign in with recovery codes until ``keep`` unused ones remain."""
+        while True:
+            browser = Browser(self.admin.env)
+            page = self.select(browser, browser.login(self.user), CODES)
+            number = self.asked_number(page)
+            if number > len(self.codes) - keep:
+                return
+            self.answer_code(browser, page, self.codes[number - 1]).require_code()
+
+    def mark(self) -> None:
+        """What an operator does for an account that must keep a second factor."""
+        path = f"/users/{self.user.id}"
+        found = self.admin.master("GET", path).json()
+        found.setdefault("attributes", {})["at_mfa_required"] = ["true"]
+        self.admin.master("PUT", path, json=found).raise_for_status()
+
+    def remove_as_administrator(self, kind: str) -> None:
+        path = f"/users/{self.user.id}/credentials/{self.credential_id(kind)}"
+        self.admin.master("DELETE", path).raise_for_status()
+
     def level_two(self, kind: str | None = None) -> Browser:
         """A browser signed in at level two."""
         browser = Browser(self.admin.env)
@@ -178,12 +233,9 @@ class Account:
     # --- enrolment (each time through a session that proved what the account already has) ------
     def action(self, name: str) -> tuple[Browser, Page]:
         browser = Browser(self.admin.env)
-        browser.login(self.user).require_code()
+        self.sign_in(browser).require_code()
         page = browser.authorize("at-web", WEB_REDIRECT, kc_action=name)
-        if self.kinds():
-            assert shown(page) in (OTP, CODES, PASSKEY), page.summary
-            page = self.prove(browser, page)
-        return browser, page
+        return browser, self.answer(browser, page)
 
     def enrol(self, kind: str) -> Account:
         if kind == OTP:
@@ -202,7 +254,7 @@ class Account:
         return self
 
 
-def set_up_otp(browser: Browser, page: Page) -> tuple[OtpDevice, Page]:
+def set_up_otp(browser: Browser, page: Page, label: str = "test") -> tuple[OtpDevice, Page]:
     secret = re.search(r'id="kc-totp-secret-key"[^>]*>([^<]+)<', page.text)
     if not secret:
         manual = re.search(r'href="([^"]*mode=manual[^"]*)"', page.text)
@@ -211,7 +263,7 @@ def set_up_otp(browser: Browser, page: Page) -> tuple[OtpDevice, Page]:
         secret = re.search(r'id="kc-totp-secret-key"[^>]*>([^<]+)<', page.text)
     assert secret, page.summary
     device = OtpDevice(secret.group(1).strip())
-    fields = {**hidden_inputs(page.text), "totp": device.code(), "userLabel": "test"}
+    fields = {**hidden_inputs(page.text), "totp": device.code(), "userLabel": label}
     return device, browser.submit(page, fields, action=form_action(page.text))
 
 
@@ -226,7 +278,22 @@ def set_up_codes(browser: Browser, page: Page) -> tuple[list[str], Page]:
 
 
 def account(admin: Admin, *factors: str) -> Account:
+    """An account whose person enrolled ``factors`` in this order. Recovery codes need a
+    permanent factor first: for codes alone see ``codes_only_account``."""
     created = Account(admin, admin.create_user())
     for kind in factors:
         created.enrol(kind)
+    return created
+
+
+def codes_only_account(admin: Admin, *, marked: bool) -> Account:
+    """What no person can create any more: an account from before, holding recovery codes only.
+    Made as it would arise here, by an administrator removing the one-time code."""
+    created = account(admin, OTP, CODES)
+    created.remove_as_administrator(OTP)
+    created.otp = None
+    # as an existing realm is prepared: no session from before the new flows survives
+    admin.master("POST", f"/users/{created.user.id}/logout").raise_for_status()
+    if marked:
+        created.mark()
     return created

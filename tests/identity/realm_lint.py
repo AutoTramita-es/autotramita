@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
 from app.auth.idp import SECOND_FACTOR_TYPES
 from app.core.config import RateLimitSettings
+
+# (authenticator or "flow:<alias>", requirement, authenticator configuration or None)
+Step = tuple[str, str, dict[str, str] | None]
 
 PLACEHOLDER = re.compile(r"^\$\{[A-Z][A-Z0-9_]*\}$")
 ADMIN_SVC_ROLES = {"manage-users", "view-users", "view-events"}
@@ -23,13 +27,13 @@ REQUIRED_ACTIONS = {
     "webauthn-register": False,
     "webauthn-register-passwordless": False,
     "VERIFY_PROFILE": True,
-    "delete_credential": True,
+    "delete_credential": False,  # no person removes a credential at the provider (F-1R-B)
     "idp_link": True,
     "CONFIGURE_RECOVERY_AUTHN_CODES": True,
     "update_user_locale": True,
 }
 # The authenticator that proves each kind of second factor the application knows (F-1R). A kind
-# without one at level two would be offered a new one-time code after the password alone.
+# without one would be offered a new one-time code after the password alone.
 FACTOR_AUTHENTICATORS = {
     "otp": "auth-otp-form",
     "webauthn": "webauthn-authenticator",
@@ -37,30 +41,182 @@ FACTOR_AUTHENTICATORS = {
     "recovery-authn-codes": "auth-recovery-authn-code-form",
 }
 assert set(FACTOR_AUTHENTICATORS) == SECOND_FACTOR_TYPES
-# Every authentication flow of the realm, exactly: (authenticator or sub-flow, requirement) in
-# execution order. Anything else could let a level be reached without its proof.
-FLOWS: dict[str, list[tuple[str, str]]] = {
-    "browser-loa": [("auth-cookie", "ALTERNATIVE"), ("flow:browser-loa-forms", "ALTERNATIVE")],
-    "browser-loa-forms": [
-        ("flow:browser-loa-1", "CONDITIONAL"),
-        ("flow:browser-loa-2", "CONDITIONAL"),
+MARKER = "at_mfa_required"
+_CODE = FACTOR_AUTHENTICATORS["recovery-authn-codes"]
+_PERMANENT = [name for name in FACTOR_AUTHENTICATORS.values() if name != _CODE]
+
+
+def _any_of(names: list[str]) -> list[Step]:
+    return [(name, "ALTERNATIVE", None) for name in names]
+
+
+def _ran(flow: str, result: str = "executed") -> Step:
+    return (
+        "conditional-sub-flow-executed",
+        "REQUIRED",
+        {"flow_to_check": flow, "check_result": result},
+    )
+
+
+def _used(credentials: str, included: str) -> Step:
+    return (
+        "conditional-credential",
+        "REQUIRED",
+        {"credentials": credentials, "included": included},
+    )
+
+
+def _marked(negated: str) -> Step:
+    config = {
+        "attribute_name": MARKER,
+        "attribute_expected_value": "true",
+        "not": negated,
+        "include_group_attributes": "false",
+        "regex": "false",
+    }
+    return ("conditional-user-attribute", "REQUIRED", config)
+
+
+def _level(number: str, max_age: str) -> Step:
+    config = {
+        "loa-condition-level": number,
+        "loa-store-in-user-session": "true",
+        "loa-max-age": max_age,
+    }
+    return ("conditional-level-of-authentication", "REQUIRED", config)
+
+
+def _sub(name: str, requirement: str = "CONDITIONAL") -> Step:
+    return (f"flow:browser-{name}", requirement, None)
+
+
+def _step(name: str, requirement: str = "REQUIRED") -> Step:
+    return (name, requirement, None)
+
+
+_CONFIGURED = _step("conditional-user-configured")
+_ALLOW = _step("allow-access-authenticator")
+_DENY = _step("deny-access-authenticator")
+_PERMANENT_TYPES = "otp##webauthn##webauthn-passwordless"
+_USED_CODE = _used("recovery-authn-codes", "true")
+
+
+def _probe(name: str, kinds: list[str]) -> dict[str, list[Step]]:
+    """Executed, asking nothing, exactly for a person who has one of ``kinds``."""
+    return {
+        f"browser-probe-{name}": [
+            _CONFIGURED,
+            _sub(f"probe-{name}-pass", "REQUIRED"),
+            *_any_of(kinds),
+        ],
+        f"browser-probe-{name}-pass": [_ALLOW],
+    }
+
+
+# Every authentication flow of the realm, exactly: (authenticator or sub-flow, requirement,
+# configuration) in execution order. Anything else could let a level be reached without its proof.
+FLOWS: dict[str, list[Step]] = {
+    "browser-loa": [
+        _step("auth-cookie", "ALTERNATIVE"),
+        _sub("loa-forms", "ALTERNATIVE"),
     ],
+    # The order 1, 3, 2, 4 decides the level each kind of credential belongs to.
+    "browser-loa-forms": [_sub(f"loa-{number}") for number in (1, 3, 2, 4)],
     "browser-loa-1": [
-        ("conditional-level-of-authentication", "REQUIRED"),
-        ("auth-username-password-form", "REQUIRED"),
+        _level("1", "43200"),
+        _step("auth-username-password-form"),
+        _sub("probe-permanent"),
+        _sub("probe-codes"),
+        _sub("deny-unmarked-codes-only"),
+        _sub("deny-marked-without-factor"),
+        _sub("loa-1-factor"),
+        _sub("probe-codes-left"),
+        _sub("loa-1-legacy-enrol"),
+        _sub("loa-1-codes-spent"),
+        _sub("loa-1-last-code"),
     ],
+    **_probe("permanent", _PERMANENT),
+    **_probe("codes", [_CODE]),
+    **_probe("codes-left", [_CODE]),
+    "browser-deny-unmarked-codes-only": [
+        _marked("true"),
+        _ran("browser-probe-permanent", "not-executed"),
+        _ran("browser-probe-codes"),
+        _DENY,
+    ],
+    "browser-deny-marked-without-factor": [
+        _marked("false"),
+        _ran("browser-probe-permanent", "not-executed"),
+        _ran("browser-probe-codes", "not-executed"),
+        _DENY,
+    ],
+    "browser-loa-1-factor": [_CONFIGURED, *_any_of(list(FACTOR_AUTHENTICATORS.values()))],
+    "browser-loa-1-legacy-enrol": [
+        _USED_CODE,
+        _ran("browser-probe-permanent", "not-executed"),
+        _step("auth-otp-form"),
+    ],
+    "browser-loa-1-codes-spent": [
+        _USED_CODE,
+        _ran("browser-probe-codes-left", "not-executed"),
+        (
+            "user-session-limits",
+            "REQUIRED",
+            {
+                "userRealmLimit": "1",
+                "userClientLimit": "0",
+                "behavior": "Terminate oldest session",
+            },
+        ),
+    ],
+    "browser-loa-1-last-code": [
+        _USED_CODE,
+        _ran("browser-probe-codes-left", "not-executed"),
+        _ran("browser-probe-permanent"),
+        *_any_of(_PERMANENT),
+    ],
+    "browser-loa-3": [
+        _level("3", "0"),
+        _sub("loa-3-prove"),
+        _sub("loa-3-enrol"),
+        _sub("loa-3-proven"),
+    ],
+    "browser-loa-3-prove": [_used(_PERMANENT_TYPES, "false"), _CONFIGURED, *_any_of(_PERMANENT)],
+    "browser-loa-3-enrol": [
+        _used(_PERMANENT_TYPES, "false"),
+        _ran("browser-loa-3-prove", "not-executed"),
+        _marked("true"),
+        _step("auth-otp-form"),
+    ],
+    "browser-loa-3-proven": [_used(_PERMANENT_TYPES, "true"), _ALLOW],
     "browser-loa-2": [
-        ("conditional-level-of-authentication", "REQUIRED"),
-        ("flow:browser-loa-2-factor", "CONDITIONAL"),
-        ("flow:browser-loa-2-enrol", "CONDITIONAL"),
+        _level("2", "600"),
+        _sub("loa-2-factor"),
+        _sub("loa-2-enrol"),
+        _sub("loa-2-proven"),
+        _sub("loa-2-proven-permanent"),
     ],
-    "browser-loa-2-factor": [("conditional-user-configured", "REQUIRED")]
-    + [(name, "ALTERNATIVE") for name in FACTOR_AUTHENTICATORS.values()],
+    "browser-loa-2-factor": [
+        _ran("browser-loa-1-factor", "not-executed"),
+        _ran("browser-loa-3-prove", "not-executed"),
+        _CONFIGURED,
+        *_any_of(_PERMANENT),
+    ],
     "browser-loa-2-enrol": [
-        ("conditional-sub-flow-executed", "REQUIRED"),
-        ("auth-otp-form", "REQUIRED"),
+        _ran("browser-loa-1-factor", "not-executed"),
+        _ran("browser-loa-3-prove", "not-executed"),
+        _ran("browser-loa-2-factor", "not-executed"),
+        _marked("true"),
+        _step("auth-otp-form"),
     ],
-    "direct-grant-denied": [("deny-access-authenticator", "REQUIRED")],
+    "browser-loa-2-proven": [_ran("browser-loa-1-factor"), _ALLOW],
+    "browser-loa-2-proven-permanent": [
+        _ran("browser-loa-1-factor", "not-executed"),
+        _ran("browser-loa-3-prove"),
+        _ALLOW,
+    ],
+    "browser-loa-4": [_level("4", "0"), _ALLOW, _step(_CODE, "DISABLED")],
+    "direct-grant-denied": [_DENY],
 }
 LOA_MAP = '{"loa1":1,"loa2":2}'
 LOA_TIMES_MAPPER = {
@@ -75,6 +231,28 @@ SECRET_KEYS = re.compile(r"secret|password|credential", re.I)
 
 def _is_local(uri: str) -> bool:
     return uri.startswith("http://127.0.0.1")
+
+
+def _profile_permissions(realm: dict[str, Any], name: str) -> Any:
+    components = realm.get("components", {}).get("org.keycloak.userprofile.UserProfileProvider", [])
+    for component in components:
+        for text in component.get("config", {}).get("kc.user.profile.config", []):
+            profile = json.loads(text)
+            if profile.get("unmanagedAttributePolicy") not in (None, "ADMIN_VIEW", "ADMIN_EDIT"):
+                return None
+            for attribute in profile.get("attributes", []):
+                if attribute.get("name") == name:
+                    return attribute.get("permissions")
+    return None
+
+
+def _names_credential_types(path: str, value: Any) -> bool:
+    """The credential condition lists kinds of credential, not credentials."""
+    return (
+        path.startswith("realm.authenticatorConfig[")
+        and isinstance(value, str)
+        and set(value.split("##")) <= SECOND_FACTOR_TYPES
+    )
 
 
 def lint_realm(realm: dict[str, Any], *, kind: str) -> list[str]:
@@ -125,7 +303,6 @@ def lint_realm(realm: dict[str, Any], *, kind: str) -> list[str]:
     flows = {f.get("alias"): f for f in realm.get("authenticationFlows", [])}
     need(set(flows) == set(FLOWS), "unexpected set of authentication flows")
     configs = {c.get("alias"): c.get("config", {}) for c in realm.get("authenticatorConfig", [])}
-    used: dict[str, list[dict[str, Any]]] = {}
     for alias, expected in FLOWS.items():
         executions = sorted(
             flows.get(alias, {}).get("authenticationExecutions", []),
@@ -135,27 +312,15 @@ def lint_realm(realm: dict[str, Any], *, kind: str) -> list[str]:
             (
                 f"flow:{e['flowAlias']}" if e.get("authenticatorFlow") else e.get("authenticator"),
                 e.get("requirement"),
+                configs.get(e["authenticatorConfig"], {}) if "authenticatorConfig" in e else None,
             )
             for e in executions
         ]
         need(actual == expected, f"flow {alias} differs from the reviewed one: {actual}")
-        used[alias] = [configs.get(e.get("authenticatorConfig"), {}) for e in executions]
 
-    def first_config(alias: str) -> dict[str, Any]:
-        found = used.get(alias) or [{}]
-        return found[0]
-
-    for alias, level, oldest in (("browser-loa-1", "1", 43200), ("browser-loa-2", "2", 600)):
-        condition = first_config(alias)
-        need(
-            condition.get("loa-condition-level") == level
-            and 0 <= int(condition.get("loa-max-age", 10**9)) <= oldest,
-            f"flow {alias}: level {level} must expire within {oldest} s",
-        )
     need(
-        first_config("browser-loa-2-enrol")
-        == {"flow_to_check": "browser-loa-2-factor", "check_result": "not-executed"},
-        "a new second factor may be set up only when there is none to prove",
+        _profile_permissions(realm, MARKER) == {"view": ["admin"], "edit": ["admin"]},
+        f"the attribute {MARKER} must be visible and changeable by administrators only",
     )
     need(realm.get("attributes", {}).get("acr.loa.map") == LOA_MAP, "realm level map changed")
 
@@ -167,6 +332,10 @@ def lint_realm(realm: dict[str, Any], *, kind: str) -> list[str]:
             found.get("enabled") is enabled and found.get("defaultAction") is False,
             f"required action {alias} must be {'on' if enabled else 'off'} and never forced",
         )
+    need(
+        actions.get("UPDATE_PASSWORD", {}).get("config") == {"max_auth_age": "0"},
+        "a password may be changed only after a fresh authentication",
+    )
     clients = {c["clientId"]: c for c in realm.get("clients", [])}
     need(set(clients) == {"at-web", "at-mobile", "at-admin-svc"}, "unexpected client set")
     for client_id, client in clients.items():
@@ -231,6 +400,8 @@ def lint_realm(realm: dict[str, Any], *, kind: str) -> list[str]:
     def scan(node: Any, path: str) -> None:
         if isinstance(node, dict):
             for key, value in node.items():
+                if key == "credentials" and _names_credential_types(path, value):
+                    continue
                 if SECRET_KEYS.search(key) and isinstance(value, str) and value:
                     need(
                         bool(PLACEHOLDER.match(value)), f"literal secret-like value at {path}.{key}"

@@ -72,6 +72,14 @@ def _config(realm: dict[str, Any], alias: str) -> dict[str, str]:
     return found
 
 
+def _marker_editable(realm: dict[str, Any]) -> None:
+    config = realm["components"]["org.keycloak.userprofile.UserProfileProvider"][0]["config"]
+    profile = json.loads(config["kc.user.profile.config"][0])
+    marker = next(a for a in profile["attributes"] if a["name"] == "at_mfa_required")
+    marker["permissions"]["edit"] = ["admin", "user"]
+    config["kc.user.profile.config"] = [json.dumps(profile)]
+
+
 def _client(realm: dict[str, Any], client_id: str) -> dict[str, Any]:
     return next(c for c in realm["clients"] if c["clientId"] == client_id)
 
@@ -139,7 +147,7 @@ def _client(realm: dict[str, Any], client_id: str) -> dict[str, Any]:
             "required actions must all be listed",
         ),
         (
-            "recovery codes not a level",
+            "a factor missing at step-up",
             lambda r: _flow(r, "browser-loa-2-factor")["authenticationExecutions"].pop(),
             "browser-loa-2-factor differs",
         ),
@@ -164,12 +172,82 @@ def _client(realm: dict[str, Any], client_id: str) -> dict[str, Any]:
         (
             "enrol although a factor exists",
             lambda r: _config(r, "loa2-no-factor-to-prove").update(check_result="executed"),
-            "only when there is none",
+            "browser-loa-2-enrol differs",
         ),
         (
             "long level two",
             lambda r: _config(r, "loa2-condition").update({"loa-max-age": "3600"}),
-            "level 2 must expire",
+            "browser-loa-2 differs",
+        ),
+        (
+            "a recovery code at step-up",
+            lambda r: _flow(r, "browser-loa-2-factor")["authenticationExecutions"].append(
+                {
+                    "authenticator": "auth-recovery-authn-code-form",
+                    "requirement": "ALTERNATIVE",
+                    "priority": 90,
+                }
+            ),
+            "browser-loa-2-factor differs",
+        ),
+        (
+            "no factor with the password",
+            lambda r: _flow(r, "browser-loa-1")["authenticationExecutions"].pop(6),
+            "browser-loa-1 differs",
+        ),
+        (
+            "last code needs no permanent factor",
+            lambda r: _flow(r, "browser-loa-1")["authenticationExecutions"].pop(),
+            "browser-loa-1 differs",
+        ),
+        (
+            "other sessions survive a spent set",
+            lambda r: _config(r, "one-session").update(userRealmLimit="0"),
+            "browser-loa-1-codes-spent differs",
+        ),
+        (
+            "codes belong to level two",
+            lambda r: _flow(r, "browser-loa-4")["authenticationExecutions"].pop(),
+            "browser-loa-4 differs",
+        ),
+        (
+            "levels reordered",
+            lambda r: _flow(r, "browser-loa-forms")["authenticationExecutions"][1].update(
+                priority=35
+            ),
+            "browser-loa-forms differs",
+        ),
+        (
+            "long level three",
+            lambda r: _config(r, "loa3-condition").update({"loa-max-age": "600"}),
+            "browser-loa-3 differs",
+        ),
+        (
+            "codes alone for anybody",
+            lambda r: _config(r, "mfa-unmarked").update({"not": "false"}),
+            "browser-deny-unmarked-codes-only differs",
+        ),
+        (
+            "locked account lets in",
+            lambda r: _flow(r, "browser-deny-marked-without-factor")[
+                "authenticationExecutions"
+            ].pop(),
+            "browser-deny-marked-without-factor differs",
+        ),
+        (
+            "marker editable by the user",
+            lambda r: _marker_editable(r),
+            "administrators only",
+        ),
+        (
+            "removal at the provider",
+            lambda r: _action(r, "delete_credential").update(enabled=True),
+            "delete_credential must be off",
+        ),
+        (
+            "password change from an old session",
+            lambda r: _action(r, "UPDATE_PASSWORD").pop("config"),
+            "fresh authentication",
         ),
         (
             "password grant flow",
@@ -230,10 +308,17 @@ def test_token_scopes_and_optional_names_are_explicit(kind: str) -> None:
 
 
 def test_every_second_factor_the_application_knows_is_proven_at_level_two() -> None:
+    """Each kind is asked with the password; a step-up of an existing session takes the
+    permanent ones only."""
     from app.auth.idp import SECOND_FACTOR_TYPES
     from tests.identity.realm_lint import FACTOR_AUTHENTICATORS
 
     assert set(FACTOR_AUTHENTICATORS) == SECOND_FACTOR_TYPES
+    every = set(FACTOR_AUTHENTICATORS.values())
+    permanent = every - {FACTOR_AUTHENTICATORS["recovery-authn-codes"]}
     for kind in KINDS:
-        executions = _flow(load(kind), "browser-loa-2-factor")["authenticationExecutions"]
-        assert {e.get("authenticator") for e in executions} >= set(FACTOR_AUTHENTICATORS.values())
+        with_password = _flow(load(kind), "browser-loa-1-factor")["authenticationExecutions"]
+        assert {e.get("authenticator") for e in with_password} >= every
+        step_up = _flow(load(kind), "browser-loa-2-factor")["authenticationExecutions"]
+        asked = {e.get("authenticator") for e in step_up} & every
+        assert asked == permanent

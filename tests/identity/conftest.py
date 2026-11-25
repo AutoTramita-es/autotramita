@@ -6,6 +6,7 @@ from collections.abc import Iterator
 
 import pytest
 from tests.conftest import RoleEnv
+from tests.identity.accounts import CODE_WINDOW_STEPS
 from tests.identity.kc import OPEN_BROWSERS, Admin, BackchannelSink, Browser, Env, SmtpSink
 from tests.identity.rig import Rig
 from tests.test_roles_and_migrations import migrate
@@ -34,7 +35,10 @@ def env() -> Env:
 @pytest.fixture(scope="session")
 def admin(env: Env) -> Iterator[Admin]:
     client = Admin(env)
+    original = client.realm()["otpPolicyLookAheadWindow"]
+    client.update_realm(otpPolicyLookAheadWindow=CODE_WINDOW_STEPS)
     yield client
+    client.update_realm(otpPolicyLookAheadWindow=original)
     client.close()
 
 

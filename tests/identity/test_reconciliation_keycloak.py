@@ -21,6 +21,7 @@ from app.auth.security.email_change_worker import run_once
 from app.auth.security.notify import NoticeKind, SmtpNotifier
 from app.auth.security.recovery_worker import EmailChangeRecoveryWorker
 from app.core.db import RequestContext, create_session_factory, session_scope
+from tests.identity.accounts import OTP, account, codes_only_account
 from tests.identity.kc import (
     GOOD_PASSWORD,
     MOBILE_REDIRECT,
@@ -43,6 +44,7 @@ from tests.identity.rig import ORIGIN, SESSION, Rig
 from tests.identity.test_security_keycloak import (
     NEW_PASSWORD,
     mail_link,
+    password_form,
     secure,
     settings_admin,
 )
@@ -250,7 +252,7 @@ def loa_condition(admin: Admin, level: str) -> dict[str, Any]:
             config: dict[str, Any] = admin.master(
                 "GET", f"/authentication/config/{config_id}"
             ).json()
-            if config["config"]["loa-condition-level"] == level:
+            if config["config"].get("loa-condition-level") == level:
                 return config
     raise AssertionError(f"no condition for level {level}")
 
@@ -300,35 +302,26 @@ def test_s03_level_two_expires_after_its_configured_age(env: Env, admin: Admin) 
 
 
 def test_keycloak_needs_level_two_to_remove_a_second_factor(env: Env, admin: Admin) -> None:
-    """The application asks LoA2 to remove a factor; so does Keycloak on its own pages."""
-    user = admin.create_user()
-    first = Browser(env)
-    first.login(user, acr_values="loa1").require_code()
-    configure_otp(first, first.authorize("at-web", WEB_REDIRECT, acr_values="loa2"))[
-        1
-    ].require_code()
-    credential = next(
-        c["id"]
-        for c in admin.master("GET", f"/users/{user.id}/credentials").json()
-        if c["type"] == "otp"
-    )
+    """The application asks LoA2 to remove a factor. Keycloak removes none at all: neither a
+    request with the password alone nor the account console of a person who proved the factor
+    (F-1R-B: the last permanent factor must not go while recovery codes stay)."""
+    who = account(admin, OTP)
+    credential = who.credential_id(OTP)
     weak = Browser(env)
-    weak.login(user, acr_values="loa1").require_code()
-    page = weak.authorize(
-        "at-web", WEB_REDIRECT, kc_action=f"delete_credential:{credential}", acr_values="loa1"
-    )
+    page = weak.login(who.user, kc_action=f"delete_credential:{credential}", acr_values="loa1")
     assert page.code is None and 'name="otp"' in page.text, page.summary
-    account = f"{env.base_url}/realms/{REALM}/account/"
+    console_url = f"{env.base_url}/realms/{REALM}/account/"
     console = Browser(env)
-    signed = console.login(user, client_id="account-console", redirect_uri=account)
-    tokens = console.token("account-console", signed.require_code(), account)
+    signed = who.sign_in(
+        console, client_id="account-console", redirect_uri=console_url, acr_values="loa2"
+    )
+    tokens = console.token("account-console", signed.require_code(), console_url)
     refused = console.http.delete(
-        f"{account}credentials/{credential}",
+        f"{console_url}credentials/{credential}",
         headers={"Authorization": f"Bearer {tokens['access_token']}", "Accept": "application/json"},
     )
-    assert refused.status_code == 403
-    kinds = {c["type"] for c in admin.master("GET", f"/users/{user.id}/credentials").json()}
-    assert kinds == {"password", "otp"}
+    assert refused.status_code == 400, refused.text
+    assert who.kinds() == [OTP]
 
 
 PASSKEY_ACTIONS = ("webauthn-register", "webauthn-register-passwordless")
@@ -389,7 +382,8 @@ def test_s03_a_passkey_enrolled_earlier_is_the_second_level(
     )
     assert removal.status_code == 401 and removal.json()["code"] == "STEP_UP_REQUIRED"
     password_only = Browser(env)
-    assert password_only.login(user, acr_values="loa1").code
+    refused = password_only.login(user, acr_values="loa1")
+    assert refused.code is None and 'id="webauth"' in refused.text, refused.summary
     second = Browser(env)
     asked = second.login(user, acr_values="loa2")
     assert asked.code is None and 'id="webauth"' in asked.text, asked.summary
@@ -400,21 +394,13 @@ def test_s03_a_passkey_enrolled_earlier_is_the_second_level(
 
 
 def test_recovery_codes_alone_protect_level_two(rig: Rig, env: Env, admin: Admin) -> None:
-    """F-1R: an account whose only second factor is a set of recovery codes must use one for
-    level two; the password alone offers neither a code nor a new one-time code setup."""
-    user = admin.create_user()
-    assert rig.sign_in(user).status_code == 302
-    page = rig.browser.authorize("at-web", WEB_REDIRECT, kc_action="CONFIGURE_RECOVERY_AUTHN_CODES")
-    fields = hidden_inputs(page.text)
-    for checkbox in re.findall(r'<input[^>]*type="checkbox"[^>]*name="([^"]+)"', page.text):
-        fields[checkbox] = "on"
-    done = rig.browser.submit(page, fields, action=form_action(page.text))
-    assert done.location and "kc_action_status=success" in done.location, done.summary
-    factors = rig.api.get(f"{API}/me/security").json()["second_factors"]
-    assert [f["type"] for f in factors] == ["recovery-authn-codes"]
-    asked = Browser(env).login(user, acr_values="loa2")
-    assert asked.code is None and 'name="recoveryCodeInput"' in asked.text, asked.summary
-    assert "kc-totp-secret-key" not in asked.text and "mode=manual" not in asked.text
+    """F-1R: an account whose only second factor is a set of recovery codes (from before the
+    final MFA decision, marked by an operator) must use one; the password alone opens no level."""
+    who = codes_only_account(admin, marked=True)
+    for level in ("loa1", "loa2"):
+        asked = Browser(env).login(who.user, acr_values=level)
+        assert asked.code is None and 'name="recoveryCodeInput"' in asked.text, asked.summary
+        assert "kc-totp-secret-key" not in asked.text and "mode=manual" not in asked.text
 
 
 # --- what Keycloak tells the application --------------------------------------------------------
@@ -564,10 +550,7 @@ def test_after_a_password_change_another_signed_in_browser_must_authenticate_aga
         json={"return_to": "/me"},
         headers=secure(rig),
     )
-    rig.browser._last = f"{ORIGIN}{AUTH_API}/callback"
-    page = rig.browser._settle(
-        rig.browser.http.get(started.json()["redirect_url"]), rig.browser._last
-    )
+    page = password_form(rig, user, started.json()["redirect_url"])
     done = rig.browser.submit(
         page, {"password-new": NEW_PASSWORD, "password-confirm": NEW_PASSWORD}
     )

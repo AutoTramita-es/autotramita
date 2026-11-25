@@ -3,6 +3,7 @@ application on real PostgreSQL and Redis, talking to the disposable Keycloak."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -16,11 +17,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from tests.auth.fake_admin import RecordingNotifier
 from tests.conftest import RoleEnv
-from tests.identity.kc import REALM, Browser, Env, TestUser
+from tests.identity.kc import REALM, Browser, Env, Page, TestUser
 
 ORIGIN = "http://127.0.0.1:18080"
 API = "/api/v1/auth"
 SESSION, FLOW = "at_session", "at_flow"  # unprefixed: the test origin is plain-http loopback
+Prove = Callable[[Browser, Page], Page]
 
 
 class Rig:
@@ -61,9 +63,16 @@ class Rig:
         with self.role_env.admin_engine().connect() as c:
             return [tuple(r) for r in c.execute(text(sql))]
 
-    def at_keycloak(self, url: str, user: TestUser | None, browser: Browser | None = None) -> str:
-        """Follow the authorization URL in the scripted browser; sign in when asked. Returns
-        the callback URL Keycloak redirects to."""
+    def at_keycloak(
+        self,
+        url: str,
+        user: TestUser | None,
+        browser: Browser | None = None,
+        prove: Prove | None = None,
+    ) -> str:
+        """Follow the authorization URL in the scripted browser; sign in when asked, with
+        ``prove`` answering the factor question. Returns the callback URL Keycloak redirects
+        to."""
         use = browser or self.browser
         use._last = f"{ORIGIN}{API}/callback"
         page = use._settle(use.http.get(url), use._last)
@@ -72,6 +81,8 @@ class Rig:
             page = use.submit(
                 page, {"username": user.email, "password": user.password, "credentialId": ""}
             )
+            if prove is not None and page.location is None:
+                page = prove(use, page)
         assert page.location and page.location.startswith(f"{ORIGIN}{API}/callback"), page.summary
         return page.location
 
@@ -81,11 +92,12 @@ class Rig:
         return_to: str = "/app",
         client: TestClient | None = None,
         browser: Browser | None = None,
+        prove: Prove | None = None,
     ) -> httpx.Response:
         api = client or self.api
         start = api.get(f"{API}/login", params={"return_to": return_to})
         assert start.status_code == 302, start.text
-        callback = self.at_keycloak(start.headers["location"], user, browser)
+        callback = self.at_keycloak(start.headers["location"], user, browser, prove)
         done: httpx.Response = api.get(callback)
         return done
 

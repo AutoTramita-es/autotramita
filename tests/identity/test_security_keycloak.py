@@ -17,6 +17,7 @@ from app.auth.idp import IdpAdminError
 from app.auth.idp_admin import KeycloakAdmin
 from app.auth.security.notify import NoticeKind
 from app.auth.web.csrf import csrf_token
+from tests.identity.accounts import set_up_otp
 from tests.identity.kc import (
     Admin,
     BackchannelSink,
@@ -173,6 +174,19 @@ def test_the_fourth_recovery_request_in_an_hour_sends_no_fourth_mail(
 
 
 # --- password change through kc_action (AC-POL-06) ----------------------------------------------
+def password_form(rig: Rig, user: TestUser, url: str):  # type: ignore[no-untyped-def]
+    """Keycloak's new-password form; it asks to sign in again first (F-3K)."""
+    rig.browser._last = f"{ORIGIN}{AUTH_API}/callback"
+    page = rig.browser._settle(rig.browser.http.get(url), rig.browser._last)
+    if 'name="password-new"' not in page.text:
+        fields = {"password": user.password, "credentialId": ""}
+        if 'name="username"' in page.text:
+            fields["username"] = user.email
+        page = rig.browser.submit(page, fields)
+    assert 'name="password-new"' in page.text, page.summary
+    return page
+
+
 def test_password_change_through_keycloak_ends_other_sessions_and_rotates_this_one(
     rig: Rig, env: Env, admin: Admin
 ) -> None:
@@ -188,11 +202,7 @@ def test_password_change_through_keycloak_ends_other_sessions_and_rotates_this_o
         headers=secure(rig),
     )
     assert started.status_code == 200, started.text
-    rig.browser._last = f"{ORIGIN}{AUTH_API}/callback"
-    page = rig.browser._settle(
-        rig.browser.http.get(started.json()["redirect_url"]), rig.browser._last
-    )
-    assert page.location is None and "password-new" in page.text, page.summary
+    page = password_form(rig, user, started.json()["redirect_url"])
     done = rig.browser.submit(
         page, {"password-new": NEW_PASSWORD, "password-confirm": NEW_PASSWORD}
     )
@@ -300,6 +310,8 @@ def test_recovery_codes_can_be_enrolled_through_keycloak_d41(rig: Rig, admin: Ad
     page = rig.browser._settle(
         rig.browser.http.get(started.json()["redirect_url"]), rig.browser._last
     )
+    # no factor yet: the provider has a one-time code set up first (final MFA decision)
+    _, page = set_up_otp(rig.browser, page)
     record_result("T09.recovery_codes_page", page.summary[:200])
     assert page.location is None and "recovery" in page.text.lower(), page.summary
     fields = hidden_inputs(page.text)
@@ -311,7 +323,7 @@ def test_recovery_codes_can_be_enrolled_through_keycloak_d41(rig: Rig, admin: Ad
     ], done.summary
     assert rig.api.get(done.location).headers["location"] == "/me?security_action=success"
     types = [f["type"] for f in rig.api.get(f"{API}/me/security").json()["second_factors"]]
-    assert types == ["recovery-authn-codes"]
+    assert sorted(types) == ["otp", "recovery-authn-codes"]
     record_result("T09.recovery_codes_full_flow", "works on 26.4.7")
 
 

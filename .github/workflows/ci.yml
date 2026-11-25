@@ -247,6 +247,7 @@ jobs:
           profile.raise_for_status()
           attrs = {a["name"]: a for a in profile.json()["attributes"]}
           assert "required" not in attrs["firstName"] and "required" not in attrs["lastName"]
+          assert attrs["at_mfa_required"]["permissions"] == {"view": ["admin"], "edit": ["admin"]}
           actions = httpx.get(base + "/admin/realms/" + realm + "/authentication/required-actions",
                               headers=headers)
           actions.raise_for_status()
@@ -254,6 +255,13 @@ jobs:
           assert enabled["webauthn-register"] is False
           assert enabled["webauthn-register-passwordless"] is False
           assert enabled["CONFIGURE_TOTP"] is True and enabled["UPDATE_PASSWORD"] is True
+          assert enabled["delete_credential"] is False
+          assert enabled["CONFIGURE_RECOVERY_AUTHN_CODES"] is True
+          password = httpx.get(base + "/admin/realms/" + realm
+                               + "/authentication/required-actions/UPDATE_PASSWORD/config",
+                               headers=headers)
+          password.raise_for_status()
+          assert password.json()["config"] == {"max_auth_age": "0"}
           imported = response.json()
           assert imported["browserFlow"] == "browser-loa"
           assert imported["directGrantFlow"] == "direct-grant-denied"
@@ -266,6 +274,10 @@ jobs:
                          "webauthn-authenticator-passwordless", "auth-recovery-authn-code-form"):
               assert (factor, "ALTERNATIVE") in found, factor
           assert ("conditional-sub-flow-executed", "REQUIRED") in found
+          for step in ("conditional-credential", "conditional-user-attribute",
+                       "deny-access-authenticator", "user-session-limits"):
+              assert (step, "REQUIRED") in found, step
+          assert ("auth-recovery-authn-code-form", "DISABLED") in found
           for client in ("at-web", "at-mobile"):
               result = httpx.get(base + "/admin/realms/" + realm + "/clients",
                                  params={"clientId": client}, headers=headers)

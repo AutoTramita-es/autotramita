@@ -1,12 +1,18 @@
 """F2-T09-REC F-1R, F-2 and F-3 against real Keycloak 26.4.7, with the application on real
 PostgreSQL and Redis where it takes part. Runs only in the ``keycloak`` CI job.
 
+The final MFA decision (2026-11-25): whoever has a second factor proves it with the password,
+credentials cannot be removed at the provider, and the password-only sign-in stays only for
+people who never set up a factor. Recovery codes and older accounts are in
+``test_recovery_codes_keycloak.py``.
+
 Two tests at the end record behaviour that is **not** protected (open findings, owner decision
 needed); they exist so that the finding is evidence and cannot change unnoticed."""
 
 from __future__ import annotations
 
 import json
+import re
 import time
 from collections.abc import Callable
 from datetime import datetime
@@ -16,7 +22,6 @@ from urllib.parse import parse_qs, urlencode, urlparse
 import httpx
 import pytest
 from app.auth.security import recovery
-from app.auth.security.notify import NoticeKind
 from app.auth.security.recovery_worker import EmailChangeRecoveryWorker
 from app.core.db import create_session_factory
 from tests.identity.accounts import (
@@ -26,7 +31,7 @@ from tests.identity.accounts import (
     PASSWORDLESS,
     Account,
     account,
-    set_up_codes,
+    codes_only_account,
     set_up_otp,
     shown,
 )
@@ -41,6 +46,8 @@ from tests.identity.kc import (
     SmtpSink,
     TestUser,
     decode_jwt,
+    form_action,
+    hidden_inputs,
 )
 from tests.identity.rig import API as AUTH_API
 from tests.identity.rig import ORIGIN, Rig
@@ -54,37 +61,60 @@ API = "/api/v1"
 ASKED = (OTP, CODES, PASSKEY)
 ACCOUNTS = {
     "totp": (OTP,),
-    "recovery_codes_only": (CODES,),
     "passkey": (PASSKEY,),
     "passwordless_passkey": (PASSWORDLESS,),
     "totp_and_codes": (OTP, CODES),
     "totp_and_passkey": (OTP, PASSKEY),
     "passkey_and_codes": (PASSKEY, CODES),
 }
+OLDER = "recovery_codes_only"  # cannot be created any more; marked by an operator
+EVERY = sorted([*ACCOUNTS, OLDER])
+CLIENTS = {"at-web": WEB_REDIRECT, "at-mobile": MOBILE_REDIRECT}
+
+
+def make(admin: Admin, name: str) -> Account:
+    if name == OLDER:
+        return codes_only_account(admin, marked=True)
+    return account(admin, *ACCOUNTS[name])
+
+
+def asked_kinds(who: Account) -> set[str]:
+    return {PASSKEY if k == PASSWORDLESS else k for k in who.kinds()}
 
 
 def password_only(env: Env, who: Account) -> Browser:
-    """What somebody who knows nothing but the password gets."""
+    """What somebody who knows nothing but the password gets, for a person without a factor."""
     browser = Browser(env)
     browser.login(who.user, acr_values="loa1").require_code()
     return browser
 
 
-# --- F-1R: the password alone is never enough ----------
-@pytest.mark.parametrize("name", sorted(ACCOUNTS))
+def signed_in(env: Env, who: Account, **kw: str) -> Browser:
+    browser = Browser(env)
+    who.sign_in(browser, **kw).require_code()
+    return browser
+
+
+# --- option A: the password alone signs nobody in who has a second factor -----------------------
+@pytest.mark.parametrize("client_id", sorted(CLIENTS))
+@pytest.mark.parametrize("name", EVERY)
 def test_with_a_second_factor_the_password_alone_never_reaches_level_two(
-    env: Env, admin: Admin, name: str
+    env: Env, admin: Admin, name: str, client_id: str
 ) -> None:
-    who = account(admin, *ACCOUNTS[name])
+    """Not even level one: whatever is requested, on the web and on the phone, the password is
+    answered with the question for an existing factor and no authorization code."""
+    who = make(admin, name)
     before = who.credentials()
-    for browser, page in (
-        (fresh := Browser(env), fresh.login(who.user, acr_values="loa2")),
-        (sso := password_only(env, who), sso.authorize("at-web", WEB_REDIRECT, acr_values="loa2")),
-    ):
+    for level in ({}, {"acr_values": "loa1"}, {"acr_values": "loa2"}):
+        browser = Browser(env)
+        page = browser.login(
+            who.user, client_id=client_id, redirect_uri=CLIENTS[client_id], **level
+        )
         # asked for an existing factor: never a code to take, never the setup of a new one
         assert page.code is None and shown(page) in ASKED, page.summary
-        expected = {PASSKEY if k == PASSWORDLESS else k for k in ACCOUNTS[name]}
-        assert who.offered(browser, page) == expected
+        assert who.offered(browser, page) == asked_kinds(who)
+        again = browser.authorize(client_id, CLIENTS[client_id])
+        assert again.code is None, "the unfinished sign-in left a session behind"
     assert who.credentials() == before
 
 
@@ -104,61 +134,108 @@ def test_every_registered_factor_reaches_level_two_and_records_when(
             assert started - 2 <= json.loads(claims["loa_map"])["2"] <= time.time() + 2
 
 
-@pytest.mark.parametrize("name", sorted(ACCOUNTS))
-@pytest.mark.parametrize("action", ["CONFIGURE_TOTP", "CONFIGURE_RECOVERY_AUTHN_CODES"])
+ACTIONS = ("CONFIGURE_TOTP", "CONFIGURE_RECOVERY_AUTHN_CODES", "UPDATE_PASSWORD")
+
+
+@pytest.mark.parametrize("client_id", [*sorted(CLIENTS), "account-console"])
+@pytest.mark.parametrize("action", ACTIONS)
+@pytest.mark.parametrize("name", EVERY)
 def test_the_password_alone_cannot_add_a_factor(
-    env: Env, admin: Admin, name: str, action: str
+    env: Env, admin: Admin, name: str, action: str, client_id: str
 ) -> None:
-    who = account(admin, *ACCOUNTS[name])
+    """Nor change the password (F-3K): every credential action starts with the sign-in, and the
+    sign-in asks for the factor."""
+    redirect = CLIENTS.get(client_id, f"{env.base_url}/realms/{REALM}/account/")
+    who = make(admin, name)
     before = who.credentials()
-    sso = password_only(env, who)
-    fresh = Browser(env)
-    asked_directly = fresh.authorize("at-web", WEB_REDIRECT, kc_action=action)
-    signed = fresh.submit(
-        asked_directly,
-        {"username": who.user.email, "password": who.user.password, "credentialId": ""},
-    )
-    pages = [
-        signed,
-        sso.authorize("at-web", WEB_REDIRECT, kc_action=action),
-        sso.authorize("at-web", WEB_REDIRECT, kc_action=action, acr_values="loa1"),
-    ]
-    for page in pages:
+    for level in ({}, {"acr_values": "loa1"}):
+        browser = Browser(env)
+        page = browser.login(
+            who.user, client_id=client_id, redirect_uri=redirect, kc_action=action, **level
+        )
         assert page.code is None and shown(page) in ASKED, page.summary
     assert who.credentials() == before
 
 
+def test_a_session_older_than_the_second_factor_cannot_change_a_credential(
+    env: Env, admin: Admin
+) -> None:
+    """F-3K: whoever signed in with the password before the person set up a factor keeps that
+    single sign-on session; every credential action from it asks for the factor."""
+    who = account(admin)
+    old = password_only(env, who)
+    who.enrol(OTP)
+    time.sleep(1.5)
+    before = who.credentials()
+    form = old.authorize("at-web", WEB_REDIRECT, kc_action="UPDATE_PASSWORD")
+    assert shown(form) == "password", form.summary  # signed in again first,
+    asked = old.submit(
+        form, {"username": who.user.email, "password": who.user.password, "credentialId": ""}
+    )
+    assert shown(asked) == OTP, asked.summary  # which asks for the factor
+    for action in ("CONFIGURE_TOTP", "CONFIGURE_RECOVERY_AUTHN_CODES"):
+        browser = Browser(env)
+        browser.cookies.update(old.cookies)
+        page = browser.authorize("at-web", WEB_REDIRECT, kc_action=action)
+        assert page.code is None and shown(page) in (OTP, "password"), page.summary
+    assert who.credentials() == before
+
+
 def account_api(env: Env, who: Account) -> tuple[Browser, dict[str, str], str]:
+    """The account console of a person who proved a factor."""
     base = f"{env.base_url}/realms/{REALM}/account/"
     browser = Browser(env)
-    signed = browser.login(who.user, client_id="account-console", redirect_uri=base)
+    signed = who.sign_in(browser, client_id="account-console", redirect_uri=base, acr_values="loa2")
     tokens = browser.token("account-console", signed.require_code(), base)
     headers = {"Authorization": f"Bearer {tokens['access_token']}", "Accept": "application/json"}
     return browser, headers, base
 
 
-@pytest.mark.parametrize("name", sorted(ACCOUNTS))
+@pytest.mark.parametrize("name", EVERY)
 def test_the_password_alone_cannot_remove_a_factor(env: Env, admin: Admin, name: str) -> None:
-    who = account(admin, *ACCOUNTS[name])
+    """The password gets no token for the account console and no removal page."""
+    who = make(admin, name)
     before = who.credentials()
-    console, headers, base = account_api(env, who)
-    sso = password_only(env, who)
-    for kind in ACCOUNTS[name]:
-        credential = who.credential_id(kind)
-        refused = console.http.delete(f"{base}credentials/{credential}", headers=headers)
-        assert refused.status_code == 403, (kind, refused.status_code)
-        page = sso.authorize("at-web", WEB_REDIRECT, kc_action=f"delete_credential:{credential}")
-        assert page.code is None and shown(page) in ASKED, page.summary
+    base = f"{env.base_url}/realms/{REALM}/account/"
+    for kind in who.kinds():
+        action = f"delete_credential:{who.credential_id(kind)}"
+        for client_id, redirect in (("account-console", base), ("at-web", WEB_REDIRECT)):
+            browser = Browser(env)
+            page = browser.login(
+                who.user, client_id=client_id, redirect_uri=redirect, kc_action=action
+            )
+            assert page.code is None and shown(page) in ASKED, page.summary
     assert who.credentials() == before
 
 
-@pytest.mark.parametrize("name", ["none", "totp", "recovery_codes_only", "passkey"])
+@pytest.mark.parametrize("name", sorted(ACCOUNTS))
+def test_nobody_removes_a_credential_at_the_provider(env: Env, admin: Admin, name: str) -> None:
+    """Not even after proving a factor: neither the account console nor a crafted request
+    removes anything, so the last permanent factor cannot go while recovery codes stay. People
+    remove factors through the application, which keeps that rule."""
+    who = account(admin, *ACCOUNTS[name])
+    before = who.credentials()
+    console, headers, base = account_api(env, who)
+    listed = console.http.get(f"{base}credentials", headers=headers).json()
+    assert not any(entry.get("removeable") for entry in listed), listed
+    for kind in who.kinds():
+        credential = who.credential_id(kind)
+        refused = console.http.delete(f"{base}credentials/{credential}", headers=headers)
+        assert refused.status_code == 400, (kind, refused.status_code, refused.text)
+        page = console.authorize(
+            "account-console", base, kc_action=f"delete_credential:{credential}"
+        )
+        assert 'id="kc-delete-text"' not in page.text and "delete-credential" not in page.text
+    assert who.credentials() == before
+
+
+@pytest.mark.parametrize("name", ["none", *EVERY])
 @pytest.mark.parametrize("client_id", ["admin-cli", "at-web", "account-console"])
 def test_no_client_may_exchange_a_password_for_a_token(
     env: Env, admin: Admin, name: str, client_id: str
 ) -> None:
     """The built-in ``admin-cli`` client allows password grants; the realm refuses the flow."""
-    who = account(admin, *ACCOUNTS.get(name, ()))
+    who = account(admin) if name == "none" else make(admin, name)
     data = {
         "grant_type": "password",
         "client_id": client_id,
@@ -175,13 +252,13 @@ def test_no_client_may_exchange_a_password_for_a_token(
 
 
 def test_a_recovery_code_works_once(env: Env, admin: Admin) -> None:
-    who = account(admin, CODES)
+    who = account(admin, OTP, CODES)
     first = Browser(env)
-    page = first.login(who.user, acr_values="loa2")
+    page = who.select(first, first.login(who.user, acr_values="loa2"), CODES)
     used = who.next_code(page)
     who.answer_code(first, page, used).require_code()
     second = Browser(env)
-    page = second.login(who.user, acr_values="loa2")
+    page = who.select(second, second.login(who.user, acr_values="loa2"), CODES)
     again = who.answer_code(second, page, used)
     assert again.code is None and shown(again) == CODES, again.summary
     who.answer_code(second, again, who.next_code(again)).require_code()
@@ -193,20 +270,32 @@ def test_wrong_proofs_are_refused(env: Env, admin: Admin) -> None:
     page = browser.login(passkey.user, acr_values="loa2")
     forged = authenticate(browser, page, env.base_url, passkey.keys[PASSKEY], forged=True)
     assert forged.code is None, "a signature of another key was accepted"
-    codes = account(admin, CODES)
+    codes = account(admin, OTP, CODES)
     browser = Browser(env)
-    page = browser.login(codes.user, acr_values="loa2")
+    page = codes.select(browser, browser.login(codes.user, acr_values="loa2"), CODES)
     wrong = codes.answer_code(browser, page, "AAAAAAAAAAAA")
     assert wrong.code is None and shown(wrong) == CODES
 
 
-def test_the_last_factor_can_be_removed_only_after_proving_it(env: Env, admin: Admin) -> None:
-    who = account(admin, OTP)
-    credential = who.credential_id(OTP)
-    sso = password_only(env, who)
-    page = sso.authorize("at-web", WEB_REDIRECT, kc_action=f"delete_credential:{credential}")
-    confirm = who.prove(sso, page)
-    assert confirm.code is None and who.kinds() == [OTP]  # proof, then Keycloak's confirmation
+@pytest.mark.parametrize("client_id", sorted(CLIENTS))
+def test_people_who_never_set_up_a_second_factor_see_no_change(
+    env: Env, admin: Admin, client_id: str
+) -> None:
+    who = account(admin)
+    browser = Browser(env)
+    page = browser.login(who.user, client_id=client_id, redirect_uri=CLIENTS[client_id])
+    tokens = browser.token(client_id, page.require_code(), CLIENTS[client_id])
+    assert decode_jwt(tokens["id_token"])["acr"] == "loa1"
+    assert browser.refresh(client_id, tokens["refresh_token"])["_status"] == 200
+    browser.authorize(client_id, CLIENTS[client_id]).require_code()  # single sign-on
+    changing = browser.authorize(client_id, CLIENTS[client_id], kc_action="UPDATE_PASSWORD")
+    if shown(changing) == "password":  # the password again, and nothing more
+        changing = browser.submit(
+            changing,
+            {"username": who.user.email, "password": who.user.password, "credentialId": ""},
+        )
+    assert shown(changing) == "new-password", changing.summary
+    assert who.required_actions() == [] and who.credentials() == ["password"]
 
 
 def test_without_a_second_factor_level_two_means_setting_one_up(env: Env, admin: Admin) -> None:
@@ -241,11 +330,11 @@ def test_a_reset_ends_web_and_mobile_sessions_and_the_phone_cannot_come_back(
 ) -> None:
     """F-0 (a) for both kinds of client: the periodic check ends them, and neither the old
     token nor a refreshed one opens a new mobile session."""
-    who = account(admin)
-    assert rig.sign_in(who.user).status_code == 302
+    who = account(admin, OTP)
+    assert rig.sign_in(who.user, prove=who.answer).status_code == 302
     phone = Browser(env)
-    code = phone.login(who.user, client_id="at-mobile", redirect_uri=MOBILE_REDIRECT).require_code()
-    tokens = phone.token("at-mobile", code, MOBILE_REDIRECT)
+    page = who.sign_in(phone, client_id="at-mobile", redirect_uri=MOBILE_REDIRECT)
+    tokens = phone.token("at-mobile", page.require_code(), MOBILE_REDIRECT)
     bearer = {"Authorization": f"Bearer {tokens['access_token']}"}
     opened = rig.another_client().post(f"{API}/auth/mobile/session", json={}, headers=bearer)
     assert opened.status_code == 201, opened.text
@@ -325,10 +414,11 @@ def test_neither_single_sign_on_nor_a_refresh_nor_the_password_moves_the_factor_
     entered = browser.submit(
         form, {"username": who.user.email, "password": who.user.password, "credentialId": ""}
     )
-    renewed = decode_jwt(browser.token("at-web", entered.require_code(), WEB_REDIRECT)["id_token"])
-    # the password sign-in is new (auth_time moves), the second factor is as old as before
-    assert times(renewed) == ("loa1", proven, renewed["auth_time"])
-    assert renewed["auth_time"] > signed_in
+    assert entered.code is None and shown(entered) == OTP, entered.summary  # the password is
+    # not enough, and the abandoned attempt moves nothing:
+    silent = browser.authorize("at-web", WEB_REDIRECT, acr_values="loa2")
+    after = browser.token("at-web", silent.require_code(), WEB_REDIRECT)
+    assert times(decode_jwt(after["id_token"])) == ("loa2", proven, signed_in)
 
 
 # --- F-2 and F-3 through the application ----------
@@ -337,23 +427,23 @@ def follow(rig: Rig, url: str) -> Page:
     return rig.browser._settle(rig.browser.http.get(url), rig.browser._last)
 
 
-def password_then_factor(rig: Rig, who: Account, page: Page) -> Page:
+def password_then_factor(rig: Rig, who: Account, page: Page, kind: str | None = None) -> Page:
     if shown(page) == "password":
         fields = {"password": who.user.password, "credentialId": ""}
         if 'name="username"' in page.text:
             fields["username"] = who.user.email
         page = rig.browser.submit(page, fields)
     assert shown(page) in ASKED, page.summary
-    return who.prove(rig.browser, page)
+    return who.answer(rig.browser, page, kind)
 
 
-def step_up(rig: Rig, who: Account) -> None:
+def step_up(rig: Rig, who: Account, kind: str | None = None) -> None:
     asked = rig.api.post(
         f"{AUTH_API}/step-up", json={"purpose": "MFA", "return_to": "/me"}, headers=secure(rig)
     )
     page = follow(rig, asked.json()["redirect_url"])
     assert shown(page) == "password", "an MFA step-up must ask again, not reuse single sign-on"
-    done = password_then_factor(rig, who, page)
+    done = password_then_factor(rig, who, page, kind)
     assert done.location, done.summary
     assert rig.api.get(done.location).status_code == 302
 
@@ -362,8 +452,12 @@ def step_up(rig: Rig, who: Account) -> None:
 def test_the_application_asks_for_the_factor_before_every_account_action(
     rig: Rig, env: Env, admin: Admin, kind: str
 ) -> None:
-    who = account(admin, kind)
-    assert rig.sign_in(who.user).status_code == 302  # level one: the password
+    who = account(admin, OTP, CODES) if kind == CODES else account(admin, kind)
+
+    def with_factor(browser: Browser, page: Page) -> Page:
+        return who.answer(browser, page, kind)
+
+    assert rig.sign_in(who.user, prove=with_factor).status_code == 302
     for path, body in (
         ("password-change-requests", {}),
         ("mfa-enrollment-requests", {"factor": "TOTP"}),
@@ -371,7 +465,7 @@ def test_the_application_asks_for_the_factor_before_every_account_action(
         refused = rig.api.post(f"{API}/me/security/{path}", json=body, headers=secure(rig))
         assert refused.status_code == 401 and refused.json()["code"] == "STEP_UP_REQUIRED"
         assert 'acr_values="loa2"' in refused.headers["www-authenticate"]
-    step_up(rig, who)
+    step_up(rig, who, kind)
     info = rig.api.get(f"{AUTH_API}/session").json()
     assert info["auth_level"] == "LOA2"
     proven = datetime.fromisoformat(info["step_up_expires_at"]).timestamp() - 600
@@ -394,87 +488,161 @@ def test_the_application_asks_for_the_factor_before_every_account_action(
     assert other["step_up_expires_at"] == info["step_up_expires_at"]
 
 
-def test_a_password_change_of_a_person_with_a_factor_runs_through_it(
-    rig: Rig, env: Env, admin: Admin
-) -> None:
-    who = account(admin, OTP)
-    assert rig.sign_in(who.user).status_code == 302
-    step_up(rig, who)
-    started = rig.api.post(
-        f"{API}/me/security/password-change-requests", json={}, headers=secure(rig)
-    )
-    url = started.json()["redirect_url"]
-    assert parse_qs(urlparse(url).query)["acr_values"] == ["loa2"]
+def change_password(rig: Rig, who: Account, url: str) -> httpx.Response:
+    """Walk the provider's pages of an application-started password change."""
     page = follow(rig, url)
-    if shown(page) != "new-password":  # Keycloak asks again when the sign-in is not recent
+    if shown(page) != "new-password":  # the provider always asks again before this form (F-3K)
         page = password_then_factor(rig, who, page)
     assert shown(page) == "new-password", page.summary
     done = rig.browser.submit(
         page, {"password-new": NEW_PASSWORD, "password-confirm": NEW_PASSWORD}
     )
     assert done.location, done.summary
-    finished = rig.api.get(done.location)
-    assert finished.headers["location"] == "/?security_action=success"
-    assert rig.api.get(f"{AUTH_API}/session").status_code == 200
+    finished: httpx.Response = rig.api.get(done.location)
+    return finished
 
 
-# --- open findings (recorded, not protected) ----------
-def test_open_finding_keycloak_changes_a_password_without_the_second_factor(
-    rig: Rig, env: Env, admin: Admin
+@pytest.mark.parametrize("asked_for_level_two", [True, False], ids=["as_sent", "parameter_dropped"])
+def test_a_password_change_of_a_person_with_a_factor_runs_through_it(
+    rig: Rig, env: Env, admin: Admin, asked_for_level_two: bool
 ) -> None:
-    """OPEN (F-3, owner decision). Keycloak 26.4.7 does not treat its password form as a
-    credential action: with the password alone it can be opened for a person who has a second
-    factor. The application detects it only when the change returns through its own callback
-    and then ends every session; a change made on Keycloak's pages alone is seen with T11."""
+    """F-3K: the provider asks for the factor before its password form even when the browser
+    drops the level request, and a browser without a session gets no further either."""
     who = account(admin, OTP)
-    browser = password_only(env, who)
-    page = browser.authorize("at-web", WEB_REDIRECT, kc_action="UPDATE_PASSWORD")
-    assert shown(page) == "new-password", "the finding changed: update F-3 and this test"
-    # the same through the application with the level request removed from the address
-    assert rig.sign_in(who.user).status_code == 302
+    assert rig.sign_in(who.user, prove=who.answer).status_code == 302
     step_up(rig, who)
+    time.sleep(1.5)  # the sign-in is no longer of this very second
     started = rig.api.post(
         f"{API}/me/security/password-change-requests", json={}, headers=secure(rig)
     )
     url = urlparse(started.json()["redirect_url"])
-    query = {k: v[0] for k, v in parse_qs(url.query).items() if k != "acr_values"}
-    rig.browser = Browser(env)  # no single sign-on session that proved the factor
-    form = follow(rig, url._replace(query=urlencode(query)).geturl())
+    query = {k: v[0] for k, v in parse_qs(url.query).items()}
+    assert query["acr_values"] == "loa2"
+    if not asked_for_level_two:
+        del query["acr_values"]
+        rig.browser = Browser(env)  # no single sign-on session that proved the factor
+    address = url._replace(query=urlencode(query)).geturl()
+    page = follow(rig, address)
+    assert shown(page) == "password", page.summary
     entered = rig.browser.submit(
-        form, {"username": who.user.email, "password": who.user.password, "credentialId": ""}
+        page,
+        {"password": who.user.password, "credentialId": ""}
+        | ({"username": who.user.email} if 'name="username"' in page.text else {}),
     )
-    assert shown(entered) == "new-password", entered.summary
+    assert shown(entered) == OTP, entered.summary  # never the form after the password alone
+    done = who.prove(rig.browser, entered)
+    assert shown(done) == "new-password", done.summary
     done = rig.browser.submit(
-        entered, {"password-new": NEW_PASSWORD, "password-confirm": NEW_PASSWORD}
+        done, {"password-new": NEW_PASSWORD, "password-confirm": NEW_PASSWORD}
     )
     assert done.location, done.summary
     finished = rig.api.get(done.location)
-    assert finished.headers["location"] == "/?security_action=reauthentication_required"
-    assert rig.rows("SELECT count(*) FROM user_sessions WHERE revoked_at IS NULL") == [(0,)]
-    assert NoticeKind.PASSWORD_CHANGED in [n.kind for n in rig.notices.notices]
+    expected = "success" if asked_for_level_two else "reauthentication_required"
+    assert finished.headers["location"] == f"/?security_action={expected}"
 
 
-def test_open_finding_unfinished_new_recovery_codes_can_be_taken_with_the_password(
+# --- the application keeps what the provider cannot ----------------------------------------------
+def test_the_application_keeps_the_last_permanent_factor_at_the_real_provider(
+    rig: Rig, env: Env, admin: Admin
+) -> None:
+    who = account(admin, OTP, CODES)
+    assert rig.sign_in(who.user, prove=who.answer).status_code == 302
+    step_up(rig, who)
+    path = f"{API}/me/security/second-factors"
+    refused = rig.api.delete(f"{path}/{who.credential_id(OTP)}", headers=secure(rig))
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "LAST_PERMANENT_FACTOR"
+    assert who.kinds() == sorted([OTP, CODES])
+    for kind in (CODES, OTP):  # the backup first, then the factor itself
+        gone = rig.api.delete(f"{path}/{who.credential_id(kind)}", headers=secure(rig))
+        assert gone.status_code == 204, gone.text
+    assert who.kinds() == []
+
+
+def test_the_application_reads_the_factor_obligation_from_the_real_provider(
+    rig: Rig, env: Env, admin: Admin
+) -> None:
+    who = account(admin, OTP)
+    who.mark()
+    assert rig.sign_in(who.user, prove=who.answer).status_code == 302
+    step_up(rig, who)
+    refused = rig.api.delete(
+        f"{API}/me/security/second-factors/{who.credential_id(OTP)}", headers=secure(rig)
+    )
+    assert refused.status_code == 409 and who.kinds() == [OTP], refused.text
+
+
+def test_the_admin_client_withdraws_credential_setups_and_nothing_else(
+    rig: Rig, admin: Admin
+) -> None:
+    who = account(admin, OTP)
+    who.mark()
+    path = f"/users/{who.user.id}"
+    before = admin.master("GET", path).json()
+    before["requiredActions"] = [
+        "VERIFY_EMAIL",
+        "CONFIGURE_TOTP",
+        "CONFIGURE_RECOVERY_AUTHN_CODES",
+    ]
+    admin.master("PUT", path, json=before).raise_for_status()
+    client = settings_admin(rig)
+    client.clear_pending_credential_setups(who.user.id)
+    after = admin.master("GET", path).json()
+    assert after["requiredActions"] == ["VERIFY_EMAIL"]
+    for field in ("email", "username", "enabled", "emailVerified", "attributes"):
+        assert after[field] == before[field], field
+    assert who.kinds() == [OTP] and client.has_factor_obligation(who.user.id)
+    client.set_verified_email(who.user.id, f"new-{who.user.email}")  # D37 keeps the marker
+    assert client.has_factor_obligation(who.user.id)
+
+
+# --- open findings (recorded, not protected) -----------------------------------------------------
+def test_open_finding_a_set_up_page_opened_before_the_first_factor_still_adds_one(
     env: Env, admin: Admin
 ) -> None:
-    """OPEN, P1 (F-1R, owner decision). After the last recovery code Keycloak requires new
-    ones. If the person leaves that page, the requirement stays on the account and is served
-    after the next **password** sign-in, without the one-time code the account also has: the
-    person who knows the password creates codes of their own and reaches level two."""
-    who = account(admin, OTP, CODES)
-    for position in range(len(who.codes)):
-        browser = Browser(env)
-        page = who.select(browser, browser.login(who.user, acr_values="loa2"), CODES)
-        done = who.answer_code(browser, page, who.next_code(page))
-        last = position == len(who.codes) - 1
-        assert (shown(done) == "codes-setup") if last else done.code, done.summary
-    assert who.kinds() == [OTP]  # left there: the codes are gone, the requirement stays
-    assert who.required_actions() == ["CONFIGURE_RECOVERY_AUTHN_CODES"]
-    stranger = Browser(env)
-    offered = stranger.login(who.user)  # the password alone
-    assert shown(offered) == "codes-setup", "the finding changed: update F-1R and this test"
-    who.codes, done = set_up_codes(stranger, offered)
-    done.require_code()
-    taken = Browser(env)
-    page = who.select(taken, taken.login(who.user, acr_values="loa2"), CODES)
-    assert who.answer_code(taken, page, who.next_code(page)).code
+    """OPEN, P1 (F-1R-C, owner decision). Somebody who knows the password opens the one-time
+    code set-up while the account has no factor and keeps that page open (reloading it keeps
+    it alive). The person then protects the account. Keycloak accepts the old page afterwards,
+    without asking for the person's factor, and no realm setting, sign-out, password change or
+    disabling of the user ends it: the second factor of the intruder is on the account."""
+    who = account(admin)
+    intruder = Browser(env)
+    held = intruder.login(who.user, kc_action="CONFIGURE_TOTP")
+    assert shown(held) == "otp-setup", held.summary
+    who.enrol(OTP)  # the person turns on the second factor
+    admin.master("POST", f"/users/{who.user.id}/logout").raise_for_status()
+    theirs, done = set_up_otp(intruder, held, label="intruder")
+    assert done.code, "the finding changed: update F-1R-C and this test"
+    assert who.credentials() == [OTP, OTP, "password"]
+    browser = Browser(env)
+    page = browser.login(who.user, acr_values="loa2")
+    assert shown(page) == OTP
+    # Keycloak lets the person choose among their one-time code devices: the intruder tries both
+    devices = re.findall(r"toggleOTP\(\d+, '([0-9a-f-]{36})'\)", page.text)
+    assert len(devices) == 2, "no choice between the two devices on the page"
+    for device in devices:
+        fields = {**hidden_inputs(page.text), "otp": theirs.code(), "selectedCredentialId": device}
+        page = browser.submit(page, fields, action=form_action(page.text))
+        if page.code:
+            break
+    assert page.code, page.summary  # level two with the intruder's factor and the password
+    tokens = browser.token("at-web", page.require_code(), WEB_REDIRECT)
+    assert decode_jwt(tokens["id_token"])["acr"] == "loa2"
+
+
+def test_open_finding_a_password_form_opened_before_the_first_factor_still_changes_it(
+    env: Env, admin: Admin
+) -> None:
+    """OPEN (F-3K, the remaining case). The same with the new-password form: submitted after
+    the person turned on a second factor, it changes the password. It gives no level and no
+    session past the factor question."""
+    who = account(admin)
+    intruder = Browser(env)
+    held = intruder.login(who.user, kc_action="UPDATE_PASSWORD")
+    assert shown(held) == "new-password", held.summary
+    who.enrol(OTP)
+    done = intruder.submit(held, {"password-new": NEW_PASSWORD, "password-confirm": NEW_PASSWORD})
+    assert done.code, "the finding changed: update F-3K and this test"
+    who.user = TestUser(id=who.user.id, email=who.user.email, password=NEW_PASSWORD)
+    page = Browser(env).login(who.user)
+    assert page.code is None and shown(page) == OTP, page.summary
