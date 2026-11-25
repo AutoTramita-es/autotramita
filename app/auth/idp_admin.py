@@ -12,7 +12,15 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
-from app.auth.idp import IdpAdminError, IdpConflict, IdpCredential, IdpEmailState, IdpUser
+from app.auth.idp import (
+    CREDENTIAL_SETUP_ACTIONS,
+    FACTOR_OBLIGATION_ATTRIBUTE,
+    IdpAdminError,
+    IdpConflict,
+    IdpCredential,
+    IdpEmailState,
+    IdpUser,
+)
 from app.auth.settings import AuthSettings
 
 log = logging.getLogger(__name__)
@@ -141,6 +149,8 @@ class KeycloakAdmin:
         lifespan_seconds: int,
         redirect_uri: str,
     ) -> None:
+        # The link runs every pending action, not only those named here, and asks for no factor.
+        self.clear_pending_credential_setups(subject)
         self._call(
             "PUT",
             f"/users/{self._id(subject)}/execute-actions-email",
@@ -167,3 +177,27 @@ class KeycloakAdmin:
 
     def delete_credential(self, subject: str, credential_id: str) -> None:
         self._call("DELETE", f"/users/{self._id(subject)}/credentials/{self._id(credential_id)}")
+
+    def clear_pending_credential_setups(self, subject: str) -> None:
+        user = self._user(subject)
+        pending = user.get("requiredActions", [])
+        if not isinstance(pending, list):
+            raise IdpAdminError("invalid identity state")
+        kept = [action for action in pending if action not in CREDENTIAL_SETUP_ACTIONS]
+        if kept != pending:
+            self._call("PUT", f"/users/{self._id(subject)}", json={"requiredActions": kept})
+
+    def has_factor_obligation(self, subject: str) -> bool:
+        attributes = self._user(subject).get("attributes") or {}
+        if not isinstance(attributes, dict):
+            raise IdpAdminError("invalid identity state")
+        return attributes.get(FACTOR_OBLIGATION_ATTRIBUTE) == ["true"]
+
+    def _user(self, subject: str) -> dict[str, Any]:
+        try:
+            user = self._call("GET", f"/users/{self._id(subject)}").json()
+        except ValueError:
+            raise IdpAdminError("invalid identity state") from None
+        if not isinstance(user, dict) or user.get("id") != subject:
+            raise IdpAdminError("invalid identity state")
+        return user

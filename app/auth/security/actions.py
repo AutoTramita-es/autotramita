@@ -7,15 +7,15 @@ that was created after the flow started. Only then sessions are ended, the audit
 written and the notice is sent.
 
 A person who has a second factor is sent to the provider asking for level two (F-3). The
-provider itself refuses to add or remove factors without it, but it does not guard its password
-form, and the browser can drop the parameter. So the return must also show a second factor
-proven within the window; a change that happened without it ends every session of the person,
-this one included."""
+realm asks for the factor before it changes a credential, but the browser can drop parameters
+and a realm can be misconfigured. So the return must also show a second factor proven within
+the window; a change that happened without it ends every session of the person, this one
+included."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, NoReturn
@@ -23,13 +23,21 @@ from uuid import UUID
 
 from app.audit.models import ActorType, AuditEvent, Outcome
 from app.audit.record import record
-from app.auth.idp import SECOND_FACTOR_TYPES, IdpAdminError, IdpCredential
+from app.auth.errors import LastPermanentFactor
+from app.auth.idp import (
+    PERMANENT_FACTOR_TYPES,
+    RECOVERY_CODES_TYPE,
+    SECOND_FACTOR_TYPES,
+    IdpAdminError,
+    IdpCredential,
+)
 from app.auth.runtime import AuthRuntime
 from app.auth.security.notify import Notice, NoticeKind, send_quietly
 from app.auth.security.recovery import latest_password
 from app.auth.sessions import service as sessions
 from app.auth.sessions.models import RevokeReason
 from app.core.db import RequestContext, session_scope
+from sqlalchemy import text
 
 
 class SecurityAction(StrEnum):
@@ -151,6 +159,11 @@ def complete_action(
             )
             kind = NoticeKind.MFA_ENROLLED
         record(db, audit)
+        if action is SecurityAction.MFA_RECOVERY_CODES and _created_since(
+            found, frozenset({"otp"}), since
+        ):
+            # The provider first has a person without a factor set up a one-time code.
+            record(db, replace(audit, details={"factor": "TOTP"}))
         email, absolute = resolved.user.email, resolved.session.absolute_expires_at
     changed = latest_password(found)
     if action is SecurityAction.PASSWORD_CHANGE and rt.markers is not None and changed:
@@ -166,12 +179,27 @@ def remove_second_factor(
     rt: AuthRuntime, db: Any, *, user_id: UUID, session_id: UUID, subject: str, credential_id: str
 ) -> str | None:
     """Delete one second factor of this person. Returns the audit code of the factor, or
-    ``None`` when the person has no such factor (their credentials are the only ones looked at)."""
+    ``None`` when the person has no such factor (their credentials are the only ones looked at).
+
+    Raises ``LastPermanentFactor`` when what would be left is recovery codes alone, or nothing
+    on an account that must keep a second factor. The provider offers no way to remove a
+    credential, so this is the only one a person has. Removals of one person are serialised, so
+    two of them cannot each see the other's factor still there."""
     if rt.admin is None:
         raise IdpAdminError("admin client is not configured")
-    owned = [c for c in rt.admin.list_credentials(subject) if c.id == credential_id]
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(CAST(:u AS text), 824338))"),
+        {"u": str(user_id)},
+    )
+    found = rt.admin.list_credentials(subject)
+    owned = [c for c in found if c.id == credential_id]
     if not owned or owned[0].type not in SECOND_FACTOR_TYPES:
         return None
+    left = {c.type for c in found if c.id != credential_id}
+    if not left & PERMANENT_FACTOR_TYPES:
+        codes_orphaned = owned[0].type in PERMANENT_FACTOR_TYPES and RECOVERY_CODES_TYPE in left
+        if codes_orphaned or rt.admin.has_factor_obligation(subject):
+            raise LastPermanentFactor()
     factor = {
         "otp": "TOTP",
         "webauthn": "WEBAUTHN",

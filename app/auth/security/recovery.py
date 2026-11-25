@@ -275,6 +275,10 @@ def check_pending_password_changes(
             if marker is None:  # the marker expired: nothing is left to compare with
                 rt.markers.forget_pending(subject, requested)
                 continue
+            if checked_at <= requested + rt.settings.recovery_link_minutes * 60:
+                # The link may still be open: a set-up left pending since it was sent would
+                # run for whoever follows it, without any factor.
+                rt.admin.clear_pending_credential_setups(subject)
             _check_one(rt, factory, notifier, subject, marker)
             if checked_at > requested + window:
                 rt.markers.forget_pending(subject, requested)

@@ -40,8 +40,24 @@ class IdpCredential:
     created_ms: int | None
 
 
-SECOND_FACTOR_TYPES = frozenset(
-    {"otp", "webauthn", "webauthn-passwordless", "recovery-authn-codes"}
+# A permanent factor can be used again and again; recovery codes are its backup and run out.
+PERMANENT_FACTOR_TYPES = frozenset({"otp", "webauthn", "webauthn-passwordless"})
+RECOVERY_CODES_TYPE = "recovery-authn-codes"
+SECOND_FACTOR_TYPES = PERMANENT_FACTOR_TYPES | {RECOVERY_CODES_TYPE}
+
+# Realm attribute of an account that once used a second factor and may never fall back to the
+# password alone (set by an operator; only administrators can see or change it).
+FACTOR_OBLIGATION_ATTRIBUTE = "at_mfa_required"
+
+# Pending provider actions that create or remove a sign-in credential.
+CREDENTIAL_SETUP_ACTIONS = frozenset(
+    {
+        "CONFIGURE_TOTP",
+        "CONFIGURE_RECOVERY_AUTHN_CODES",
+        "webauthn-register",
+        "webauthn-register-passwordless",
+        "delete_credential",
+    }
 )
 
 
@@ -70,3 +86,11 @@ class IdentityProviderAdmin(Protocol):
     def list_credentials(self, subject: str) -> list[IdpCredential]: ...
 
     def delete_credential(self, subject: str, credential_id: str) -> None: ...
+
+    def clear_pending_credential_setups(self, subject: str) -> None:
+        """Withdraw every pending action that would create or remove a sign-in credential. The
+        provider runs pending actions for whoever opens one of its e-mail links, without
+        asking for any factor."""
+        ...
+
+    def has_factor_obligation(self, subject: str) -> bool: ...

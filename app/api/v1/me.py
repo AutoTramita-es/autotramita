@@ -462,6 +462,8 @@ def build_me_router(limits: AuthLimitSettings, trusted: Sequence[IPNetwork] = ()
         "/me/security/second-factors/{credential_id}",
         status_code=204,
         summary="Remove one of my second factors (needs the second factor)",
+        description="The last permanent factor is kept while recovery codes remain, and on an "
+        "account that must keep a second factor (409 LAST_PERMANENT_FACTOR).",
     )
     def remove_second_factor(
         request: Request,

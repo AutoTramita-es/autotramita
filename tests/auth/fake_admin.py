@@ -5,7 +5,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from app.auth.idp import IdpAdminError, IdpConflict, IdpCredential, IdpEmailState, IdpUser
+from app.auth.idp import (
+    CREDENTIAL_SETUP_ACTIONS,
+    IdpAdminError,
+    IdpConflict,
+    IdpCredential,
+    IdpEmailState,
+    IdpUser,
+)
 from app.auth.security.notify import Notice
 
 
@@ -16,6 +23,8 @@ class FakeAdmin:
     sent: list[tuple[str, tuple[str, ...], int, str]] = field(default_factory=list)
     calls: list[str] = field(default_factory=list)
     deleted: list[tuple[str, str]] = field(default_factory=list)
+    pending: dict[str, list[str]] = field(default_factory=dict)  # pending provider actions
+    obliged: set[str] = field(default_factory=set)  # subjects that must keep a second factor
     down: bool = False
 
     def add(self, email: str, subject: str, *, enabled: bool = True, verified: bool = True) -> None:
@@ -58,6 +67,7 @@ class FakeAdmin:
     def send_actions_email(
         self, subject: str, actions: Sequence[str], *, lifespan_seconds: int, redirect_uri: str
     ) -> None:
+        self.clear_pending_credential_setups(subject)  # as the real client does
         self._check("email")
         self.sent.append((subject, tuple(actions), lifespan_seconds, redirect_uri))
 
@@ -69,6 +79,17 @@ class FakeAdmin:
         self._check("delete")
         self.deleted.append((subject, credential_id))
         self.credentials[subject] = [c for c in self.credentials[subject] if c.id != credential_id]
+
+    def clear_pending_credential_setups(self, subject: str) -> None:
+        self._check("clear_pending")
+        if subject in self.pending:
+            self.pending[subject] = [
+                a for a in self.pending[subject] if a not in CREDENTIAL_SETUP_ACTIONS
+            ]
+
+    def has_factor_obligation(self, subject: str) -> bool:
+        self._check("obligation")
+        return subject in self.obliged
 
 
 @dataclass

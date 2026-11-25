@@ -403,6 +403,25 @@ def test_second_factor_enrolment_is_proven_by_the_provider_and_noticed(rig: Rig)
     ) == [("RECOVERY_CODES",)]
 
 
+def test_a_one_time_code_set_up_on_the_way_to_recovery_codes_is_audited_too(rig: Rig) -> None:
+    """The provider first has a person without a factor set one up (no codes-only accounts)."""
+    client = rig.login(sid="s-action")
+    started = start(
+        client, "mfa-enrollment-requests", {"factor": "RECOVERY_CODES", "return_to": "/me"}
+    )
+    rig.admin.credentials[SUB] = [
+        IdpCredential("c-otp", "otp", int((NOW + 4) * 1000)),
+        IdpCredential("c-rc", "recovery-authn-codes", int((NOW + 5) * 1000)),
+    ]
+    done = come_back(rig, client, started, kc_action_status="success")
+    assert done.headers["location"] == "/me?security_action=success"
+    assert sorted(
+        rig.web.rows(
+            "SELECT details->>'factor' FROM audit_events WHERE action='security.mfa.enrolled'"
+        )
+    ) == [("RECOVERY_CODES",), ("TOTP",)]
+
+
 def test_a_callback_for_somebody_elses_session_or_subject_is_refused(rig: Rig) -> None:
     victim = rig.login(sid="s-action")
     started = start(victim, "password-change-requests")

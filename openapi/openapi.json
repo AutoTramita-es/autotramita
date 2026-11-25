@@ -5218,6 +5218,7 @@
     },
     "/api/v1/me/security/second-factors/{credential_id}": {
       "delete": {
+        "description": "The last permanent factor is kept while recovery codes remain, and on an account that must keep a second factor (409 LAST_PERMANENT_FACTOR).",
         "operationId": "remove_second_factor_api_v1_me_security_second_factors__credential_id__delete",
         "parameters": [
           {

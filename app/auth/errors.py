@@ -69,6 +69,14 @@ class InvalidStatusTransition(Conflict):
     title = "Status change not allowed"
 
 
+class LastPermanentFactor(Conflict):
+    """409 LAST_PERMANENT_FACTOR: removing it would leave recovery codes without a factor they
+    back up, or an account that must keep a second factor without one."""
+
+    code = "LAST_PERMANENT_FACTOR"
+    title = "The last permanent second factor cannot be removed"
+
+
 class AccountDisabled(Forbidden):
     """403 ACCOUNT_DISABLED, only ever returned after the person authenticated successfully."""
 

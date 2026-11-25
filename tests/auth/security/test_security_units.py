@@ -8,6 +8,7 @@ import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import httpx
 import pytest
@@ -53,6 +54,7 @@ class Provider:
             {"id": "u-1", "email": "a@example.test", "enabled": True, "emailVerified": True}
         ]
         self.status = 200
+        self.person: dict[str, Any] = {}  # the representation read by id
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
@@ -63,6 +65,9 @@ class Provider:
             return httpx.Response(self.status, json={"errorMessage": "secret detail"})
         if request.url.path.endswith("/users") and request.method == "GET":
             return httpx.Response(200, json=self.users)
+        parent, _, last = request.url.raw_path.decode().split("?")[0].rpartition("/")
+        if request.method == "GET" and parent.endswith("/users"):
+            return httpx.Response(200, json={"id": unquote(last), **self.person})
         if request.url.path.endswith("/credentials"):
             return httpx.Response(
                 200,
@@ -134,6 +139,73 @@ def test_actions_email_carries_lifespan_client_and_redirect_but_no_secret_in_the
     }
     assert json.loads(request.content) == ["UPDATE_PASSWORD"]
     assert request.headers["authorization"] == "Bearer tok"
+
+
+def writes(provider: Provider) -> list[tuple[str, str, Any]]:
+    return [
+        (r.method, r.url.path.rpartition("/")[2], json.loads(r.content))
+        for r in provider.requests
+        if r.method != "GET" and not r.url.path.endswith("/token")
+    ]
+
+
+def send_reset(provider: Provider) -> None:
+    admin_with(provider).send_actions_email(
+        "u-1",
+        ["UPDATE_PASSWORD"],
+        lifespan_seconds=1800,
+        redirect_uri="https://autotramita.example/",
+    )
+
+
+def test_pending_credential_setups_are_withdrawn_before_any_actions_email() -> None:
+    """The link runs whatever is pending, without a factor (F-1R-B through e-mail)."""
+    provider = Provider()
+    provider.person = {
+        "requiredActions": [
+            "CONFIGURE_TOTP",
+            "VERIFY_EMAIL",
+            "CONFIGURE_RECOVERY_AUTHN_CODES",
+            "webauthn-register",
+            "webauthn-register-passwordless",
+            "delete_credential",
+        ]
+    }
+    send_reset(provider)
+    assert writes(provider) == [
+        ("PUT", "u-1", {"requiredActions": ["VERIFY_EMAIL"]}),
+        ("PUT", "execute-actions-email", ["UPDATE_PASSWORD"]),
+    ]
+    untouched = Provider()
+    untouched.person = {"requiredActions": ["VERIFY_EMAIL"]}
+    send_reset(untouched)
+    assert [w[1] for w in writes(untouched)] == ["execute-actions-email"]
+
+
+@pytest.mark.parametrize("person", [{"id": "somebody-else"}, {"requiredActions": "x"}])
+def test_no_email_is_sent_when_pending_setups_cannot_be_checked(person: dict[str, Any]) -> None:
+    provider = Provider()
+    provider.person = person
+    with pytest.raises(IdpAdminError):
+        send_reset(provider)
+    assert writes(provider) == []
+
+
+@pytest.mark.parametrize(
+    ("attributes", "obliged"),
+    [
+        (None, False),
+        ({}, False),
+        ({"at_mfa_required": ["true"]}, True),
+        ({"at_mfa_required": ["false"]}, False),
+    ],
+)
+def test_the_factor_obligation_is_read_from_the_realm_attribute(
+    attributes: dict[str, Any] | None, obliged: bool
+) -> None:
+    provider = Provider()
+    provider.person = {} if attributes is None else {"attributes": attributes}
+    assert admin_with(provider).has_factor_obligation("u-1") is obliged
 
 
 def test_credentials_are_listed_without_secret_data() -> None:

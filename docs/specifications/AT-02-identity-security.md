@@ -304,7 +304,7 @@ Konvencije F1 (I16): `/api/v1`, snake_case, `application/problem+json` s `code` 
 | 401 | `STEP_UP_REQUIRED` | potrebna svježa/jača autentifikacija (RFC 9470) |
 | 403 | `CSRF_INVALID` · `EMAIL_NOT_VERIFIED` · `ACCOUNT_DISABLED` · `FORBIDDEN` | CSRF; e-mail nepotvrđen; račun deaktiviran/blokiran; nema ovlasti (bez detalja o granu) |
 | 404 | `NOT_FOUND` · `WORKSPACE_NOT_FOUND` | nepostojeći ili nevidljiv resurs (ne otkriva tenant) |
-| 409 | `GRANT_CONFLICT` · `INVALID_STATUS_TRANSITION` · `ACCOUNT_CONFLICT` · `LAST_GRANT_ADMIN` | sukobi stanja |
+| 409 | `GRANT_CONFLICT` · `INVALID_STATUS_TRANSITION` · `ACCOUNT_CONFLICT` · `LAST_GRANT_ADMIN` · `LAST_PERMANENT_FACTOR` | sukobi stanja |
 | 412/428 | F1 | `If-Match` |
 | 429/503 | `RATE_LIMIT_EXCEEDED` · `RATE_LIMIT_UNAVAILABLE` · `IDENTITY_PROVIDER_UNAVAILABLE` | limiti; Keycloak/Redis nedostupni (fail closed) |
 `type` prema F1 (`https://docs.autotramita.es/errors/<kebab-code>`).

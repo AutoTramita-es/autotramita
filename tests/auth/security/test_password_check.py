@@ -352,3 +352,18 @@ def test_the_application_wires_the_check_into_its_worker(
     assert not alive(web)
     expected = [] if environment == "prod" else [NoticeKind.PASSWORD_RESET_COMPLETED]
     assert [kind for kind, _ in notices(rig)] == expected
+
+
+def test_while_the_link_lives_pending_credential_setups_are_withdrawn(rig: Rig) -> None:
+    """A set-up that became pending after the e-mail was sent would run for whoever follows it."""
+    rig.login(sid="old")
+    ask_for_recovery(rig)
+    lifetime = rig.web.runtime.settings.recovery_link_minutes * 60
+    rig.admin.pending[SUB] = ["CONFIGURE_RECOVERY_AUTHN_CODES", "VERIFY_EMAIL", "CONFIGURE_TOTP"]
+    rig.web.clock.now = NOW + lifetime - 1
+    check(rig)
+    assert rig.admin.pending[SUB] == ["VERIFY_EMAIL"]
+    rig.admin.pending[SUB] = ["CONFIGURE_TOTP"]
+    rig.web.clock.now = NOW + lifetime + 1  # the link is dead: nothing can run it any more
+    check(rig)
+    assert rig.admin.pending[SUB] == ["CONFIGURE_TOTP"]
