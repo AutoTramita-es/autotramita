@@ -254,12 +254,25 @@ jobs:
           assert enabled["webauthn-register"] is False
           assert enabled["webauthn-register-passwordless"] is False
           assert enabled["CONFIGURE_TOTP"] is True and enabled["UPDATE_PASSWORD"] is True
+          imported = response.json()
+          assert imported["browserFlow"] == "browser-loa"
+          assert imported["directGrantFlow"] == "direct-grant-denied"
+          executions = httpx.get(
+              base + "/admin/realms/" + realm + "/authentication/flows/browser-loa/executions",
+              headers=headers)
+          executions.raise_for_status()
+          found = {(e.get("providerId"), e["requirement"]) for e in executions.json()}
+          for factor in ("auth-otp-form", "webauthn-authenticator",
+                         "webauthn-authenticator-passwordless", "auth-recovery-authn-code-form"):
+              assert (factor, "ALTERNATIVE") in found, factor
+          assert ("conditional-sub-flow-executed", "REQUIRED") in found
           for client in ("at-web", "at-mobile"):
               result = httpx.get(base + "/admin/realms/" + realm + "/clients",
                                  params={"clientId": client}, headers=headers)
               result.raise_for_status()
               rows = [c for c in result.json() if c["clientId"] == client]
               assert len(rows) == 1 and rows[0]["fullScopeAllowed"] is False
+              assert "at-loa-times" in {m["name"] for m in rows[0]["protocolMappers"]}
           print(realm + " imported and verified")
           PYREALM
             docker rm -f "$container" >/dev/null

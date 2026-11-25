@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.auth.idp import SECOND_FACTOR_TYPES
 from app.core.config import RateLimitSettings
 
 PLACEHOLDER = re.compile(r"^\$\{[A-Z][A-Z0-9_]*\}$")
@@ -26,6 +27,48 @@ REQUIRED_ACTIONS = {
     "idp_link": True,
     "CONFIGURE_RECOVERY_AUTHN_CODES": True,
     "update_user_locale": True,
+}
+# The authenticator that proves each kind of second factor the application knows (F-1R). A kind
+# without one at level two would be offered a new one-time code after the password alone.
+FACTOR_AUTHENTICATORS = {
+    "otp": "auth-otp-form",
+    "webauthn": "webauthn-authenticator",
+    "webauthn-passwordless": "webauthn-authenticator-passwordless",
+    "recovery-authn-codes": "auth-recovery-authn-code-form",
+}
+assert set(FACTOR_AUTHENTICATORS) == SECOND_FACTOR_TYPES
+# Every authentication flow of the realm, exactly: (authenticator or sub-flow, requirement) in
+# execution order. Anything else could let a level be reached without its proof.
+FLOWS: dict[str, list[tuple[str, str]]] = {
+    "browser-loa": [("auth-cookie", "ALTERNATIVE"), ("flow:browser-loa-forms", "ALTERNATIVE")],
+    "browser-loa-forms": [
+        ("flow:browser-loa-1", "CONDITIONAL"),
+        ("flow:browser-loa-2", "CONDITIONAL"),
+    ],
+    "browser-loa-1": [
+        ("conditional-level-of-authentication", "REQUIRED"),
+        ("auth-username-password-form", "REQUIRED"),
+    ],
+    "browser-loa-2": [
+        ("conditional-level-of-authentication", "REQUIRED"),
+        ("flow:browser-loa-2-factor", "CONDITIONAL"),
+        ("flow:browser-loa-2-enrol", "CONDITIONAL"),
+    ],
+    "browser-loa-2-factor": [("conditional-user-configured", "REQUIRED")]
+    + [(name, "ALTERNATIVE") for name in FACTOR_AUTHENTICATORS.values()],
+    "browser-loa-2-enrol": [
+        ("conditional-sub-flow-executed", "REQUIRED"),
+        ("auth-otp-form", "REQUIRED"),
+    ],
+    "direct-grant-denied": [("deny-access-authenticator", "REQUIRED")],
+}
+LOA_MAP = '{"loa1":1,"loa2":2}'
+LOA_TIMES_MAPPER = {
+    "user.session.note": "loa-map",
+    "claim.name": "loa_map",
+    "jsonType.label": "String",
+    "id.token.claim": "true",
+    "access.token.claim": "true",
 }
 SECRET_KEYS = re.compile(r"secret|password|credential", re.I)
 
@@ -75,6 +118,46 @@ def lint_realm(realm: dict[str, Any], *, kind: str) -> list[str]:
     for part in ("notUsername", "notEmail", "passwordBlacklist("):
         need(part in policy, f"password policy lacks {part}")
     need(realm.get("browserFlow") == "browser-loa", "step-up browser flow must be active")
+    need(
+        realm.get("directGrantFlow") == "direct-grant-denied",
+        "password grants must be refused for every client",
+    )
+    flows = {f.get("alias"): f for f in realm.get("authenticationFlows", [])}
+    need(set(flows) == set(FLOWS), "unexpected set of authentication flows")
+    configs = {c.get("alias"): c.get("config", {}) for c in realm.get("authenticatorConfig", [])}
+    used: dict[str, list[dict[str, Any]]] = {}
+    for alias, expected in FLOWS.items():
+        executions = sorted(
+            flows.get(alias, {}).get("authenticationExecutions", []),
+            key=lambda e: e.get("priority", 0),
+        )
+        actual = [
+            (
+                f"flow:{e['flowAlias']}" if e.get("authenticatorFlow") else e.get("authenticator"),
+                e.get("requirement"),
+            )
+            for e in executions
+        ]
+        need(actual == expected, f"flow {alias} differs from the reviewed one: {actual}")
+        used[alias] = [configs.get(e.get("authenticatorConfig"), {}) for e in executions]
+
+    def first_config(alias: str) -> dict[str, Any]:
+        found = used.get(alias) or [{}]
+        return found[0]
+
+    for alias, level, oldest in (("browser-loa-1", "1", 43200), ("browser-loa-2", "2", 600)):
+        condition = first_config(alias)
+        need(
+            condition.get("loa-condition-level") == level
+            and 0 <= int(condition.get("loa-max-age", 10**9)) <= oldest,
+            f"flow {alias}: level {level} must expire within {oldest} s",
+        )
+    need(
+        first_config("browser-loa-2-enrol")
+        == {"flow_to_check": "browser-loa-2-factor", "check_result": "not-executed"},
+        "a new second factor may be set up only when there is none to prove",
+    )
+    need(realm.get("attributes", {}).get("acr.loa.map") == LOA_MAP, "realm level map changed")
 
     actions = {a.get("alias"): a for a in realm.get("requiredActions", [])}
     need(set(REQUIRED_ACTIONS) <= set(actions), "required actions must all be listed")
@@ -111,6 +194,21 @@ def lint_realm(realm: dict[str, Any], *, kind: str) -> list[str]:
                 bool(PLACEHOLDER.match(str(client.get("secret", "")))),
                 f"{where}: secret must be an ${{ENV}} placeholder",
             )
+    for client_id in ("at-web", "at-mobile"):
+        client = clients.get(client_id, {})
+        need(
+            client.get("attributes", {}).get("acr.loa.map") == LOA_MAP,
+            f"client {client_id}: level map changed",
+        )
+        times = [
+            m.get("config", {})
+            for m in client.get("protocolMappers", [])
+            if m.get("protocolMapper") == "oidc-usersessionmodel-note-mapper"
+        ]
+        need(
+            len(times) == 1 and LOA_TIMES_MAPPER.items() <= times[0].items(),
+            f"client {client_id}: the second-factor time (loa_map) must be in both tokens",
+        )
     web = clients.get("at-web", {})
     need(bool(web.get("attributes", {}).get("backchannel.logout.url")), "at-web: backchannel URL")
     need(clients.get("at-mobile", {}).get("publicClient") is True, "at-mobile must be public")

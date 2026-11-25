@@ -61,6 +61,17 @@ def _action(realm: dict[str, Any], alias: str) -> dict[str, Any]:
     return found
 
 
+def _flow(realm: dict[str, Any], alias: str) -> dict[str, Any]:
+    return next(f for f in realm["authenticationFlows"] if f["alias"] == alias)
+
+
+def _config(realm: dict[str, Any], alias: str) -> dict[str, str]:
+    found: dict[str, str] = next(
+        c["config"] for c in realm["authenticatorConfig"] if c["alias"] == alias
+    )
+    return found
+
+
 def _client(realm: dict[str, Any], client_id: str) -> dict[str, Any]:
     return next(c for c in realm["clients"] if c["clientId"] == client_id)
 
@@ -128,6 +139,54 @@ def _client(realm: dict[str, Any], client_id: str) -> dict[str, Any]:
             "required actions must all be listed",
         ),
         (
+            "recovery codes not a level",
+            lambda r: _flow(r, "browser-loa-2-factor")["authenticationExecutions"].pop(),
+            "browser-loa-2-factor differs",
+        ),
+        (
+            "factor optional",
+            lambda r: _flow(r, "browser-loa-2")["authenticationExecutions"][1].update(
+                requirement="DISABLED"
+            ),
+            "browser-loa-2 differs",
+        ),
+        (
+            "pass-through at level two",
+            lambda r: _flow(r, "browser-loa-2-factor")["authenticationExecutions"].append(
+                {
+                    "authenticator": "allow-access-authenticator",
+                    "requirement": "ALTERNATIVE",
+                    "priority": 90,
+                }
+            ),
+            "browser-loa-2-factor differs",
+        ),
+        (
+            "enrol although a factor exists",
+            lambda r: _config(r, "loa2-no-factor-to-prove").update(check_result="executed"),
+            "only when there is none",
+        ),
+        (
+            "long level two",
+            lambda r: _config(r, "loa2-condition").update({"loa-max-age": "3600"}),
+            "level 2 must expire",
+        ),
+        (
+            "password grant flow",
+            lambda r: r.update(directGrantFlow="direct grant"),
+            "password grants",
+        ),
+        (
+            "level map",
+            lambda r: _client(r, "at-mobile")["attributes"].update({"acr.loa.map": "{}"}),
+            "level map changed",
+        ),
+        (
+            "no factor time",
+            lambda r: _client(r, "at-web")["protocolMappers"].pop(),
+            "loa_map",
+        ),
+        (
             "svc roles",
             lambda r: r["users"][0]["clientRoles"]["realm-management"].append("manage-realm"),
             "too broad",
@@ -168,3 +227,13 @@ def test_token_scopes_and_optional_names_are_explicit(kind: str) -> None:
     attrs = {attribute["name"]: attribute for attribute in profile["attributes"]}
     assert "required" not in attrs["firstName"] and "required" not in attrs["lastName"]
     assert attrs["email"]["required"] == {"roles": ["user"]}
+
+
+def test_every_second_factor_the_application_knows_is_proven_at_level_two() -> None:
+    from app.auth.idp import SECOND_FACTOR_TYPES
+    from tests.identity.realm_lint import FACTOR_AUTHENTICATORS
+
+    assert set(FACTOR_AUTHENTICATORS) == SECOND_FACTOR_TYPES
+    for kind in KINDS:
+        executions = _flow(load(kind), "browser-loa-2-factor")["authenticationExecutions"]
+        assert {e.get("authenticator") for e in executions} >= set(FACTOR_AUTHENTICATORS.values())

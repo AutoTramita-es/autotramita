@@ -16,7 +16,25 @@ realm import are live prerequisites needing separate authorization).
 3. Keycloak tests (`-m keycloak`) run in the CI job `identity`; locally only against the disposable compose file on a developer machine, never against shared services or real data.
 
 ## Required actions
-The realm file lists every required action. Passkey registration (`webauthn-register`, `webauthn-register-passwordless`) is **off** until the step-up flow accepts a passkey as a second level (decision F-1 b). The file applies only when a realm is first imported: in a realm that already exists, switch both off by hand and check that no account holds a passkey.
+The realm file lists every required action. Passkey registration (`webauthn-register`, `webauthn-register-passwordless`) is **off** (decision F-1 b). Level two proves a passkey an account already has (F-1R), but registration stays off until the owner decides separately to switch it on.
+
+## Level two (F-1R, F-2)
+- `browser-loa-2` first asks for **any** second factor the person has (one-time code, passkey, passwordless passkey or recovery code). Only a person without any is offered to set up a one-time code.
+- `directGrantFlow` is `direct-grant-denied`: no client can exchange a password for a token, including the built-in `admin-cli` of the application realm.
+- Clients `at-web` and `at-mobile` map the session note `loa-map` into the claim `loa_map`. The application counts a step-up from the level-two time in it. **Without the mapper the application never accepts level two** (fail closed).
+- The linter (`tests/identity/realm_lint.py`) fixes the exact flows; a change to them needs a change there and Keycloak tests.
+
+## A realm that already exists
+The realm file applies only when a realm is **first imported**. Nothing in this repository changes an existing realm, and no existing credential is removed. Before real users, apply by hand and verify (admin console or admin API), then run the checks of the CI step "Import DEV and PROD realms" against it:
+1. Authentication flows: create `browser-loa-2-factor`, `browser-loa-2-enrol` and `direct-grant-denied` exactly as in the realm file, replace the one-time code step of `browser-loa-2` with the two sub-flows, bind the direct grant flow to `direct-grant-denied`.
+2. Add the `at-loa-times` mapper to `at-web` and `at-mobile`.
+3. Switch off both passkey registration actions.
+4. Check accounts that already hold a passkey or only recovery codes: they are asked for that factor at level two from then on.
+5. Sign out all sessions of the realm, so no session authenticated under the old flow survives.
+
+## Open items (owner decision, see the CP09 report)
+- Keycloak 26.4.7 does not require the second factor on its password form.
+- After the last recovery code, an abandoned regeneration is served after a password-only sign-in.
 
 ## Secrets
 Realm files contain no secret. Confidential clients use `${AT_WEB_CLIENT_SECRET}` and `${AT_ADMIN_SVC_CLIENT_SECRET}`, resolved by Keycloak from its environment at import (verified in spike S7). Per environment, secrets differ and live outside the repository.

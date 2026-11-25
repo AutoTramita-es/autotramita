@@ -56,6 +56,7 @@
   "adminEventsEnabled": true,
   "adminEventsDetailsEnabled": false,
   "browserFlow": "browser-loa",
+  "directGrantFlow": "direct-grant-denied",
   "attributes": {
     "acr.loa.map": "{\"loa1\":1,\"loa2\":2}"
   },
@@ -97,6 +98,21 @@
             "included.custom.audience": "at-api",
             "id.token.claim": "false",
             "access.token.claim": "true",
+            "introspection.token.claim": "false"
+          }
+        },
+        {
+          "name": "at-loa-times",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.session.note": "loa-map",
+            "claim.name": "loa_map",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false",
             "introspection.token.claim": "false"
           }
         }
@@ -142,6 +158,21 @@
             "access.token.claim": "true",
             "introspection.token.claim": "false"
           }
+        },
+        {
+          "name": "at-loa-times",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.session.note": "loa-map",
+            "claim.name": "loa_map",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "false"
+          }
         }
       ],
       "defaultClientScopes": [
@@ -185,7 +216,7 @@
   "authenticationFlows": [
     {
       "alias": "browser-loa",
-      "description": "Browser flow with level-of-authentication step-up (loa1 password, loa2 password + OTP)",
+      "description": "Browser flow with level-of-authentication step-up (loa1 password, loa2 password + a second factor)",
       "providerId": "basic-flow",
       "topLevel": true,
       "builtIn": false,
@@ -261,7 +292,7 @@
     },
     {
       "alias": "browser-loa-2",
-      "description": "Level 2: one-time password",
+      "description": "Level 2: a second factor",
       "providerId": "basic-flow",
       "topLevel": false,
       "builtIn": false,
@@ -276,10 +307,110 @@
           "autheticatorFlow": false
         },
         {
+          "authenticatorFlow": true,
+          "requirement": "CONDITIONAL",
+          "priority": 20,
+          "flowAlias": "browser-loa-2-factor",
+          "userSetupAllowed": false,
+          "autheticatorFlow": true
+        },
+        {
+          "authenticatorFlow": true,
+          "requirement": "CONDITIONAL",
+          "priority": 30,
+          "flowAlias": "browser-loa-2-enrol",
+          "userSetupAllowed": false,
+          "autheticatorFlow": true
+        }
+      ]
+    },
+    {
+      "alias": "browser-loa-2-factor",
+      "description": "Whoever has a second factor must prove one of them",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-user-configured",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "webauthn-authenticator",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 30,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "webauthn-authenticator-passwordless",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 40,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
+          "authenticator": "auth-recovery-authn-code-form",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 50,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        }
+      ]
+    },
+    {
+      "alias": "browser-loa-2-enrol",
+      "description": "Only for a person without any second factor: set up a one-time code",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-sub-flow-executed",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "authenticatorConfig": "loa2-no-factor-to-prove",
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        },
+        {
           "authenticator": "auth-otp-form",
           "authenticatorFlow": false,
           "requirement": "REQUIRED",
           "priority": 20,
+          "userSetupAllowed": false,
+          "autheticatorFlow": false
+        }
+      ]
+    },
+    {
+      "alias": "direct-grant-denied",
+      "description": "Password grants are refused for every client (D02)",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "deny-access-authenticator",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
           "userSetupAllowed": false,
           "autheticatorFlow": false
         }
@@ -301,6 +432,13 @@
         "loa-condition-level": "2",
         "loa-store-in-user-session": "true",
         "loa-max-age": "600"
+      }
+    },
+    {
+      "alias": "loa2-no-factor-to-prove",
+      "config": {
+        "flow_to_check": "browser-loa-2-factor",
+        "check_result": "not-executed"
       }
     }
   ],
