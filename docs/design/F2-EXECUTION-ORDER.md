@@ -326,6 +326,23 @@ Ograničenja: samo dev; lokalni FAST i ciljani testovi tijekom razvoja; završni
 STOP: ako zahtjevi nisu ostvarivi postojećom arhitekturom, dostaviti konkretan tehnički blocker i prijedlog minimalnog rješenja. Cilj: F2-CP09 — READY FOR OWNER ACCEPTANCE bez otvorenih P0/P1.
 ```
 
+```
+F2-T09-REC — Keycloak Security Provider Authorization | 2026-11-25 | Referentni HEAD 7e0065b
+Tekst vlasnika (doslovno, izvaci):
+"Autoriziram implementaciju minimalnog vlastitog Keycloak Security Providera za zatvaranje F-1R-C (P1) i povezanih sigurnosnih nalaza."
+"INFRA-AI-01, INFRA-CI-02 i INFRA-CI-03 privremeno su odgođeni do završetka F2." "CP09 ostaje neprihvaćen." "T10–T13 nisu autorizirani ovim nalogom."
+Prihvaćene arhitekturne odluke: vlastiti minimalni Keycloak provider u Javi; Keycloak SPI mehanizmi; vlastiti reproducibilni Keycloak Docker image; pinanje upstream imagea i ovisnosti; dopuna ADR-008, D43 i povezanih F2 odluka; integracija u lokalni CI i GitHub Actions; automatsko upravljanje atributom at_mfa_required; kontrolirano isključivanje MFA-a gdje politika dopušta.
+Ne odobrava: vlastiti fork Keycloaka, novi vanjski servis, novu trajnu bazu, dodatne javne mrežne portove.
+Obavezno: analiza izvornog koda točne verzije (SPI, životni ciklus required actions, transakcije, authentication sessions, dokaz trajnog faktora, konkurentnost, više instanci, cache, sve putanje izmjene vjerodajnica); dokaz izvedivosti na izoliranom Keycloaku; "Sama ponovna provjera bez odgovarajuće zaštite od konkurentnih izmjena nije dovoljna."; "Ako podržani SPI ne omogućuje pouzdano i atomsko provođenje sigurnosnih uvjeta, zaustavi implementaciju tog dijela i dostavi konkretan arhitekturni blocker."; "Ne uvoditi nepodržane interne mehanizme bez zasebne autorizacije."
+Provider štiti TOTP enrollment, generiranje i regeneraciju recovery kodova, promjenu i reset lozinke i ostale putanje izmjene vjerodajnica; provjera u trenutku operacije nad aktualnim stanjem; fail-closed; zaštita od TOCTOU i utrka i između više instanci ("In-memory lock jedne JVM instance nije dovoljan").
+Dopuna I07, D22, D23, D41: at_mfa_required je trajna obveza; automatski true nakon prve aktivacije trajnog faktora, konzistentno s vjerodajnicom; recovery kodovi ne autoriziraju nove trajne faktore ni regeneraciju; gubitak svih faktora: fail-closed, bez automatskog uklanjanja atributa, oporavak T10/T11; dobrovoljno isključivanje uz svježu lozinku, svježi trajni faktor, izričitu potvrdu, opoziv sesija, audit, opoziv recovery kodova, uklanjanje atributa tek nakon uspješne operacije; platformski korisnici ne smiju isključiti MFA (bez zamjenske grant arhitekture prije T10); postupak usklađivanja postojećih računa bez brisanja vjerodajnica i bez izvršavanja na trajnom realmu.
+Zatvoriti F-1R-C, ostatak F-3K i open recovery authentication finding; tri testa ranjivosti pretvoriti u regresijske testove zaštite.
+Docker image: ista verzija Keycloaka, upstream po digestu, pinane build ovisnosti, multi-stage, bez build alata i tajni u runtimeu, non-root, provjere Java ovisnosti i imagea; bez objave u javni registry.
+CI: lokalni runner i GitHub Actions s ekvivalentnim imageom; bez promjene triggera, branch protectiona ili općih CI pravila; bez INFRA-CI-02, INFRA-CI-03, INFRA-AI-01.
+Zabranjeno: T10–T13, samostalno prihvaćanje CP09/F2, deployment, izmjene trajnih baza i migracije na njima, izmjene aktivnih realmova, merge u main, force push, nove grane, slabljenje MFA politike ili testova, isključivanje sigurnosnih provjera, skrivanje nalaza, neautorizirane promjene infrastrukture, paralelne izmjene radnog stabla.
+Završni status: "F2-CP09 — NOT READY FOR OWNER ACCEPTANCE" ako postoje otvoreni P0/P1 ili nije dokazana sigurnost konkurentnih operacija; inače "F2-T09-REC — IMPLEMENTATION COMPLETED / READY FOR INDEPENDENT SECURITY REVIEW".
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
