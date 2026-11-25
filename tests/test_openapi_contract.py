@@ -48,15 +48,20 @@ def test_committed_spec_is_current() -> None:
     assert Path(TARGET).read_text() == render(), "run: python -m app.api.export_openapi"
 
 
+BROWSER_REDIRECTS = {("get", "/api/v1/auth/login"), ("get", "/api/v1/auth/callback")}
+
+
 def test_every_operation_is_described_and_has_a_success_response(spec: dict[str, Any]) -> None:
     assert spec["paths"], "the contract must not be empty"
     for path, operations in spec["paths"].items():
         for method, operation in operations.items():
             assert operation.get("summary"), (path, method)
-            assert any(code[0] in "23" for code in operation["responses"]), (
-                path,
-                method,
-            )  # 2xx, or a redirect
+            codes = operation["responses"]
+            if any(code.startswith("2") for code in codes):
+                continue
+            # Only the two browser navigations of the sign-in answer with a redirect instead of
+            # a 2xx; every other operation keeps F1's rule (AC-CTX-01 equivalence).
+            assert (method, path) in BROWSER_REDIRECTS and "302" in codes, (path, method)
 
 
 def test_errors_are_problem_json_and_no_default_validation_schema(spec: dict[str, Any]) -> None:

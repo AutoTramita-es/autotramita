@@ -1,4 +1,4 @@
-"""F2-T07 against real Keycloak 26.4.7: a native-style sign-in (authorization code + PKCE with
+"""F2-T07 against real Keycloak 26.8.2: a native-style sign-in (authorization code + PKCE with
 the public client), real access tokens against the application's mobile session routes.
 Runs only in the ``keycloak`` CI job."""
 

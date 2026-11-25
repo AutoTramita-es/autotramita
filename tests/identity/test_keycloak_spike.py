@@ -1,5 +1,5 @@
 """F2-T01 spike S1-S10: each test proves (or refutes) one assumption of the F2 design against
-a real Keycloak 26.4.7 container. Run only in the ``keycloak`` CI job (disposable container).
+a real Keycloak 26.8.2 container. Run only in the ``keycloak`` CI job (disposable container).
 A failing test means a design assumption does not hold: STOP and report at CP01."""
 
 import re

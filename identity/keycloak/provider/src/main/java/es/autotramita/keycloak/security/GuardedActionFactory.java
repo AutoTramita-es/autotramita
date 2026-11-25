@@ -20,7 +20,7 @@ import org.keycloak.provider.ServerInfoAwareProviderFactory;
  */
 public final class GuardedActionFactory {
 
-    static final String VERSION = "1.1.0";
+    static final String VERSION = "1.1.1";
     static final int ORDER = 100;
 
     private GuardedActionFactory() {}

@@ -1,4 +1,4 @@
-"""F2-T09-REC against real Keycloak 26.4.7, PostgreSQL 16, Redis 7 and an SMTP sink.
+"""F2-T09-REC against real Keycloak 26.8.2, PostgreSQL 16, Redis 7 and an SMTP sink.
 
 D37 end to end through the periodic worker, the absence of a way around it inside Keycloak, and
 the remaining checks of S3 (level-of-authentication age, WebAuthn) plus what Keycloak does and

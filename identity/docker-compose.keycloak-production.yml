@@ -1,0 +1,24 @@
+# PREPARED, NOT APPLIED (F2-T09-REC Keycloak Security Upgrade, 2026-11-25).
+# Future production Keycloak: the AutoTramita image (pinned Keycloak 26.8.2 plus the security
+# provider, identity/keycloak/Dockerfile) instead of the upstream image of docker-compose.yml.
+# It replaces quay.io/keycloak/keycloak:26.4.7 and is the version every test runs (a test keeps the
+# pins equal to the Dockerfile, CI and the developer compose file).
+#
+# Applying it is a production deployment and needs its own owner authorization. Do it only with
+# the procedure in identity/keycloak/UPGRADE-26.8.2.md: database backup first (the first start
+# migrates the Keycloak database and there is no supported downgrade), then the realm steps.
+#
+#   docker compose -p autotramita-<env> --env-file <env file> \
+#     -f docker-compose.yml -f docker-compose.<env>.yml -f identity/docker-compose.keycloak-production.yml \
+#     build keycloak
+#
+# Paths are relative to the first file (the repository root).
+services:
+  keycloak:
+    image: autotramita-keycloak:26.8.2-provider-1.1.1
+    pull_policy: build
+    build:
+      context: ./identity/keycloak
+      args:
+        KEYCLOAK_IMAGE: quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3
+        JDK_IMAGE: eclipse-temurin:21-jdk@sha256:8ad118b146aa92da815b576441acd6b42b38236797ad0b6edc8c200b85bb0734

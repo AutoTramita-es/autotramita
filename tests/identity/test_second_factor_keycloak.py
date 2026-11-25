@@ -1,4 +1,4 @@
-"""F2-T09-REC F-1R, F-2 and F-3 against real Keycloak 26.4.7, with the application on real
+"""F2-T09-REC F-1R, F-2 and F-3 against real Keycloak 26.8.2, with the application on real
 PostgreSQL and Redis where it takes part. Runs only in the ``keycloak`` CI job.
 
 The final MFA decision (2026-11-25): whoever has a second factor proves it with the password,

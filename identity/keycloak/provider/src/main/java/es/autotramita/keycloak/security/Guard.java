@@ -135,7 +135,8 @@ final class Guard {
         boolean fresh = false;
         if (started != null) {
             try {
-                fresh = Time.currentTime() - Integer.parseInt(started) <= Policy.FRESH_SECONDS;
+                // Keycloak 26.8: currentTime() (int) is deprecated; the long variant reads the same clock.
+                fresh = Time.currentTimeSeconds() - Long.parseLong(started) <= Policy.FRESH_SECONDS;
             } catch (NumberFormatException e) {
                 fresh = false;
             }

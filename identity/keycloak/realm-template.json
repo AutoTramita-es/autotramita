@@ -196,6 +196,7 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "basic", "email", "kc-admin-api"],
       "redirectUris": [],
       "webOrigins": []
     }

@@ -397,6 +397,12 @@ def lint_realm(realm: dict[str, Any], *, kind: str) -> list[str]:
     admin = clients.get("at-admin-svc", {})
     need(admin.get("serviceAccountsEnabled") is True, "at-admin-svc needs a service account")
     need(admin.get("standardFlowEnabled") is False, "at-admin-svc must not use browser flows")
+    # Keycloak 26.8 accepts an admin API token only with the kc-admin-api scope (its audience);
+    # without it the application's administration (F-0, account actions) fails.
+    need(
+        "kc-admin-api" in admin.get("defaultClientScopes", []),
+        "at-admin-svc needs the kc-admin-api scope for the admin API",
+    )
     for user in realm.get("users", []):
         granted = set(user.get("clientRoles", {}).get("realm-management", []))
         need(granted <= ADMIN_SVC_ROLES, f"service account roles too broad: {granted}")

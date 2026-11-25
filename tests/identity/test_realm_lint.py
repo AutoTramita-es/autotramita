@@ -304,6 +304,11 @@ def _client(realm: dict[str, Any], client_id: str) -> dict[str, Any]:
             "credentials",
         ),
         (
+            "svc without the admin API scope",
+            lambda r: _client(r, "at-admin-svc")["defaultClientScopes"].remove("kc-admin-api"),
+            "kc-admin-api",
+        ),
+        (
             "tenant claim",
             lambda r: _client(r, "at-web")["protocolMappers"].append(
                 {"name": "t", "config": {"claim.name": "tenant_id"}}

@@ -1,4 +1,4 @@
-"""F2-T09 against real Keycloak 26.4.7: the admin client, password recovery owned by the
+"""F2-T09 against real Keycloak 26.8.2: the admin client, password recovery owned by the
 application, password change and second-factor enrolment through ``kc_action``, and removal of
 a factor, on real PostgreSQL and Redis. Runs only in the ``keycloak`` CI job.
 
@@ -331,7 +331,7 @@ def test_recovery_codes_can_be_enrolled_through_keycloak_d41(rig: Rig, admin: Ad
     assert rig.api.get(done.location).headers["location"] == "/me?security_action=success"
     types = [f["type"] for f in rig.api.get(f"{API}/me/security").json()["second_factors"]]
     assert sorted(types) == ["otp", "recovery-authn-codes"]
-    record_result("T09.recovery_codes_full_flow", "works on 26.4.7")
+    record_result("T09.recovery_codes_full_flow", "works on 26.8.2")
 
 
 def test_d37_admin_reads_and_changes_only_the_target_subject(rig: Rig, admin: Admin) -> None:

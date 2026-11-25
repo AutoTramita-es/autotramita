@@ -1,4 +1,4 @@
-"""F2-T06 against real Keycloak 26.4.7: the application's web sign-in, back-channel logout and
+"""F2-T06 against real Keycloak 26.8.2: the application's web sign-in, back-channel logout and
 step-up with Keycloak's own pages, tokens and keys, on real PostgreSQL and Redis.
 Runs only in the ``keycloak`` CI job."""
 

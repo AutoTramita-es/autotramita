@@ -43,6 +43,16 @@ def cbor(value: Any) -> bytes:
     return _head(5, len(value)) + b"".join(cbor(k) + cbor(v) for k, v in value.items())
 
 
+def _page_value(page: Page, name: str) -> re.Match[str] | None:
+    """A value the page's script passes to the WebAuthn API: ``name : '…'`` (Keycloak 26.4),
+    ``name : "…"`` (26.8, FreeMarker ``?c``) or JSON ``"name": "…"``."""
+    return (
+        re.search(name + r" : '([^']+)'", page.text)
+        or re.search(name + r' : "([^"]+)"', page.text)
+        or re.search(r'"' + name + r'"\s*:\s*"([^"]+)"', page.text)
+    )
+
+
 class SoftwareKey:
     """The private half of a registered software passkey, to answer sign-in challenges."""
 
@@ -55,8 +65,8 @@ class SoftwareKey:
 def register(browser: Browser, page: Page, origin: str, key: SoftwareKey | None = None) -> Page:
     """Answer Keycloak's passkey registration page."""
     holder = key or SoftwareKey()
-    challenge = re.search(r"challenge : '([^']+)'", page.text)
-    rp = re.search(r"rpId : '([^']+)'", page.text)
+    challenge = _page_value(page, "challenge")
+    rp = _page_value(page, "rpId")
     assert challenge and rp, page.summary
     numbers = holder.private.public_key().public_numbers()
     credential = holder.credential
@@ -95,6 +105,8 @@ def register(browser: Browser, page: Page, origin: str, key: SoftwareKey | None 
             "publicKeyCredentialId": _b64(credential),
             "authenticatorLabel": "software key",
             "transports": "internal",
+            # what the browser reports for a built-in authenticator (Keycloak 26.8 reads it)
+            "authenticatorAttachment": "platform",
             "error": "",
         },
         action=form_action(page.text),
@@ -106,12 +118,8 @@ def authenticate(
 ) -> Page:
     """Answer Keycloak's passkey sign-in page, as a browser would after
     ``navigator.credentials.get``. ``forged`` signs with a different private key."""
-    challenge = re.search(r"challenge : '([^']+)'", page.text) or re.search(
-        r'"challenge"\s*:\s*"([^"]+)"', page.text
-    )
-    rp = re.search(r"rpId : '([^']+)'", page.text) or re.search(
-        r'"rpId"\s*:\s*"([^"]+)"', page.text
-    )
+    challenge = _page_value(page, "challenge")
+    rp = _page_value(page, "rpId")
     assert challenge and rp, page.summary
     key.counter += 1
     authenticator_data = (

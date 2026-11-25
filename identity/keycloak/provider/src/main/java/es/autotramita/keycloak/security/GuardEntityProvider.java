@@ -6,7 +6,12 @@ import org.keycloak.connections.jpa.entityprovider.JpaEntityProvider;
 /** Registers {@link GuardEntity} and its table (Keycloak's supported custom-entity SPI). */
 public final class GuardEntityProvider implements JpaEntityProvider {
 
+    /**
+     * Still abstract in Keycloak 26.8, but marked for removal: the Quarkus distribution finds the
+     * entity in the provider jar at build time. Kept because the interface requires it.
+     */
     @Override
+    @SuppressWarnings("removal")
     public List<Class<?>> getEntities() {
         return List.of(GuardEntity.class);
     }

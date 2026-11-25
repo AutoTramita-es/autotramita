@@ -1,4 +1,4 @@
-"""F2-T09-REC final MFA decision (2026-11-25) against real Keycloak 26.4.7: recovery codes are
+"""F2-T09-REC final MFA decision (2026-11-25) against real Keycloak 26.8.2: recovery codes are
 the backup of a permanent factor, an account that once had a second factor never falls back to
 the password alone, and no e-mail link runs a credential set-up. Runs only in the ``keycloak``
 CI job.

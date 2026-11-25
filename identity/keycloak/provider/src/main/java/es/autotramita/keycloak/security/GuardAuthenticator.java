@@ -15,7 +15,7 @@ public final class GuardAuthenticator implements Authenticator {
 
     @Override
     public void authenticate(AuthenticationFlowContext context) {
-        context.getAuthenticationSession().setAuthNote(Guard.STARTED, String.valueOf(Time.currentTime()));
+        context.getAuthenticationSession().setAuthNote(Guard.STARTED, String.valueOf(Time.currentTimeSeconds()));
         context.success();
     }
 

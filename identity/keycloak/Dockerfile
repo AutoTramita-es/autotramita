@@ -1,6 +1,6 @@
 # AutoTramita Keycloak image: the pinned upstream Keycloak plus one provider jar built from source
 # against that image's own libraries. Nothing else is added. Build context: identity/keycloak.
-ARG KEYCLOAK_IMAGE=quay.io/keycloak/keycloak:26.4.7@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007
+ARG KEYCLOAK_IMAGE=quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3
 ARG JDK_IMAGE=eclipse-temurin:21-jdk@sha256:8ad118b146aa92da815b576441acd6b42b38236797ad0b6edc8c200b85bb0734
 
 FROM ${KEYCLOAK_IMAGE} AS keycloak

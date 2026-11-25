@@ -8,17 +8,25 @@ ROOT = Path(__file__).resolve().parents[2]
 COMPOSE = (ROOT / "identity" / "docker-compose.keycloak-test.yml").read_text()
 CI = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
 COMPOSE_MAIN = (ROOT / "docker-compose.yml").read_text()
+PRODUCTION = (ROOT / "identity" / "docker-compose.keycloak-production.yml").read_text()
 IMAGE = re.compile(r"quay\.io/keycloak/keycloak:(\d+\.\d+\.\d+)@sha256:([0-9a-f]{64})")
 
 
 def test_test_image_is_pinned_by_digest_to_the_version_in_compose() -> None:
-    version = re.search(r"quay\.io/keycloak/keycloak:(\d+\.\d+\.\d+)", COMPOSE_MAIN)
-    assert version
+    # The tests run exactly the Keycloak prepared for production (version and digest). The live
+    # definition (docker-compose.yml) changes only with a production authorization; until then it
+    # may name nothing but the version the prepared file says it replaces (F2-T09-REC upgrade).
+    prepared = IMAGE.findall(PRODUCTION)
+    assert len(prepared) == 1, "the prepared production file must pin exactly one image"
     for text in (COMPOSE, CI):
         found = IMAGE.findall(text)
         assert found, "image must carry a digest"
-        assert {v for v, _ in found} == {version.group(1)}
-    assert {d for _, d in IMAGE.findall(COMPOSE)} == {d for _, d in IMAGE.findall(CI)}
+        assert set(found) == set(prepared)
+    live = re.search(r"quay\.io/keycloak/keycloak:(\d+\.\d+\.\d+)", COMPOSE_MAIN)
+    assert live
+    if live.group(1) != prepared[0][0]:
+        assert f"replaces quay.io/keycloak/keycloak:{live.group(1)}" in PRODUCTION
+        assert "PREPARED, NOT APPLIED" in PRODUCTION
 
 
 def test_disposable_compose_has_no_persistent_state_and_no_shared_services() -> None:
@@ -49,6 +57,7 @@ def test_the_image_is_built_from_the_same_pinned_images_everywhere() -> None:
     dockerfile = dict(PINNED.findall(DOCKERFILE))
     assert set(dockerfile) == {"KEYCLOAK_IMAGE", "JDK_IMAGE"}
     assert dict(PINNED.findall(CI)) == dockerfile == dict(PINNED.findall(COMPOSE))
+    assert dict(PINNED.findall(PRODUCTION)) == dockerfile
     assert IMAGE.search(dockerfile["KEYCLOAK_IMAGE"])
     assert "autotramita-keycloak:ci" in CI
     assert (

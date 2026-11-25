@@ -18,7 +18,7 @@ mkdir -p "$work/check"
 (cd "$here" && javac --release 21 -encoding UTF-8 -proc:none -Xlint:all -Werror \
     -cp "$work/classes" -d "$work/check" src/test/java/es/autotramita/keycloak/security/PolicyCheck.java)
 java -cp "$work/classes:$work/check" es.autotramita.keycloak.security.PolicyCheck
-printf 'Manifest-Version: 1.0\nCreated-By: autotramita build.sh\nImplementation-Title: autotramita-keycloak-security-provider\nImplementation-Version: %s\nBuilt-Against: Keycloak 26.4.7\n' "$version" > "$work/manifest"
+printf 'Manifest-Version: 1.0\nCreated-By: autotramita build.sh\nImplementation-Title: autotramita-keycloak-security-provider\nImplementation-Version: %s\nBuilt-Against: Keycloak 26.8.2\n' "$version" > "$work/manifest"
 (cd "$work/classes" && find . -type f | sed 's#^\./##' | LC_ALL=C sort > "$work/files")
 (cd "$work/classes" && jar --create --file "$out" --manifest "$work/manifest" \
     --date=2026-11-25T00:00:00Z $(cat "$work/files"))

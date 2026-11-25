@@ -1,5 +1,5 @@
 """The AutoTramita Keycloak security provider (identity/keycloak/provider) against the real
-Keycloak 26.4.7 image it is built into. Runs only in the ``keycloak`` CI job.
+Keycloak 26.8.2 image it is built into. Runs only in the ``keycloak`` CI job.
 
 The provider takes the credential decision when a form is *submitted*: under a database row lock
 of the person (held across Keycloak instances sharing the database), on freshly read state, in the
@@ -142,7 +142,7 @@ def test_the_provider_replaces_every_credential_action_and_guards_the_sign_in(ad
     providers = admin.server("GET", "/serverinfo").json()["providers"]
     actions = providers["required-action"]["providers"]
     for action in GUARDED:
-        assert actions[action]["operationalInfo"]["autotramita-guard"] == "1.1.0", action
+        assert actions[action]["operationalInfo"]["autotramita-guard"] == "1.1.1", action
     assert "at-security-guard" in providers["authenticator"]["providers"]
     executions = admin.master("GET", "/authentication/flows/browser-loa-forms/executions").json()
     assert executions[0]["providerId"] == "at-security-guard"
