@@ -66,8 +66,9 @@ public final class Policy {
                     return "account_locked";
                 }
                 if (account.codes() || account.obliged()) {
-                    // an account from before that holds recovery codes only moves to a permanent factor
-                    return proof.code() && proof.fresh() ? null : "recovery_code_required";
+                    // recovery codes are no proof of a permanent factor: an account holding codes
+                    // only waits for the controlled recovery (T10/T11)
+                    return "controlled_recovery_required";
                 }
                 return null; // the first factor of a person who never had one (I07)
             case RECOVERY_CODES:

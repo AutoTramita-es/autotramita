@@ -142,7 +142,7 @@ def test_the_provider_replaces_every_credential_action_and_guards_the_sign_in(ad
     providers = admin.server("GET", "/serverinfo").json()["providers"]
     actions = providers["required-action"]["providers"]
     for action in GUARDED:
-        assert actions[action]["operationalInfo"]["autotramita-guard"] == "1.0.0", action
+        assert actions[action]["operationalInfo"]["autotramita-guard"] == "1.1.0", action
     assert "at-security-guard" in providers["authenticator"]["providers"]
     executions = admin.master("GET", "/authentication/flows/browser-loa-forms/executions").json()
     assert executions[0]["providerId"] == "at-security-guard"
@@ -533,4 +533,5 @@ def test_existing_accounts_are_reconciled_without_deleting_anything(env: Env, ad
     assert not obliged(admin, never.user) and not obliged(admin, pending.user)
     assert pending.required_actions() == ["VERIFY_EMAIL"]
     assert {who.user.id: kinds(admin, who.user) for who in people} == before  # nothing deleted
-    assert sorted(applied.review) == sorted([locked.user.id, never.user.id, pending.user.id])
+    expected_review = [locked.user.id, never.user.id, pending.user.id, codes.user.id]
+    assert sorted(applied.review) == sorted(expected_review)

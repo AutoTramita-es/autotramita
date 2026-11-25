@@ -227,9 +227,9 @@ def _client(realm: dict[str, Any], client_id: str) -> dict[str, Any]:
             "browser-loa-3 differs",
         ),
         (
-            "codes alone for anybody",
-            lambda r: _config(r, "mfa-unmarked").update({"not": "false"}),
-            "browser-deny-unmarked-codes-only differs",
+            "codes alone let in",
+            lambda r: _flow(r, "browser-deny-codes-only")["authenticationExecutions"].pop(),
+            "browser-deny-codes-only differs",
         ),
         (
             "locked account lets in",

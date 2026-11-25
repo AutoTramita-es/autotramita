@@ -4,7 +4,8 @@ AutoTramita security provider and its flows are switched on there (identity/READ
 It reads every account through the admin API and sorts it:
 
 * ``permanent``: holds a one-time code or passkey; marked ``at_mfa_required`` if not yet;
-* ``codes_only``: holds recovery codes only; marked too (unmarked, the new flow refuses it);
+* ``codes_only``: holds recovery codes only; marked too, and listed for review: the realm refuses
+  it at sign-in until a controlled recovery (T10/T11), a code proves no permanent factor;
 * ``locked``: marked but holds no second factor; left as it is (controlled recovery, T10/T11);
 * ``never``: neither marked nor any second factor; left as it is. Keycloak keeps no history of
   removed credentials, so this does not prove the account never had one: review by hand;
@@ -100,7 +101,7 @@ def reconcile(
                 update["requiredActions"] = kept
                 report.counts["pending"] += 1
                 report.changed.append((user_id, "pending set-up withdrawn"))
-            if kind in ("locked", "never"):
+            if kind in ("locked", "never", "codes_only"):
                 report.review.append(user_id)
             if update and apply:
                 written = client.put(f"{base}/{user_id}", json={**representation, **update})

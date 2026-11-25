@@ -140,19 +140,18 @@ FLOWS: dict[str, list[Step]] = {
         _step("auth-username-password-form"),
         _sub("probe-permanent"),
         _sub("probe-codes"),
-        _sub("deny-unmarked-codes-only"),
+        _sub("deny-codes-only"),
         _sub("deny-marked-without-factor"),
         _sub("loa-1-factor"),
         _sub("probe-codes-left"),
-        _sub("loa-1-legacy-enrol"),
         _sub("loa-1-codes-spent"),
         _sub("loa-1-last-code"),
     ],
     **_probe("permanent", _PERMANENT),
     **_probe("codes", [_CODE]),
     **_probe("codes-left", [_CODE]),
-    "browser-deny-unmarked-codes-only": [
-        _marked("true"),
+    # recovery codes alone are no proof of a permanent factor: refused before a code is asked
+    "browser-deny-codes-only": [
         _ran("browser-probe-permanent", "not-executed"),
         _ran("browser-probe-codes"),
         _DENY,
@@ -164,11 +163,6 @@ FLOWS: dict[str, list[Step]] = {
         _DENY,
     ],
     "browser-loa-1-factor": [_CONFIGURED, *_any_of(list(FACTOR_AUTHENTICATORS.values()))],
-    "browser-loa-1-legacy-enrol": [
-        _USED_CODE,
-        _ran("browser-probe-permanent", "not-executed"),
-        _step("auth-otp-form"),
-    ],
     "browser-loa-1-codes-spent": [
         _USED_CODE,
         _ran("browser-probe-codes-left", "not-executed"),

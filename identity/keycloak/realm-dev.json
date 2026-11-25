@@ -325,7 +325,7 @@
           "priority": 50,
           "authenticatorFlow": true,
           "userSetupAllowed": false,
-          "flowAlias": "browser-deny-unmarked-codes-only"
+          "flowAlias": "browser-deny-codes-only"
         },
         {
           "requirement": "CONDITIONAL",
@@ -353,18 +353,11 @@
           "priority": 90,
           "authenticatorFlow": true,
           "userSetupAllowed": false,
-          "flowAlias": "browser-loa-1-legacy-enrol"
-        },
-        {
-          "requirement": "CONDITIONAL",
-          "priority": 100,
-          "authenticatorFlow": true,
-          "userSetupAllowed": false,
           "flowAlias": "browser-loa-1-codes-spent"
         },
         {
           "requirement": "CONDITIONAL",
-          "priority": 110,
+          "priority": 100,
           "authenticatorFlow": true,
           "userSetupAllowed": false,
           "flowAlias": "browser-loa-1-last-code"
@@ -687,8 +680,8 @@
       ]
     },
     {
-      "alias": "browser-deny-unmarked-codes-only",
-      "description": "Recovery codes alone are accepted only for an account marked for the transition",
+      "alias": "browser-deny-codes-only",
+      "description": "An account holding recovery codes only is refused before any code is asked: a code is no proof of a permanent factor, the account waits for the controlled recovery (T10/T11)",
       "providerId": "basic-flow",
       "topLevel": false,
       "builtIn": false,
@@ -698,8 +691,8 @@
           "priority": 10,
           "authenticatorFlow": false,
           "userSetupAllowed": false,
-          "authenticator": "conditional-user-attribute",
-          "authenticatorConfig": "mfa-unmarked"
+          "authenticator": "conditional-sub-flow-executed",
+          "authenticatorConfig": "permanent-none"
         },
         {
           "requirement": "REQUIRED",
@@ -707,19 +700,11 @@
           "authenticatorFlow": false,
           "userSetupAllowed": false,
           "authenticator": "conditional-sub-flow-executed",
-          "authenticatorConfig": "permanent-none"
-        },
-        {
-          "requirement": "REQUIRED",
-          "priority": 30,
-          "authenticatorFlow": false,
-          "userSetupAllowed": false,
-          "authenticator": "conditional-sub-flow-executed",
           "authenticatorConfig": "codes-some"
         },
         {
           "requirement": "REQUIRED",
-          "priority": 40,
+          "priority": 30,
           "authenticatorFlow": false,
           "userSetupAllowed": false,
           "authenticator": "deny-access-authenticator"
@@ -807,38 +792,6 @@
           "authenticatorFlow": false,
           "userSetupAllowed": false,
           "authenticator": "auth-recovery-authn-code-form"
-        }
-      ]
-    },
-    {
-      "alias": "browser-loa-1-legacy-enrol",
-      "description": "A recovery code without a permanent factor leads to setting one up first",
-      "providerId": "basic-flow",
-      "topLevel": false,
-      "builtIn": false,
-      "authenticationExecutions": [
-        {
-          "requirement": "REQUIRED",
-          "priority": 10,
-          "authenticatorFlow": false,
-          "userSetupAllowed": false,
-          "authenticator": "conditional-credential",
-          "authenticatorConfig": "used-recovery-code"
-        },
-        {
-          "requirement": "REQUIRED",
-          "priority": 20,
-          "authenticatorFlow": false,
-          "userSetupAllowed": false,
-          "authenticator": "conditional-sub-flow-executed",
-          "authenticatorConfig": "permanent-none"
-        },
-        {
-          "requirement": "REQUIRED",
-          "priority": 30,
-          "authenticatorFlow": false,
-          "userSetupAllowed": false,
-          "authenticator": "auth-otp-form"
         }
       ]
     },

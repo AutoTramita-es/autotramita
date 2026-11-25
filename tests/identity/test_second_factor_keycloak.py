@@ -68,7 +68,7 @@ ACCOUNTS = {
     "totp_and_passkey": (OTP, PASSKEY),
     "passkey_and_codes": (PASSKEY, CODES),
 }
-OLDER = "recovery_codes_only"  # cannot be created any more; marked by an operator
+OLDER = "recovery_codes_only"  # cannot be created any more; refused, waits for recovery
 EVERY = sorted([*ACCOUNTS, OLDER])
 CLIENTS = {"at-web": WEB_REDIRECT, "at-mobile": MOBILE_REDIRECT}
 
@@ -77,6 +77,15 @@ def make(admin: Admin, name: str) -> Account:
     if name == OLDER:
         return codes_only_account(admin, marked=True)
     return account(admin, *ACCOUNTS[name])
+
+
+def refused_or_asked(name: str, page: Page) -> None:
+    """The password alone is answered with the question for an existing permanent factor, or,
+    for an account holding recovery codes only, with a refusal (controlled recovery, T10/T11;
+    after several refusals Keycloak's brute-force protection shows its sign-in form)."""
+    assert page.code is None, page.summary
+    expected = ("denied", "password") if name == OLDER else ASKED
+    assert shown(page) in expected, page.summary
 
 
 def asked_kinds(who: Account) -> set[str]:
@@ -112,8 +121,9 @@ def test_with_a_second_factor_the_password_alone_never_reaches_level_two(
             who.user, client_id=client_id, redirect_uri=CLIENTS[client_id], **level
         )
         # asked for an existing factor: never a code to take, never the setup of a new one
-        assert page.code is None and shown(page) in ASKED, page.summary
-        assert who.offered(browser, page) == asked_kinds(who)
+        refused_or_asked(name, page)
+        if name != OLDER:
+            assert who.offered(browser, page) == asked_kinds(who)
         again = browser.authorize(client_id, CLIENTS[client_id])
         assert again.code is None, "the unfinished sign-in left a session behind"
     assert who.credentials() == before
@@ -154,7 +164,7 @@ def test_the_password_alone_cannot_add_a_factor(
         page = browser.login(
             who.user, client_id=client_id, redirect_uri=redirect, kc_action=action, **level
         )
-        assert page.code is None and shown(page) in ASKED, page.summary
+        refused_or_asked(name, page)
     assert who.credentials() == before
 
 
@@ -205,7 +215,7 @@ def test_the_password_alone_cannot_remove_a_factor(env: Env, admin: Admin, name:
             page = browser.login(
                 who.user, client_id=client_id, redirect_uri=redirect, kc_action=action
             )
-            assert page.code is None and shown(page) in ASKED, page.summary
+            refused_or_asked(name, page)
     assert who.credentials() == before
 
 

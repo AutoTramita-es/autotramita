@@ -41,6 +41,11 @@ public final class PolicyCheck {
                 if (obliged && !permanent && !codes && change != Change.PASSWORD) {
                     require(!allowed, "locked", change, account, proof);
                 }
+                // A recovery code is never the proof behind a new permanent factor: without a
+                // permanent factor only an account with nothing at all may set up its first one.
+                if (change == Change.PERMANENT_FACTOR && allowed && !permanent) {
+                    require(!codes && !obliged, "factor after a recovery code", change, account, proof);
+                }
                 // Recovery codes only ever follow a permanent factor.
                 if (change == Change.RECOVERY_CODES && allowed) {
                     require(permanent, "codes without a permanent factor", change, account, proof);
@@ -69,7 +74,8 @@ public final class PolicyCheck {
                 "F-3K", null, totp, none);
         require("permanent_factor_required".equals(Policy.refusal(Change.RECOVERY_CODES, totp, code)),
                 "held code", null, totp, code);
-        require(Policy.refusal(Change.PERMANENT_FACTOR, codesOnly, code) == null, "transition", null, codesOnly, code);
+        require("controlled_recovery_required".equals(Policy.refusal(Change.PERMANENT_FACTOR, codesOnly, code)),
+                "no transition with a code", null, codesOnly, code);
         require(Policy.refusal(Change.DISABLE, totp, otp) == null, "switch-off", null, totp, otp);
         require(Policy.refusal(Change.DISABLE, totp, code) != null, "switch-off by code", null, totp, code);
         System.out.println("PolicyCheck: " + checked + " combinations, all invariants hold");

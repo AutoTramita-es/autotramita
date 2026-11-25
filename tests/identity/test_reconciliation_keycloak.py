@@ -398,12 +398,13 @@ def test_s03_a_passkey_enrolled_earlier_is_the_second_level(
 
 
 def test_recovery_codes_alone_protect_level_two(rig: Rig, env: Env, admin: Admin) -> None:
-    """F-1R: an account whose only second factor is a set of recovery codes (from before the
-    final MFA decision, marked by an operator) must use one; the password alone opens no level."""
+    """F-1R and the owner decision of 2026-11-25: an account whose only second factor is a set of
+    recovery codes (from before) never reaches a level with the password alone; it is refused
+    before a code is asked and waits for the controlled recovery (T10/T11)."""
     who = codes_only_account(admin, marked=True)
     for level in ("loa1", "loa2"):
         asked = Browser(env).login(who.user, acr_values=level)
-        assert asked.code is None and 'name="recoveryCodeInput"' in asked.text, asked.summary
+        assert asked.code is None and "Access denied" in asked.text, asked.summary
         assert "kc-totp-secret-key" not in asked.text and "mode=manual" not in asked.text
 
 

@@ -37,7 +37,6 @@ from tests.identity.kc import (
     Page,
     SmtpSink,
     TestUser,
-    decode_jwt,
     form_action,
     hidden_inputs,
 )
@@ -281,66 +280,47 @@ def test_a_sign_in_held_open_with_a_code_gets_no_new_codes_after_the_last_one(
 
 
 # --- accounts that hold recovery codes only -----------------------------------------------------
-@pytest.mark.parametrize("client_id", sorted(CLIENTS))
-def test_an_unmarked_codes_only_account_is_refused(env: Env, admin: Admin, client_id: str) -> None:
-    """Fail closed: an account an operator has not marked cannot spend its codes at all."""
-    who = codes_only_account(admin, marked=False)
-    browser = Browser(env)
-    page = browser.login(who.user, client_id=client_id, redirect_uri=CLIENTS[client_id])
-    assert page.code is None and shown(page) == "denied", page.summary
-    assert who.credentials() == ["password", CODES] and sessions(admin, who) == 0
-
-
-@pytest.mark.parametrize("client_id", sorted(CLIENTS))
-def test_a_marked_codes_only_account_moves_to_a_permanent_factor(
-    env: Env, admin: Admin, client_id: str
+@pytest.mark.parametrize("marked", [False, True], ids=["unmarked", "marked"])
+def test_a_codes_only_account_waits_for_the_controlled_recovery(
+    env: Env, admin: Admin, marked: bool
 ) -> None:
-    who = codes_only_account(admin, marked=True)
-    redirect = CLIENTS[client_id]
-    for _ in range(2):  # abandoning the set-up changes nothing but the spent code
-        browser = Browser(env)
-        page = browser.login(who.user, client_id=client_id, redirect_uri=redirect)
-        assert shown(page) == CODES, page.summary  # the existing factor first
-        page = who.answer_code(browser, page, who.next_code(page))
-        assert shown(page) == "otp-setup", page.summary
-        try_to_skip(browser, page, who)
-        assert who.credentials() == ["password", CODES] and sessions(admin, who) == 0
-    who.otp, done = set_up_otp(browser, page)
-    done.require_code()
-    assert who.kinds() == sorted([OTP, CODES])
-    for kind in (OTP, CODES):  # an ordinary account now, the codes its backup
-        browser = Browser(env)
-        who.sign_in(browser, kind).require_code()
+    """Owner decision of 2026-11-25: recovery codes are no proof of a permanent factor, so an
+    account holding codes only (from before) neither signs in with one nor sets up a one-time
+    code with one. It is refused before any code is asked, on every client and for every
+    request, so no code is spent and no credential is removed: controlled recovery (T10/T11)."""
+    who = codes_only_account(admin, marked=marked)
+    before = admin.master("GET", f"/users/{who.user.id}/credentials").json()
+    refused_everywhere(env, who)
+    after = admin.master("GET", f"/users/{who.user.id}/credentials").json()
+    assert after == before  # the codes credential is untouched: nothing was spent
+    assert sessions(admin, who) == 0
 
 
-def test_the_application_request_moves_a_codes_only_account_too(env: Env, admin: Admin) -> None:
+def test_an_application_request_cannot_move_a_codes_only_account_either(
+    env: Env, admin: Admin
+) -> None:
     who = codes_only_account(admin, marked=True)
     browser = Browser(env)
     page = browser.login(
         who.user, kc_action="CONFIGURE_TOTP", acr_values="loa2", prompt="login", max_age="0"
     )
-    page = who.prove(browser, page, CODES)
-    for _ in range(2):  # the forced set-up, then the requested one
-        if shown(page) == "otp-setup":
-            who.otp, page = set_up_otp(browser, page)
-    tokens = browser.token("at-web", page.require_code(), WEB_REDIRECT)
-    claims = decode_jwt(tokens["id_token"])
-    assert claims["acr"] == "loa2" and '"2"' in str(claims["loa_map"])
+    assert page.code is None and shown(page) == "denied", page.summary
+    assert who.credentials() == ["password", CODES]
 
 
 def locked_account(env: Env, admin: Admin) -> Account:
-    """Marked, every code spent, the set-up of a one-time code abandoned each time. After the
-    last code the set-up is refused too (the provider): nothing usable is left to prove."""
-    who = codes_only_account(admin, marked=True)
-    for position in range(len(who.codes)):
-        _, page = sign_in_with_code(env, who)
-        last = position == len(who.codes) - 1
-        if last:
-            assert page.code is None and page.location and "error=access_denied" in page.location
-        else:
-            assert page.code is None and shown(page) == "otp-setup", (position, page.summary)
-    assert who.kinds() == [] and sessions(admin, who) == 0
+    """Obliged and no factor left: a one-time code an administrator removed (the provider made
+    the obligation permanent with it)."""
+    who = account(admin, OTP)
+    who.remove_as_administrator(OTP)
+    who.otp = None
+    assert who.kinds() == [] and obliged_account(admin, who)
     return who
+
+
+def obliged_account(admin: Admin, who: Account) -> bool:
+    found = admin.master("GET", f"/users/{who.user.id}").json().get("attributes") or {}
+    return bool(found.get("at_mfa_required") == ["true"])
 
 
 def refused_everywhere(env: Env, who: Account) -> None:
@@ -355,26 +335,28 @@ def refused_everywhere(env: Env, who: Account) -> None:
             assert shown(page) in ("denied", "password"), (client_id, extra, page.summary)
 
 
-def test_the_last_code_of_a_codes_only_account_leaves_it_closed(env: Env, admin: Admin) -> None:
-    """Spending it never turns the account into a password-only one."""
+def test_an_obliged_account_without_any_factor_stays_closed(env: Env, admin: Admin) -> None:
+    """It never turns into a password-only account."""
     who = locked_account(env, admin)
     refused_everywhere(env, who)
     assert who.credentials() == ["password"]
 
 
 @pytest.mark.parametrize("move", ["wrong_code", "reload", "other_method", "restart", "empty_post"])
-def test_a_sign_in_left_at_the_code_question_gains_nothing_when_the_codes_run_out(
+def test_a_sign_in_left_at_the_factor_question_gains_nothing_when_the_factor_goes(
     env: Env, admin: Admin, move: str
 ) -> None:
-    who = codes_only_account(admin, marked=True)
+    """A sign-in waits at the one-time code question; meanwhile the account loses its permanent
+    factor and keeps only recovery codes. Whatever the waiting browser does next without a
+    further proof, it gets no session and no set-up."""
+    who = account(admin, OTP, CODES)
     parked = Browser(env)
     page = parked.login(who.user)  # the password, then it waits
-    assert shown(page) == CODES
-    for _ in range(len(who.codes)):
-        sign_in_with_code(env, who)
+    assert shown(page) == OTP
+    who.remove_as_administrator(OTP)
     action = html.unescape(form_action(page.text))
     if move == "wrong_code":
-        answer = who.answer_code(parked, page, "AAAAAAAAAAAA")
+        answer = parked.submit(page, {**hidden_inputs(page.text), "otp": "000000"}, action=action)
     elif move == "reload":
         answer = parked.get(action)
     elif move == "other_method":
@@ -388,7 +370,7 @@ def test_a_sign_in_left_at_the_code_question_gains_nothing_when_the_codes_run_ou
     else:
         answer = parked.submit(page, {}, action=action)
     assert answer.code is None and shown(answer) not in ("otp-setup", "codes-setup"), answer.summary
-    assert who.credentials() == ["password"] and sessions(admin, who) == 0
+    assert who.credentials() == ["password", CODES]
 
 
 def test_an_administrator_removing_the_factor_of_a_marked_account_does_not_open_it(
@@ -462,6 +444,11 @@ def test_a_recovery_link_runs_no_pending_set_up(
     asks Keycloak to send it, so it changes the password and nothing else."""
     if state == "locked":
         who = locked_account(env, admin)
+        path = f"/users/{who.user.id}"  # a set-up left pending on the locked account
+        person = admin.master("GET", path).json()
+        admin.master(
+            "PUT", path, json={**person, "requiredActions": [NEW_CODES]}
+        ).raise_for_status()
     else:
         who = account(admin, OTP, CODES)
         spend_last_code(env, who)

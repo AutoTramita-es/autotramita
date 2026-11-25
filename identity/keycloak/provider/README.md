@@ -1,6 +1,6 @@
 # autotramita-keycloak-security-provider
 
-A minimal Keycloak provider that enforces the AutoTramita MFA policy **at the moment a credential changes**. Authorized by the owner on 2026-11-25 (F2-T09-REC, Keycloak Security Provider Authorization). Version `1.0.0`, built against Keycloak **26.4.7** only.
+A minimal Keycloak provider that enforces the AutoTramita MFA policy **at the moment a credential changes**. Authorized by the owner on 2026-11-25 (F2-T09-REC, Keycloak Security Provider Authorization). Version `1.1.0`, built against Keycloak **26.4.7** only. 1.1.0 (2026-11-25, owner decision): a recovery code never authorizes a permanent factor, also not on an account that holds codes only.
 
 ## Why it exists
 
@@ -19,10 +19,10 @@ Signing the user out, disabling the user, a new password, `notBefore` or shorter
 Checked for every combination by `PolicyCheck` (2,048 cases) on every build, and on a real Keycloak by the tests below.
 
 1. An account that holds a one-time code or passkey changes a credential only with a one-time code or passkey **proven in this sign-in**, at most 10 minutes after the sign-in started. Exceptions: a password reset through the person's e-mail link (D20; every factor stays), and new recovery codes right after setting up the first permanent factor in the same sign-in.
-2. Recovery codes never authorize a new permanent factor, new codes, a password change or the switch-off. Only an account from before (holding codes only, marked by an operator) may move to a permanent factor with one.
+2. Recovery codes never authorize a new permanent factor, new codes, a password change or the switch-off. An account holding recovery codes only (from before; none can be created now) is refused at sign-in and waits for the controlled recovery (T10/T11) — owner decision of 2026-11-25.
 3. Recovery codes only ever follow a permanent factor.
 4. The first permanent factor sets `at_mfa_required=true` in the same transaction as the credential. Opening or abandoning a form never sets it.
-5. An account with `at_mfa_required` and no usable factor gets no factor set up: it stays closed until a controlled recovery (T10/T11).
+5. An account with `at_mfa_required` and no usable factor, and an account holding recovery codes only, gets no factor set up: it stays closed until a controlled recovery (T10/T11). The realm refuses such an account before it asks for a code, so no code is spent.
 6. An e-mail link never adds a factor and never switches it off.
 7. The switch-off needs a fresh permanent factor, the explicit confirmation, and no `at_mfa_mandatory`. Every factor, the codes and the obligation go in one transaction, and every other session ends.
 8. If anything is missing or fails, the change does not happen (fail closed).
@@ -94,10 +94,10 @@ At start-up Keycloak warns that each of these SPIs "is internal and may change w
   - Its entries are checked against an allow-list.
   - `PolicyCheck` runs before packaging.
 - **Runtime stage:** the pinned Keycloak image plus `providers/autotramita-keycloak-security-provider.jar` (0444, owner 1000), user 1000. No build tool and no secret.
-- **Identity:** the jar's SHA-256 is printed by every build. For version 1.0.0 it is `7e9e297e58b4ed4542a933e64d3d74e3e737ff1e5108adb5909b897d54f32732`.
+- **Identity:** the jar's SHA-256 is printed by every build. Version 1.1.0: `12cfbc6695834303e04c1b220ed42c405687c631103941dbb72fc408694ad94a` (1.0.0 was `7e9e297e…`).
 - **Integrity of the classpath:** the Keycloak jars in the pinned image are byte-identical to the Maven Central artifacts of 26.4.7. The SHA-1 of `keycloak-services`, `keycloak-server-spi`, `keycloak-server-spi-private` and `keycloak-model-jpa` was compared during the analysis.
 - **Same build everywhere:** CI builds `autotramita-keycloak:ci` on GitHub and in Local CI from the same Dockerfile and digests. The developer compose file builds the same image. The image is not pushed to any registry.
-- **Image vulnerabilities:** the runtime image differs from upstream by one jar with no dependency, so its exposure is exactly that of the pinned upstream image. **A CVE scan of the image is not part of CI**: Local CI gives steps no network for a vulnerability database. This is an open item.
+- **Image vulnerabilities (KC-SP-12):** the CI job `image-scan` builds the image, has the pinned scanner `aquasec/trivy:0.76.2@sha256:8f6bb947…` download its vulnerability database (schema 2) and Java database (schema 1), saves the image, scans it **without network** for operating-system packages and Java components (JSON report), and runs `scripts/identity/scan_gate.py`. The gate fails on a database older than 48 hours (Java: 7 days) or missing, on a report of another image or scanner or without OS and Java coverage, and on every CRITICAL or HIGH finding without a time-limited acceptance by the owner (`identity/keycloak/vulnerability-acceptances.json`, empty). There is no automatic exception. **State on 2026-11-25:** 9 CRITICAL and 93 HIGH findings (90 distinct), nearly all fixed only in later Keycloak releases; the gate fails. Reviewed per finding in [`vulnerability-review-26.4.7.json`](../vulnerability-review-26.4.7.json) (group, applicability, remedy). Same database: Keycloak 26.8.2 has 0 CRITICAL and 6 HIGH, 26.8.1 1 and 10, 26.7.5 2 and 18. Resolving it needs an authorized Keycloak upgrade (with this provider's upgrade procedure); this is outside the provider's scope.
 
 ## Upgrading Keycloak
 
@@ -136,10 +136,14 @@ Never run it against a realm with real users without a separate authorization.
 - **Never lift `at_mfa_required` in bulk.**
 - **The `AT_MFA_GUARD` table** may stay; it holds only user ids, realm ids and a counter.
 
+## Database unavailable
+
+Observed on the two-node setup (exploration, 2026-11-25): with the database stopped, a submitted set-up form answers 500 and nothing is written (the transaction cannot start or commit). With the database paused, the request waits; when the database returns, the decision is taken then, under the lock, on the state of that moment. Keycloak cannot sign anybody in without its database in either case.
+
 ## Known limitations
 
 - The loser of a concurrent first change gets Keycloak's error page, not a friendly refusal.
 - Keycloak marks the SPIs used as internal, with no compatibility promise (see Upgrading).
 - A person who picks a recovery code at the fresh sign-in before adding a factor or changing the password is refused and has to start again with the authenticator.
-- Changes through the admin REST API bypass the guard (trust boundary).
+- Changes through the admin REST API bypass the guard (trust boundary). If an administrator removes the last permanent factor while a sign-in waits at the factor question, that sign-in already passed the refusal of codes-only accounts and may finish with a recovery code (a second factor, not the password alone).
 - Production start-up options (`kc.sh build --optimized`, database, cache stack) belong to D43 and deployment; tests use `start-dev`. The two-node test uses PostgreSQL with local caches.
