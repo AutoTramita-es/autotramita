@@ -2,7 +2,7 @@
 
 Datum: 2026-11-24 | Status: **ACCEPTED uz CP00 (2026-11-24)** | Povezano: [Execution order](F2-EXECUTION-ORDER.md) · [Plan §4](F2-IMPLEMENTATION-PLAN.md) · [AT-02](../specifications/AT-02-identity-security.md) · [Registar](F2-DECISION-REGISTER.md)
 
-> **F2-T09-REC:** [Izvještaj CP09 s dokazom po kriteriju](F2-CP09-RECONCILIATION-REPORT.md#8-acceptance-matrix-t01t13) bilježi trenutne rezultate i nedostatke. Kriteriji ostaju normativni; CP09 nije prihvaćen. Migracija 0007 pripada D37, a 0008 izolaciji konteksta i audita: brojevi u AC-PLT-12 (0006), AC-ADM-10 (0007) i raspon u §13.2 čitaju se kao sljedeći slobodni brojevi (od 0009).
+> **F2-T09-REC:** [Izvještaj CP09 s dokazom po kriteriju](F2-CP09-RECONCILIATION-REPORT.md#8-acceptance-matrix-t01t13) bilježi trenutne rezultate i nedostatke. Kriteriji ostaju normativni; CP09 nije prihvaćen (stanje 2026-11-25: **AC-POL-10 OPEN P1**, 8 PARTIAL). Odluke vlasnika F-2 i F-3 preciziraju AC-POL-06 i AC-POL-10: svježina se mjeri od stvarne provjere faktora, a osoba s MFA-om mora faktor dokazati za osjetljive radnje. Migracija 0007 pripada D37, 0008 izolaciji konteksta i audita, a 0009 razrješenju D37 (F-4): brojevi u AC-PLT-12 (0006), AC-ADM-10 (0007) i raspon u §13.2 čitaju se kao sljedeći slobodni brojevi (od 0010).
 
 ## Pravila dokazivanja
 - Kriterij vrijedi samo uz **dokaz**: imenovani test u CI runu na točnom SHA-u (3+1 job zelen, 0 skipped, `-W error`), ili pregledan artefakt naveden u koloni „Dokaz". Tvrdnja bez dokaza = nije ispunjeno.

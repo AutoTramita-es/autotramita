@@ -12,6 +12,8 @@ Datum: 2026-11-24 | Paket: F2-T01 | Status: **F2-CP01 PRIHVAĆEN 2026-11-24 (D37
 > - The e-mail address is read-only for the person (profile page and account API).
 > - Mobile back-channel logout, optional names, minimized tokens and separate DEV/PROD imports pass.
 >
+> **Update (2026-11-25, CI run [45527442553](https://github.com/AutoTramita-es/autotramita/actions/runs/45527442553)):** the level-two flow now proves one-time codes, passkeys and recovery codes (the WebAuthn and recovery-code findings above are superseded). `UpdatePassword` is not a credential action, so no level setting protects Keycloak's password form; a pending required action is served after a password-only sign-in ([CP09 report §2](F2-CP09-RECONCILIATION-REPORT.md#2-owner-decision-needed)). `auth_time` moves on a password sign-in; the session note `loa-map` records when each level was really proven.
+>
 > The table below is the historical T01 result.
 
 ## Rezultati

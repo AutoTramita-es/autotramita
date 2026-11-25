@@ -7,7 +7,13 @@ Povezano: [AT-02 specifikacija](../specifications/AT-02-identity-security.md) ·
 
 **Owner decisions on F2-T09-REC findings (2026-11-24, verbatim: „Autoriziram F-0 opciju (a) i F-1 opciju (b).”), ACCEPTED:** F-0 (a) periodička provjera neriješenih promjena lozinke na 60 s workeru (dopuna D20) · F-1 (b) registracija passkeya isključena dok WebAuthn ne bude podržan u LoA2 toku (privremeno sužava D22 na TOTP; F-1 (a) nije odlučen).
 
-**Open items raised by F2-T09-REC (not decisions; owner to decide, see report §2):** F-1R a recovery-codes-only account reaches LoA2 with the password alone (D22/D23/D41, P1, blocks T10) · F-2 freshness of a silent MFA step-up (D23) · F-3 LoA1 for e-mail and password change by people with MFA (D23) · F-4 resolution rules for D37 `MANUAL_REVIEW` (T11).
+**Owner decisions of 2026-11-25 (F2-T09-REC completion order), ACCEPTED** (verbatim extracts in the [execution order](F2-EXECUTION-ORDER.md)):
+- **F-1R (d)** — TOTP, recovery codes and WebAuthn are part of the level-two flow (extends D22/D23/D41). Passkey registration stays off until separately approved (F-1 b unchanged).
+- **F-2** — a step-up lasts at most 10 minutes from the successful authentication with the factor; neither single sign-on nor a new token extends it; the 5-minute limit stays where defined (amends D23).
+- **F-3** — sensitive account actions need a fresh password for people without MFA and a fresh authentication with the existing factor for people with MFA; recovery stays a separate flow (amends D23 and AT-02 §7.2).
+- **F-4** — a minimal safe resolution for D37 `MANUAL_REVIEW`; privileged interface may depend on T10/T11 (completes D37).
+
+**Open, owner to decide ([CP09 report §2](F2-CP09-RECONCILIATION-REPORT.md#2-owner-decision-needed)):** F-1R-B (P1) abandoned recovery-code regeneration is served after the password alone · F-3K (P2) Keycloak's password form does not ask for the factor. Option A would amend D23 (“LoA1 = password” for people with a factor), option B would amend D41. Neither is decided.
 
 ## Zapis prihvaćanja (F2-CP00, 2026-11-24)
 Vlasnik projekta je izričito napisao: „Prihvaćam D01–D43 kako su predloženi; autoriziram samo F2-T01." Time su **ACCEPTED** D01–D41 i D43, uključujući D17 (aditivni F1 amandman) i D20 (aplikacijski oporavak lozinke, odstupanje od formulacije G6 koraka 6a) te potvrdu O04 (D02) i O05 (D15). **D42 ostaje OPEN** jer je pravno pitanje za AT-20 (prijedlog nije odluka). Prihvaćanje odluka ne autorizira druge pakete: autoriziran je isključivo **F2-T01**. Odluke ovisne o spiku (D19, D20, D22, D23, D24, D37, D41) prihvaćene su kao dizajn **uz uvjet** da ishod spika S1–S10 to potvrdi; opovrgnuta tvrdnja zaustavlja rad na CP01 (STOP), ne improvizira se.
