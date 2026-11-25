@@ -500,3 +500,34 @@ def test_rec_migrations_downgrade_to_exactly_what_was_there_and_back(
     assert _security_catalog(role_env) == before
     migrate(owner, "upgrade", "head")
     assert _security_catalog(role_env) == head
+
+
+# --- REC / F-4: 0009 changes one transition rule and nothing else ------------------------------
+def _email_guard(env: RoleEnv) -> tuple[object, ...]:
+    with env.admin_engine().connect() as db:
+        row = db.execute(
+            text(
+                "SELECT p.prosrc, p.proacl::text, p.proowner::regrole::text, p.prosecdef "
+                "FROM pg_proc p WHERE p.proname = 'email_change_guard'"
+            )
+        ).one()
+    return tuple(row)
+
+
+def test_the_review_migration_only_widens_the_guard_and_downgrades_exactly(
+    role_env: RoleEnv,
+) -> None:
+    owner = role_env.engine("owner")
+    migrate(owner, "upgrade", "0008")
+    before, catalog = _email_guard(role_env), _security_catalog(role_env)
+    migrate(owner, "upgrade", "0009")
+    head = _email_guard(role_env)
+    assert "app.email_change_review" in str(head[0]) and "app.email_change_review" not in str(
+        before[0]
+    )
+    assert head[1:] == before[1:]  # same privileges and owner, still no SECURITY DEFINER
+    assert _security_catalog(role_env) == catalog  # no grant, policy or constraint changed
+    migrate(owner, "downgrade", "0008")
+    assert _email_guard(role_env) == before and _security_catalog(role_env) == catalog
+    migrate(owner, "upgrade", "head")
+    assert _email_guard(role_env) == head

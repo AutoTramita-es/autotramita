@@ -49,6 +49,7 @@ CATALOG: dict[str, ActionSpec] = {
     "identity.link.conflict": _spec(ID),
     "identity.email.verified": _spec(ID),
     "identity.email.changed": _spec(ID),
+    "identity.email.change_reviewed": _spec(ID, decision="code", result="code"),
     "identity.user.deactivated": _spec(ID, reason_code="code"),
     "identity.user.blocked": _spec(ID, reason_code="code"),
     "identity.user.reactivated": _spec(ID, reason_code="code"),

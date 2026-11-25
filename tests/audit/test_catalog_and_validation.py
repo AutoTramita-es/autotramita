@@ -12,7 +12,8 @@ SAMPLE: dict[Kind, Any] = {"code": "WEB", "int": 3, "bool": True, "uuid": str(uu
 SPEC_ACTIONS = {  # AT-02 section 9.2, expanded
     "auth.login.succeeded", "auth.login.failed", "auth.logout", "auth.callback.rejected",
     "auth.token.invalid", "identity.user.provisioned", "identity.link.conflict",
-    "identity.email.verified", "identity.email.changed", "identity.user.deactivated",
+    "identity.email.verified", "identity.email.changed", "identity.email.change_reviewed",
+    "identity.user.deactivated",
     "identity.user.blocked", "identity.user.reactivated", "session.created", "session.revoked",
     "session.expired_detected", "session.context.changed", "session.theft_suspected",
     "security.password.changed", "security.password.recovery.requested",
