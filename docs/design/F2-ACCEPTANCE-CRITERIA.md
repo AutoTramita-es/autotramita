@@ -2,6 +2,8 @@
 
 Datum: 2026-11-24 | Status: **ACCEPTED uz CP00 (2026-11-24)** | Povezano: [Execution order](F2-EXECUTION-ORDER.md) · [Plan §4](F2-IMPLEMENTATION-PLAN.md) · [AT-02](../specifications/AT-02-identity-security.md) · [Registar](F2-DECISION-REGISTER.md)
 
+> **F2-T09-REC Keycloak Security Upgrade (2026-11-25, D45):** Keycloak 26.8.2 umjesto 26.4.7; AC-CTX-01 preformuliran (očuvana F1 sigurnosna jamstva umjesto doslovno nepromijenjenih testova); izvor geolokacije za AC-SES-10 odgođen do T11.
+>
 > **F2-T09-REC:** [Izvještaj CP09 s dokazom po kriteriju](F2-CP09-RECONCILIATION-REPORT.md#8-acceptance-matrix-t01t13) bilježi trenutne rezultate i nedostatke. Kriteriji ostaju normativni; CP09 nije prihvaćen (stanje 2026-11-25: **AC-POL-10 OPEN P1**, 8 PARTIAL). Odluke vlasnika F-2 i F-3 preciziraju AC-POL-06 i AC-POL-10: svježina se mjeri od stvarne provjere faktora, a osoba s MFA-om mora faktor dokazati za osjetljive radnje. Migracija 0007 pripada D37, 0008 izolaciji konteksta i audita, a 0009 razrješenju D37 (F-4): brojevi u AC-PLT-12 (0006), AC-ADM-10 (0007) i raspon u §13.2 čitaju se kao sljedeći slobodni brojevi (od 0010).
 
 ## Pravila dokazivanja
@@ -13,7 +15,7 @@ Datum: 2026-11-24 | Status: **ACCEPTED uz CP00 (2026-11-24)** | Povezano: [Execu
 ## 1. Keycloak (T01) — F2.01
 | ID | Kriterij | Dokaz |
 |---|---|---|
-| AC-KC-01 | Realm JSON za DEV/test uvozi se u svježi KC 26.4.7 container bez ručnih koraka | CI `identity-integration` |
+| AC-KC-01 | Realm JSON za DEV/test uvozi se u svježi KC 26.8.2 container bez ručnih koraka (do 2026-11-25: 26.4.7; D45) | CI `identity-integration` |
 | AC-KC-02 | Linter realma odbija: wildcard redirect, implicit, direct grants, javni klijent s tajnom, tajnu u JSON-u, `verifyEmail=false`, `resetPasswordAllowed=true`, brute-force ≠ 5/15 min | test linter + negativni primjeri |
 | AC-KC-03 | Za DEV i PROD postoje odvojeni realmovi/konfiguracija bez zajedničkih tajni i klijenata | linter + pregled |
 | AC-KC-04 | Spike izvještaj daje POTVRĐENO/OPOVRGNUTO za S1–S10 s dokazom | `F2-KEYCLOAK-SPIKE-REPORT.md` |
@@ -50,7 +52,7 @@ Datum: 2026-11-24 | Status: **ACCEPTED uz CP00 (2026-11-24)** | Povezano: [Execu
 ## 4. Kontekst i izolacija (T03, T08)
 | ID | Kriterij | Dokaz |
 |---|---|---|
-| AC-CTX-01 | D17 je aditivan: svi F1 testovi neizmijenjeni i zeleni | CI |
+| AC-CTX-01 | D17 je aditivan: **sva prethodno prihvaćena F1 sigurnosna jamstva su očuvana** i svi F1 testovi zeleni. Izmjene i proširenja F1 testova dopuštene su samo ako nijedno jamstvo nije uklonjeno, nijedna tvrdnja oslabljena, a ekvivalentnost starih i novih provjera dokumentirana i dokazana (matrica ekvivalentnosti u izvještaju CP09). Preformulirano odlukom vlasnika 2026-11-25 (D45); prije: "svi F1 testovi neizmijenjeni i zeleni" | CI + matrica ekvivalentnosti |
 | AC-CTX-02 | Bootstrap kontekst ne curi između konekcija iz poola ni transakcija | PG test |
 | AC-CTX-03 | Bootstrap kontekst postavlja isključivo auth modul; ne otkriva tuđe retke | statički test + PG test |
 | AC-CTX-04 | Klijentski `tenant_id`/`branch_id` (header/body/path/query) ne mijenja kontekst | API test |
@@ -89,7 +91,7 @@ Datum: 2026-11-24 | Status: **ACCEPTED uz CP00 (2026-11-24)** | Povezano: [Execu
 | AC-SES-07 | RLS: tuđa sesija nevidljiva i neopoziva; platform samo uz grant | PG test |
 | AC-SES-08 | `user_id`, `credential_hash`, `absolute_expires_at` nepromjenjivi iz app uloge | PG test |
 | AC-SES-09 | Touch najviše 1×/60 s | unit |
-| AC-SES-10 | UA promjena opoziva sesiju (`SECURITY_POLICY`); promjena države samo audit + obavijest | integracijski |
+| AC-SES-10 | UA promjena opoziva sesiju (`SECURITY_POLICY`); promjena države samo audit + obavijest. Izvor geolokacije: odluka odgođena do T11 (vlasnik 2026-11-25, D45) | integracijski |
 | AC-SES-11 | Rotacija vjerodajnice pri prijavi i step-upu; stara odmah neupotrebljiva | integracijski |
 | AC-SES-12 | Migracija 0005 up/down/up | CI korak |
 

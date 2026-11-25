@@ -1,6 +1,6 @@
 # autotramita-keycloak-security-provider
 
-A minimal Keycloak provider that enforces the AutoTramita MFA policy **at the moment a credential changes**. Authorized by the owner on 2026-11-25 (F2-T09-REC, Keycloak Security Provider Authorization). Version `1.1.0`, built against Keycloak **26.4.7** only. 1.1.0 (2026-11-25, owner decision): a recovery code never authorizes a permanent factor, also not on an account that holds codes only.
+A minimal Keycloak provider that enforces the AutoTramita MFA policy **at the moment a credential changes**. Authorized by the owner on 2026-11-25 (F2-T09-REC, Keycloak Security Provider Authorization). Version `1.1.1`, built against Keycloak **26.8.2** only. 1.1.0 (2026-11-25, owner decision): a recovery code never authorizes a permanent factor, also not on an account that holds codes only. 1.1.1 (2026-11-25, Keycloak Security Upgrade, D45): compatibility with Keycloak 26.8.2 only, the policy is unchanged.
 
 ## Why it exists
 
@@ -12,7 +12,7 @@ Realm configuration alone could not close three findings, all with the same caus
 | F-3K, rest (P2) | the same with the new-password form | refused at submit |
 | Held sign-in with a code | password + unused recovery code, held open while the last code is spent elsewhere, received new codes | refused: a recovery code never authorizes new codes |
 
-Signing the user out, disabling the user, a new password, `notBefore` or shorter lifetimes do not end such a form (tried on 26.4.7).
+Signing the user out, disabling the user, a new password, `notBefore` or shorter lifetimes do not end such a form (tried on 26.4.7; the provider's tests that hold such forms pass unchanged on 26.8.2).
 
 ## Security invariants
 
@@ -27,7 +27,7 @@ Checked for every combination by `PolicyCheck` (2,048 cases) on every build, and
 7. The switch-off needs a fresh permanent factor, the explicit confirmation, and no `at_mfa_mandatory`. Every factor, the codes and the obligation go in one transaction, and every other session ends.
 8. If anything is missing or fails, the change does not happen (fail closed).
 
-## Extension points (Keycloak 26.4.7)
+## Extension points (Keycloak 26.8.2)
 
 | SPI | Use | Keycloak's classification |
 |---|---|---|
@@ -37,6 +37,31 @@ Checked for every combination by `PolicyCheck` (2,048 cases) on every build, and
 | theme resources | `at-disable-mfa.ftl` and its messages | — |
 
 At start-up Keycloak warns that each of these SPIs "is internal and may change without notice". These are the documented extension points of the Server Developer Guide (Authentication SPI, Required actions, JPA entity providers). However, Keycloak gives **no compatibility promise** for them between versions. That is why the provider is compiled against the exact jars of the pinned image, and the whole regression suite is mandatory for every upgrade (below).
+
+**Review against the sources of 26.8.2 (2026-11-25).** Sources and jars of 26.4.7 and 26.8.2 from Maven Central (the image jars are byte-identical to them), compared class by class. Regression evidence: the Keycloak job on 26.8.2, 257 tests, one node and two nodes on one database, plus the upgrade rehearsal ([UPGRADE-26.8.2.md](../UPGRADE-26.8.2.md)).
+
+| Internal API used | Changed in 26.8.2? | Security effect | Correction | Regression evidence |
+|---|---|---|---|---|
+| `RequiredActionProvider`, `RequiredActionContext`, `InitiatedActionSupport`, `CredentialRegistrator` | no (imports reordered) | none | none | every `test_security_provider_keycloak` test |
+| `RequiredActionFactory` | `isOneTimeAction()` defaults to `true` (was `false`); built-ins dropped their own overrides | stricter: execute-actions links with passkey registration are single-use; the guarded factories inherit the built-in value as before | none | `test_a_link_sent_past_the_application_runs_no_set_up_either`, `test_a_recovery_link_runs_no_pending_set_up` |
+| `UpdateTotp`, `UpdatePassword`, `RecoveryAuthnCodesAction` (extended) | only the `isOneTimeAction()` override removed | none | none | KC-SP-02/03/04 tests |
+| `WebAuthnRegisterFactory`, `WebAuthnPasswordlessRegisterFactory` (extended) | trust verifier built lazily | none | none | passkey tests (68) |
+| `WebAuthnRegister` (wrapped) | challenge consumed atomically across nodes, duplicate credential becomes an error page, AAGUID policy needs attestation, attachment checked | stricter; an error leaves the status at challenge, so the provider records nothing | none | `test_first_activations_on_two_nodes_at_once_leave_exactly_one_factor`, passkey tests |
+| Casts of the set-up factories (`OTPFormAuthenticator`, `WebAuthnAuthenticator`, `WebAuthnPasswordlessAuthenticator`) | same casts | the factories must still extend the built-ins | none | `test_the_provider_replaces_every_credential_action_and_guards_the_sign_in` |
+| `ProviderManager.compareFactories` | no | none | none | same test (operational info 1.1.1 on every action, also the CI import step) |
+| `LoginActionsService.processRequireAction` (`processAction` inside the request transaction) | no | none | none | `test_a_held_form_is_refused_and_the_refusal_is_recorded` |
+| `AuthenticatorUtil.getAuthnCredentials` | no | none | none | KC-SP-02/03 tests |
+| `AuthenticatorUtil.logoutOtherSessions` (switch-off) | also removes other authentication sessions and, by default, offline sessions | stricter | none | `test_a_person_switches_the_second_factor_off_with_the_factor_and_a_confirmation` |
+| `DefaultActionTokenKey.ACTION_TOKEN_USER_ID` | key unchanged; nonce from `SecretGenerator`; `ResetCredentialEmail` now requires the token user | stricter | none | `test_a_forgotten_password_is_recovered_and_the_factor_stays` |
+| `Time.currentTime()` | deprecated (`int`) | none | `Time.currentTimeSeconds()` (same clock, `long`); the note is parsed as `long` (an `int` note of a sign-in started before the upgrade still parses) | `test_a_second_one_time_code_needs_the_permanent_factor_in_this_sign_in`, freshness tests |
+| `JpaEntityProvider` / `JpaEntityProviderFactory`, `JpaConnectionProvider` | `getEntities()` marked for removal (still abstract; Quarkus finds the entity at build time) | none | `@SuppressWarnings("removal")` on that method only | lock tests on two nodes; rehearsal: guard rows kept and written after the migration |
+| `UserCache`, `UserStoragePrivateUtil.userLocalStorage` | no | none | none | `test_a_form_held_on_one_node_is_refused_after_the_factor_was_set_up_on_the_other` |
+| `SubjectCredentialManager` (`getStoredCredentialsStream`, `removeStoredCredentialById`) | new default method `getFirstFactorCredentialsStream` only | none | none | switch-off and removal tests |
+| `EventType.CUSTOM_REQUIRED_ACTION_ERROR`, `ServerInfoAwareProviderFactory` | no | none | none | `test_a_held_form_is_refused_and_the_refusal_is_recorded` |
+| Hibernate 7.1.4 → 7.4.9, PostgreSQL driver 42.7.7 → 42.7.13 | lock hint and Liquibase changelog unchanged | none | none | two-node concurrency tests (3 rounds each) |
+| Admin REST API (trusted, outside the guard) | needs the `kc-admin-api` scope in the token | the application's `at-admin-svc` was refused (fail closed, but the application's checks would fail) | `kc-admin-api` default scope on `at-admin-svc` (realm file, linter); manual step for existing realms | `test_the_application_reads_the_factor_obligation_from_the_real_provider`, rehearsal (401 → 200) |
+
+No change needed a new mechanism, a fork or the removal of a protection.
 
 **How the replacement works.** Keycloak prefers a custom factory to an internal one with the same ID (`ProviderManager.compareFactories`), and the order is raised as well (100). Each factory **extends** the built-in class, because Keycloak's own authenticators cast the factory of their set-up action to it (`OTPFormAuthenticator`, `WebAuthnAuthenticator`, `WebAuthnPasswordlessAuthenticator`). The subclass keeps every built-in behaviour and only wraps the provider it creates.
 
@@ -87,29 +112,31 @@ At start-up Keycloak warns that each of these SPIs "is internal and may change w
 ## Build, identity and reproducibility
 
 - **Build:** `identity/keycloak/Dockerfile`, multi-stage, from two images pinned by digest:
-  - `quay.io/keycloak/keycloak:26.4.7@sha256:9409c59b…`
+  - `quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e…` (26.4.7 until 2026-11-25)
   - `eclipse-temurin:21-jdk@sha256:8ad118b1…`
 - **Build stage:** compiles the sources with `javac --release 21 -Xlint:all -Werror` against `/opt/keycloak/lib` of the pinned Keycloak image, the only classpath. It has **no third-party dependency** and downloads nothing; Local CI builds without network.
   - The jar is built twice and the two copies must be identical.
   - Its entries are checked against an allow-list.
   - `PolicyCheck` runs before packaging.
 - **Runtime stage:** the pinned Keycloak image plus `providers/autotramita-keycloak-security-provider.jar` (0444, owner 1000), user 1000. No build tool and no secret.
-- **Identity:** the jar's SHA-256 is printed by every build. Version 1.1.0: `12cfbc6695834303e04c1b220ed42c405687c631103941dbb72fc408694ad94a` (1.0.0 was `7e9e297e…`).
-- **Integrity of the classpath:** the Keycloak jars in the pinned image are byte-identical to the Maven Central artifacts of 26.4.7. The SHA-1 of `keycloak-services`, `keycloak-server-spi`, `keycloak-server-spi-private` and `keycloak-model-jpa` was compared during the analysis.
+- **Identity:** the jar's SHA-256 is printed by every build. Version 1.1.1 (on 26.8.2): `d61ac28e362008f530b3ab6b5642fbbb892eda5f0137669d5be96b935b7c574a` (1.1.0 on 26.4.7 was `12cfbc66…`, 1.0.0 `7e9e297e…`).
+- **Integrity of the classpath:** the Keycloak jars in the pinned image are byte-identical to the Maven Central artifacts of 26.8.2. The SHA-1 of `keycloak-services`, `-server-spi`, `-server-spi-private`, `-model-jpa`, `-core`, `-common`, `-model-storage`, `-model-storage-private`, `-model-storage-services` and `-model-infinispan` was compared (and the same for 26.4.7).
 - **Same build everywhere:** CI builds `autotramita-keycloak:ci` on GitHub and in Local CI from the same Dockerfile and digests. The developer compose file builds the same image. The image is not pushed to any registry.
-- **Image vulnerabilities (KC-SP-12):** the CI job `image-scan` builds the image, has the pinned scanner `aquasec/trivy:0.76.2@sha256:8f6bb947…` download its vulnerability database (schema 2) and Java database (schema 1), saves the image, scans it **without network** for operating-system packages and Java components (JSON report), and runs `scripts/identity/scan_gate.py`. The gate fails on a database older than 48 hours (Java: 7 days) or missing, on a report of another image or scanner or without OS and Java coverage, and on every CRITICAL or HIGH finding without a time-limited acceptance by the owner (`identity/keycloak/vulnerability-acceptances.json`, empty). There is no automatic exception. **State on 2026-11-25:** 9 CRITICAL and 93 HIGH findings (90 distinct), nearly all fixed only in later Keycloak releases; the gate fails. Reviewed per finding in [`vulnerability-review-26.4.7.json`](../vulnerability-review-26.4.7.json) (group, applicability, remedy). Same database: Keycloak 26.8.2 has 0 CRITICAL and 6 HIGH, 26.8.1 1 and 10, 26.7.5 2 and 18. Resolving it needs an authorized Keycloak upgrade (with this provider's upgrade procedure); this is outside the provider's scope.
+- **Image vulnerabilities (KC-SP-12):** the CI job `image-scan` builds the image, has the pinned scanner `aquasec/trivy:0.76.2@sha256:8f6bb947…` download its vulnerability database (schema 2) and Java database (schema 1), saves the image, scans it **without network** for operating-system packages and Java components (JSON report), and runs `scripts/identity/scan_gate.py`. The gate fails on a database older than 48 hours (Java: 7 days) or missing, on a report of another image or scanner or without OS and Java coverage, and on every CRITICAL or HIGH finding without a time-limited acceptance by the owner (`identity/keycloak/vulnerability-acceptances.json`, empty). There is no automatic exception. **State on 2026-11-25, after the upgrade to 26.8.2:** 0 CRITICAL and 6 HIGH (Guava, the JDK's eMudhra distrust, four in `sqlite-libs`), all carried over from 26.4.7, none new; the gate fails until the owner decides on them. Reviewed one by one in [`vulnerability-review-26.8.2.json`](../vulnerability-review-26.8.2.json) (applicability, preconditions, protection, fix, recommendation, recheck date). Before the upgrade, with the same databases: 9 CRITICAL and 93 HIGH (90 distinct, [`vulnerability-review-26.4.7.json`](../vulnerability-review-26.4.7.json), kept for comparison).
 
 ## Upgrading Keycloak
 
-1. Change both pinned references together (Dockerfile defaults, `ci.yml`, compose; a test keeps them equal).
-2. Build. A compile error means the SPI changed: read the new built-in classes before adapting anything.
+1. Change both pinned references together (Dockerfile defaults, `ci.yml`, the developer compose file and the prepared production file `identity/docker-compose.keycloak-production.yml`; a test keeps them equal). The live `docker-compose.yml` changes only with a production authorization.
+2. Build. A compile error (also a deprecation: the build uses `-Werror`) means the SPI changed: read the new built-in classes before adapting anything.
 3. Re-check against the new sources:
    - `ProviderManager.compareFactories`;
    - every cast of a set-up factory (`grep -rn "(UpdateTotp)\|(WebAuthnRegisterFactory)\|(WebAuthnPasswordlessRegisterFactory)"`);
    - `LoginActionsService.requiredActionPOST` (the decision must still run in `processAction` inside the request transaction);
-   - `AuthenticatorUtil.getAuthnCredentials`, `DefaultActionTokenKey.ACTION_TOKEN_USER_ID`, `JpaEntityProvider`.
-4. Run the full Keycloak job. **Mandatory regression tests:** `test_security_provider_keycloak.py`, `test_second_factor_keycloak.py`, `test_recovery_codes_keycloak.py` (including the two-node tests), the fail-closed step and the realm import step.
-5. Raise `VERSION` and record the new jar hash here.
+   - `AuthenticatorUtil.getAuthnCredentials`, `DefaultActionTokenKey.ACTION_TOKEN_USER_ID`, `JpaEntityProvider`;
+   - interfaces the guarded actions wrap (`RequiredActionProvider`, `RequiredActionFactory`): a new default method is not delegated automatically;
+   - what the admin REST API requires of a token (26.8: the `kc-admin-api` scope) and the realm migrations of every version in between.
+4. Run the full Keycloak job and the upgrade rehearsal (`scripts/identity/upgrade_rehearsal.py`) from the old image to the new one. **Mandatory regression tests:** `test_security_provider_keycloak.py`, `test_second_factor_keycloak.py`, `test_recovery_codes_keycloak.py` (including the two-node tests), the fail-closed step and the realm import step.
+5. Raise `VERSION` and record the new jar hash here. Record the review per extension point (as above for 26.8.2) and the production steps (as in [UPGRADE-26.8.2.md](../UPGRADE-26.8.2.md)).
 
 ## Reconciling an existing realm
 

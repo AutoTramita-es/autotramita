@@ -41,7 +41,7 @@ Načela: Keycloak dokazuje **tko je osoba**; aplikacija odlučuje **što smije**
 | Host | `auth.dev.autotramita.es` | `auth.autotramita.es` |
 | Baza | `autotramita_keycloak_dev` | `autotramita_keycloak_prod` |
 | Kod konfiguracije | `identity/keycloak/realm-dev.json` | `identity/keycloak/realm-prod.json` |
-Isti izvor (zajednički predložak realma + preklapanje po okruženju). Nema dijeljenja realma, tajni, klijenata ni baze (I01). Image `quay.io/keycloak/keycloak:26.4.7` kako je pripijen u Composeu. Compose/Traefik se u F2 **ne mijenjaju** (uvoz realma, skrivanje admin konzole — D43 — su live preduvjet uz zasebnu autorizaciju).
+Isti izvor (zajednički predložak realma + preklapanje po okruženju). Nema dijeljenja realma, tajni, klijenata ni baze (I01). Image: AutoTramita Keycloak image (`identity/keycloak/Dockerfile`, upstream `quay.io/keycloak/keycloak:26.8.2` pinan po digestu, D44/D45); živi `docker-compose.yml` i dalje navodi 26.4.7 dok nadogradnja produkcije ne bude zasebno autorizirana. Compose/Traefik se u F2 **ne mijenjaju** (uvoz realma, skrivanje admin konzole — D43 — su live preduvjet uz zasebnu autorizaciju).
 
 ### 4.2 Klijenti (D02)
 | Klijent | Tip | Tok | Napomene |
@@ -60,7 +60,7 @@ Realm ključ RS256 s prioritetom; rotacija svakih 90 dana ili odmah pri kompromi
 
 ### 4.5 Lokalno i CI okruženje (D07)
 1. **Jedinično:** lažni IdP (lokalni RSA par, JWKS, generator tokena s kontroliranim claimovima) — brz, bez mreže.
-2. **Integracijsko:** Keycloak 26.4.7 service container (digest pin) s uvezenim `realm-test.json` u CI-u; lokalno jednokratni `identity/docker-compose.keycloak-test.yml` s izbacivim volumenom. Nikad zajednički Keycloak, nikad stvarni podaci.
+2. **Integracijsko:** Keycloak 26.8.2 container (AutoTramita image, digest pin; do 2026-11-25 26.4.7) s uvezenim `realm-test.json` u CI-u; lokalno jednokratni `identity/docker-compose.keycloak-test.yml` s izbacivim volumenom. Nikad zajednički Keycloak, nikad stvarni podaci.
 3. Realm linter test (bez Keycloaka): zabranjeni wildcard redirect, direct grants, implicit, javni klijent s tajnom, tajna u JSON-u, `registrationEmailAsUsername` nedosljedan, brute-force parametri, `resetPasswordAllowed=false`, `verifyEmail=true`.
 
 ## 5. F2.02 — Globalni korisnički identitet

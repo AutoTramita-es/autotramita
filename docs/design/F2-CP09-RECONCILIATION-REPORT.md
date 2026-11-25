@@ -1,29 +1,72 @@
 # F2-CP09 — reconciliation report (F2-T09-REC)
 
-Date: 2026-11-25 (revised after the Final Completion Order). **Status: F2-T09-REC — BLOCKED.** Every requirement of the order is implemented and every test passes, but KC-SP-12 fails as it must: the pinned Keycloak 26.4.7 image carries **9 CRITICAL and 93 HIGH** findings (90 distinct), nearly all fixed only in later Keycloak releases, and a Keycloak upgrade is not authorized. Minimal proposal in [§12](#12-status-blocker-and-independent-security-review). No P0 or P1 finding of the AutoTramita code is open. **CP09 is not accepted**; T10 is not started; nothing was deployed, no existing realm or persistent database was touched. D42 stays OPEN (AT-20), R10 stays deferred, O15 blocks production mail.
+Date: 2026-11-25 (revised after the Keycloak Security Upgrade). **Status: F2-T09-REC — IMPLEMENTATION COMPLETED / OWNER SECURITY DECISION REQUIRED.** Keycloak runs 26.8.2 in development, tests and CI (owner authorization, D45), the security provider 1.1.1 is compatible and every test passes. The image scan went from **9 CRITICAL / 93 HIGH to 0 CRITICAL / 6 HIGH** (same databases); the six remaining HIGH findings are analysed one by one and need the owner's decision ([§2.0](#20-keycloak-security-upgrade-2026-11-25)); the gate keeps failing until then, as it must. No P0 or P1 finding of the AutoTramita code is open. **CP09 is not accepted**; T10 is not started; nothing was deployed, no existing realm or persistent database was touched. D42 stays OPEN (AT-20), R10 stays deferred, O15 blocks production mail.
 
 ## 1. Revisions and evidence
 
 | Item | Value |
 |---|---|
-| Start of the Final Completion Order | `5340fb78bae07f809b3b9fad84b21478fb341c99` |
-| **Final implementation SHA** | `8e49b9150cb7e9a9b15bfdb22ab6ae67fb88c99d` |
-| **Local FULL CI on that SHA** | run `20261125-140644-a99236`, clean tree (`201e7bb4ec0efa3ed3731da71f907c546b6b483c`), 376.7 s: **every test job PASS**; `image-scan` **FAIL** at its gate (§2.1), so the run is FAIL |
-| **GitHub CI on that SHA** | [45632069412](https://github.com/AutoTramita-es/autotramita/actions/runs/45632069412): every test job **success**, `image-scan` **failure** at its gate (102 findings, same databases as locally); `compare-github.sh`: **EQUIVALENT** |
-| Main tests | **1,436 passed**, 0 failed, 0 errors, 0 skipped |
-| Keycloak tests | **257 passed** (one node, two nodes on one database, the application), 0 failed, 0 errors, 0 skipped. **Total 1,693** distinct tests; all invocations 1,876 |
-| Image scan | Trivy 0.76.2 (pinned by digest); vulnerability DB schema 2, updated 2026-11-25T13:07Z (age 1.0 h, sha256 `1581858e…`); Java DB schema 1, updated 2026-11-25T00:58Z (13.2 h, `538098aa…`); image `autotramita-keycloak:ci`, Red Hat 9.7, OS packages and Java components covered; **9 CRITICAL, 93 HIGH**, none accepted |
-| Provider | **1.1.0**, jar SHA-256 `12cfbc6695834303e04c1b220ed42c405687c631103941dbb72fc408694ad94a` (built twice per build, identical; decision table 2,048 cases) |
+| Start of the Keycloak Security Upgrade | `ad693c50cf7d7e1c860520017d663d69ad3c606b` |
+| Owner decisions recorded before the code | `77caf18` (D45, ADR-008, execution order) |
+| **Final implementation SHA** | recorded in the results commit that follows it (§1 of the next revision) |
+| **Local FULL CI on that SHA** | recorded in the results commit |
+| **GitHub CI on that SHA** | recorded in the results commit |
+| Keycloak | **26.8.2**, `quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3` (index; amd64 `sha256:75b5c435…`), RHEL 9.9, OpenJDK 21.0.13.1 |
+| Provider | **1.1.1**, jar SHA-256 `d61ac28e362008f530b3ab6b5642fbbb892eda5f0137669d5be96b935b7c574a` (built twice per build, identical; decision table 2,048 cases) |
+| Image scan | Trivy 0.76.2 (pinned by digest); vulnerability DB schema 2 updated 2026-11-25T13:07Z (`1581858e…`), Java DB schema 1 updated 2026-11-25T00:58Z (`538098aa…`), the same databases as the 26.4.7 scan; **0 CRITICAL, 6 HIGH**, none accepted |
+| Targeted runs during the work | Local CI `keycloak` profile: first run 178/257 (the tests' software passkey could not read 26.8.2's page, §2.0), after the helper fix **257/257**; `security` profile: gate FAIL on the 6 HIGH |
 
-Commits of this order: `7cacef8` (owner decisions, before the code), `382bcdb` (recovery-only policy, provider 1.1.0), `8e49b91` (image scan, broker corrections); then the documentation commit. Earlier: see §1 of the previous revision in Git history (`5340fb7`). Local CI limits LCI-04 and LCI-05 apply as accepted (also to the scanner's download).
+Previous revision (Final Completion Order, provider 1.1.0 on 26.4.7): final SHA `8e49b91`, local FULL `20261125-140644-a99236`, GitHub run [45632069412](https://github.com/AutoTramita-es/autotramita/actions/runs/45632069412), 1,436 main and 257 Keycloak tests; see Git history (`ad693c5`).
 
-The matrix in [§8](#8-acceptance-matrix-t01t13) was generated from the JUnit files of the local run above; the generator refuses a row whose named test is missing or did not pass. `M` = main job, `K` = Keycloak job.
+The matrix in [§8](#8-acceptance-matrix-t01t13) is checked against the JUnit files of the final local run: every named test exists and passed. `M` = main job, `K` = Keycloak job.
 
 ## 2. Keycloak security provider
 
+### 2.0 Keycloak Security Upgrade (2026-11-25)
+
+Owner authorization D45: Keycloak 26.4.7 → **26.8.2** directly, one-time exception to the 14-day rule for development, tests and CI only. Upgrade details, rehearsal and production steps: [identity/keycloak/UPGRADE-26.8.2.md](../../identity/keycloak/UPGRADE-26.8.2.md); SPI review per extension point: [provider README](../../identity/keycloak/provider/README.md#extension-points-keycloak-2682).
+
+**Checks before the change.**
+
+| Check | Result |
+|---|---|
+| Official availability | GitHub release 26.8.2 ("Latest"), tag commit `e514445f`; image on `quay.io/keycloak/keycloak` (the location keycloak.org names) |
+| Release date | **Deviation from the CP09 report:** the GitHub release is dated **2026-11-05**, not 19 Nov. The image tag was published three times (2026-11-09, 11-12, **11-19**, base image rebuilds); the pinned digest is the image of 19 Nov, so the image is younger than 14 days and the owner's exception is needed for it. 26.8.1 is not used (owner) |
+| Release notes and advisories | 26.8.2 lists 40+ security fixes (among them account takeover via stale SSO notes, stored XSS on the login page, a session takeover through logout, SAML parser denial of service, token-exchange lifetimes); 26.5–26.8.1 hold the fixes of the 90 findings of 26.4.7 |
+| Upgrade guide 26.5.0–26.8.2 (`docs/documentation/upgrading`, tag 26.8.2) | relevant: **Admin REST API audience check** (26.8.2, breaks a service account without `kc-admin-api`), required actions one-time by default, transactions may not be restarted by extensions (the provider never starts one), login failures in the database, email no longer verified by other flows, refresh-token expiry capped by session idle, SCIM API enabled as a feature but off per realm (`scimApiEnabled` false; not set by the realms), secondary-authentication lockout (`maxSecondaryAuthFailures` default 0, not set: AC-POL-01 unchanged), `session_state`/`sid` no longer UUIDs (now 24 characters of base64url, `SecretGenerator.generateBase64SecureId(18)`, inside the application's `kc_session_id` check `^[A-Za-z0-9._:-]{1,128}$` of 0005; the application reads them as strings; real sign-in and back-channel logout tests pass) |
+| PostgreSQL | 13 is end of life, 16 supported; the database user should be able to read `pg_class`/`pg_namespace` for faster migrations (warning only); driver 42.7.13 |
+| Realm configurations | DEV, PROD and TEST realm files import into fresh 26.8.2 instances with every flow, action, mapper and profile attribute asserted (CI step); one realm change needed (`kc-admin-api` on `at-admin-svc`) |
+| Java and build | runtime OpenJDK 21.0.13.1 (was 21.0.9); the provider still compiles with `--release 21` in the unchanged pinned `eclipse-temurin:21-jdk` image; two deprecations (`-Werror`) corrected |
+| Internal SPIs of the provider | compared class by class with the 26.4.7 sources; no change weakens a guarantee; provider 1.1.1 (two source corrections, policy unchanged) |
+| Authenticity and digest | official repository; SLSA provenance names the GitHub repository and the tag commit; Keycloak jars byte-identical (SHA-1) to Maven Central 26.8.2; no cosign signature exists for Keycloak images (recorded, not a blocker: digest pin plus provenance plus Maven Central comparison) |
+| Reported scan results | confirmed: 0 CRITICAL / 6 HIGH with the same databases as the 26.4.7 scan |
+
+**Changes.** Pins in `Dockerfile`, `ci.yml` (three places, job name), `identity/docker-compose.keycloak-test.yml` and the new prepared `identity/docker-compose.keycloak-production.yml` (not applied; the live `docker-compose.yml` keeps naming 26.4.7, and a test allows that only while the prepared file states it replaces that version); provider 1.1.1 (`Time.currentTimeSeconds()`, `@SuppressWarnings("removal")` on `getEntities()`, version, manifest); realm template: `kc-admin-api` default scope on `at-admin-svc` (linter rule and negative case); tests' software passkey reads 26.8.2's page; `scripts/identity/upgrade_rehearsal.py` (disposable containers only). No other component was upgraded (JDK build image, PostgreSQL, Redis, Trivy unchanged).
+
+**Migration (disposable containers only).** Clean install and realm import: CI. Upgrade of a 26.4.7 database (realm of `ad693c5`, accounts with each factor, one session): migrated in 16.8 s; users, credentials (stored hashes), obligations, guard rows identical; every factor signs in; the session from before continues and its refresh token works; the provider decides on the migrated database; `at-admin-svc` 401 until the scope is added, then 200; restore of the backup under 26.4.7 gives back the exact earlier state; 26.4.7 on the migrated database **starts with a warning only**, so the procedure forbids it (no supported downgrade). Result file: [`upgrade-rehearsal-26.8.2.json`](../../identity/keycloak/upgrade-rehearsal-26.8.2.json).
+
+**KC-SP-12 after the upgrade (result: FAIL, owner decision required).** Same scanner, same gate, same databases (`1581858e…`, `538098aa…`):
+
+| | 26.4.7 | 26.8.2 |
+|---|---|---|
+| CRITICAL | 9 | **0** |
+| HIGH | 93 | **6** |
+| distinct CRITICAL/HIGH | 90 | 6 (all carried over, none new) |
+
+| CVE | Component | Severity, CVSS | Applicability | Fix | Recommendation | Recheck |
+|---|---|---|---|---|---|---|
+| CVE-2026-102554 | Guava 33.6.0-jre (Keycloak lib) | HIGH; Red Hat 7.5, GHSA 5.9 | not reachable: no Java deserialization of untrusted input; upstream `status/not-vulnerable` (keycloak#54855) | Guava 33.7.2, expected in a 26.8.x patch (`backport/26.8`) | time-limited acceptance to 2026-12-31, then the patch release | every 26.8.x release |
+| CVE-2026-91403 | java-21-openjdk-headless 21.0.13.1 | HIGH; Red Hat 6.8 | mitigated: Red Hat "will not fix" in the JDK, the fix is ca-certificates (CVE-2026-114406, RHSA-2026:88459), whose fixed version is in the image and is the JDK's trust store | none for the JDK by design | time-limited acceptance (vendor mitigation installed) to 2027-02-22 | every image update |
+| CVE-2026-119373 | sqlite-libs 3.34.1 (FTS5) | HIGH; 7.8 local | not reachable: the Keycloak JVM loads neither libsqlite3 nor NSS softokn (`/proc/1/maps`), nothing takes SQL or FTS5 tables | none for RHEL 9 | time-limited acceptance to 2027-02-22 | monthly |
+| CVE-2026-119374 | sqlite-libs 3.34.1 (FTS5 secure delete) | HIGH; 7.8 local | Red Hat: RHEL 9 sqlite **not affected**; also not reachable | not needed per vendor | time-limited acceptance (false positive) to 2027-02-22 | when the database follows the vendor |
+| CVE-2026-119379 | sqlite-libs 3.34.1 (session extension) | HIGH; 7.8 local | not reachable (no changesets applied anywhere) | none for RHEL 9 | time-limited acceptance to 2027-02-22 | monthly |
+| CVE-2026-119586 | sqlite-libs 3.34.1 (`sqlite3` shell `.recover`) | HIGH; 7.8 local | not applicable: the shell is not installed | none for RHEL 9 | time-limited acceptance to 2027-02-22 | monthly |
+
+Per finding (preconditions, protections, sources, removal): [`vulnerability-review-26.8.2.json`](../../identity/keycloak/vulnerability-review-26.8.2.json), which also holds the proposed acceptance entries. **Nothing was accepted:** `vulnerability-acceptances.json` is empty, `scan_gate.py` is unchanged. No supported fix exists inside 26.8.2: removing or replacing the Guava jar or OS packages of the official image is not authorized (and sqlite-libs belongs to the base image's rpm database and NSS).
+
 ### 2.1 Final Completion Order (2026-11-25)
 
-**KC-SP-12 — image scan (result: FAIL, blocker).** Job `image-scan` in `ci.yml` (and Local CI): build the image; the pinned scanner downloads its two databases (the only container with a network: the job's egress network in Local CI); `docker save`; scan with `--network none` (OS and Java, JSON); `scripts/identity/scan_gate.py` fails on a database older than 48 h (Java 7 days) or missing, a report of another image or scanner version or without OS and Java coverage, and every CRITICAL or HIGH without a time-limited owner acceptance (`identity/keycloak/vulnerability-acceptances.json`, empty; 22 tests in `tests/identity/test_scan_gate.py`, the false-PASS cases above all). No automatic exception exists. Result: 90 distinct CRITICAL/HIGH findings, reviewed in [`vulnerability-review-26.4.7.json`](../../identity/keycloak/vulnerability-review-26.4.7.json):
+**KC-SP-12 — image scan (result on 26.4.7: FAIL, blocker; superseded by the upgrade, [§2.0](#20-keycloak-security-upgrade-2026-11-25)).** Job `image-scan` in `ci.yml` (and Local CI): build the image; the pinned scanner downloads its two databases (the only container with a network: the job's egress network in Local CI); `docker save`; scan with `--network none` (OS and Java, JSON); `scripts/identity/scan_gate.py` fails on a database older than 48 h (Java 7 days) or missing, a report of another image or scanner version or without OS and Java coverage, and every CRITICAL or HIGH without a time-limited owner acceptance (`identity/keycloak/vulnerability-acceptances.json`, empty; 22 tests in `tests/identity/test_scan_gate.py`, the false-PASS cases above all). No automatic exception exists. Result: 90 distinct CRITICAL/HIGH findings, reviewed in [`vulnerability-review-26.4.7.json`](../../identity/keycloak/vulnerability-review-26.4.7.json):
 
 | Group | Findings | Applicability | Remedy |
 |---|---|---|---|
@@ -37,7 +80,7 @@ The matrix in [§8](#8-acceptance-matrix-t01t13) was generated from the JUnit fi
 | Other libraries (HTML sanitizer, Guava, Micrometer) | 3 | likely / conditional | Keycloak upgrade (Guava fix not yet in 26.8.2) |
 | OS packages (ca-certificates CRITICAL; pcre2, sqlite, libcap, libacl) | 15 | ca-certificates applicable, others limited | Keycloak upgrade (newer UBI); sqlite has no fix |
 
-Same database, published releases: **26.8.2** (19 Nov 2026) 0 CRITICAL / 6 HIGH (JDK will-not-fix, 4 sqlite without fix, Guava); **26.8.1** (31 Oct 2026) 1 / 10; **26.7.5** 2 / 18; **26.4.7** 9 / 93. The 26.4 patch releases named by some advisories are not published as community images. Not upgraded: needs authorization.
+Same database, published releases: **26.8.2** (19 Nov 2026) 0 CRITICAL / 6 HIGH (JDK will-not-fix, 4 sqlite without fix, Guava); **26.8.1** (31 Oct 2026) 1 / 10; **26.7.5** 2 / 18; **26.4.7** 9 / 93. The 26.4 patch releases named by some advisories are not published as community images. Upgraded on 2026-11-25 after the owner's authorization (§2.0); the counts of 26.8.2 were confirmed.
 
 **Recovery-only accounts (closed).** Provider 1.1.0: a recovery code never authorizes a permanent factor, also not for an account holding codes only (`controlled_recovery_required`); the realm refuses such an account before a code is asked (`browser-deny-codes-only`, `browser-loa-1-legacy-enrol` removed), so no code is spent and nothing is deleted. Codes still never authorize new codes, a password change or the switch-off. K `test_a_codes_only_account_waits_for_the_controlled_recovery` (marked and unmarked, every client and request, credential untouched), `test_an_application_request_cannot_move_a_codes_only_account_either`, `test_recovery_codes_alone_protect_level_two`, the codes-only rows of the option-A tests; first factor of people without MFA: `test_the_first_permanent_factor_makes_the_obligation_permanent`, `test_without_a_second_factor_level_two_means_setting_one_up`. `PolicyCheck` has the invariant "no permanent factor after a recovery code".
 
@@ -69,7 +112,7 @@ No new P0 or P1 finding.
 
 Design, invariants, guarantees, upgrade, rollback and limits: [provider README](../../identity/keycloak/provider/README.md). Summary of what the analysis of the exact version (sources of 26.4.7 from Maven Central; the image's jars are byte-identical to those artifacts) established:
 
-| Question | Finding on 26.4.7 |
+| Question | Finding on 26.4.7 (rechecked on 26.8.2: unchanged, [§2.0](#20-keycloak-security-upgrade-2026-11-25)) |
 |---|---|
 | Extension points | required actions, authenticators, JPA entity providers, theme resources. Keycloak itself classifies these SPIs as **internal** (start-up warning, no compatibility promise): upgrades need the mandatory regression suite |
 | Replacing a built-in action | a custom factory with the same ID wins (`ProviderManager.compareFactories`); it must extend the built-in class, because three authenticators cast to it (found when the forced set-up failed; fixed) |
@@ -85,7 +128,7 @@ Design, invariants, guarantees, upgrade, rollback and limits: [provider README](
 
 | ID | Status | Evidence (K = Keycloak job, M = main job) |
 |---|---|---|
-| KC-SP-01 SPI feasible | **PASS** | analysis above; provider loaded and replacing every action: K `test_the_provider_replaces_every_credential_action_and_guards_the_sign_in`; CI import step asserts it for DEV and PROD |
+| KC-SP-01 SPI feasible | **PASS** (26.8.2) | analysis above and the review per extension point of 26.8.2 ([provider README](../../identity/keycloak/provider/README.md#extension-points-keycloak-2682)); provider 1.1.1 loaded and replacing every action: K `test_the_provider_replaces_every_credential_action_and_guards_the_sign_in`; CI import step asserts it for DEV and PROD |
 | KC-SP-02 F-1R-C closed | **PASS** | K `test_a_set_up_page_opened_before_the_first_factor_is_refused_after_it` (was `test_open_finding_…_still_adds_one`), `test_a_held_form_is_refused_and_the_refusal_is_recorded` |
 | KC-SP-03 rest of F-3K closed | **PASS** | K `test_a_password_form_opened_before_the_first_factor_is_refused_after_it` (was `test_open_finding_…_still_changes_it`), `test_a_password_change_needs_the_permanent_factor_not_a_code` |
 | KC-SP-04 held recovery-code sign-in closed | **PASS** | K `test_a_sign_in_held_open_with_a_code_gets_no_new_codes_after_the_last_one` (was `test_known_gap_…`), `test_a_link_sent_past_the_application_runs_no_set_up_either` |
@@ -95,16 +138,16 @@ Design, invariants, guarantees, upgrade, rollback and limits: [provider README](
 | KC-SP-08 concurrency | **PASS** | one node: `test_two_first_activations_at_once_leave_exactly_one_factor` (3 rounds); two nodes on one database with local caches: `test_a_form_held_on_one_node_is_refused_after_the_factor_was_set_up_on_the_other`, `test_first_activations_on_two_nodes_at_once_leave_exactly_one_factor` (first change and lock wait, 3 rounds each), `test_new_recovery_codes_on_two_nodes_at_once_leave_one_set`, `test_a_password_form_and_a_first_activation_on_two_nodes_end_in_a_serial_state`; M `test_two_removals_at_once_cannot_both_take_a_permanent_factor` |
 | KC-SP-09 Keycloak paths | **PASS** | web, phone and account console in `test_the_password_alone_cannot_add_a_factor` (now including the password action), `test_the_password_alone_cannot_remove_a_factor`, `test_nobody_removes_a_credential_at_the_provider`; e-mail links: `test_a_recovery_link_runs_no_pending_set_up`, `test_a_link_sent_past_the_application_runs_no_set_up_either` |
 | KC-SP-10 fail closed | **PASS** | CI step "Without the security provider the realm signs nobody in"; refusals end with `access_denied` and roll back; the loser of a concurrent first change rolls back |
-| KC-SP-11 reproducible image | **PASS** | two builds per build compared byte for byte; same jar hash on every machine; static tests keep the pinned references equal (Dockerfile, CI, compose) |
-| KC-SP-12 Java dependencies and image | **FAIL (blocker)** — Trivy gate: 9 CRITICAL / 93 HIGH in upstream 26.4.7, none accepted (§2.1). Earlier evidence still holds: | no third-party Java dependency (build classpath = the pinned image's jars, no download; jar entries allow-listed; imports restricted by a test); runtime = pinned upstream + one 0444 jar, non-root (test). the scan now runs in CI (§2.1) |
-| KC-SP-13 upgrade and rollback | **PASS** (documentation) | provider README: upgrade steps and mandatory tests; rollback that never restores unguarded actions while MFA accounts exist |
-| KC-SP-14 earlier regressions | **PASS** | every F-0, F-1, F-1R, F-1R-B, F-2, F-3, F-4 and R01–R07 test passed in the run of §1 (some adapted, §9) |
-| KC-SP-15 FULL local CI | **PASS** | §1 |
-| KC-SP-16 GitHub CI on the final SHA | **PASS as evidence, run FAIL as expected** | [45632069412](https://github.com/AutoTramita-es/autotramita/actions/runs/45632069412) on `8e49b91`: test jobs success, image-scan gate failure, equivalent to the local run |
-| KC-SP-17 matrix of 126 criteria | **PASS** | §8 |
+| KC-SP-11 reproducible image | **PASS** | two builds per build compared byte for byte; same jar hash on every machine (1.1.1: `d61ac28e…`); static tests keep the pinned references equal (Dockerfile, CI, developer compose and the prepared production file; the live compose may only name the version the prepared file replaces) |
+| KC-SP-12 Java dependencies and image | **FAIL — owner decision required** | Trivy gate on 26.8.2: **0 CRITICAL / 6 HIGH** (was 9 / 93 on 26.4.7, same databases), each analysed with a recommendation (§2.0, `vulnerability-review-26.8.2.json`); none accepted, no automatic exception. Still holds: no third-party Java dependency of the provider (build classpath = the pinned image's jars, no download; jar entries allow-listed; imports restricted by a test); runtime = pinned upstream + one 0444 jar, non-root (test) |
+| KC-SP-13 upgrade and rollback | **PASS** (documentation and rehearsal) | the upgrade to 26.8.2 followed the provider's procedure; [UPGRADE-26.8.2.md](../../identity/keycloak/UPGRADE-26.8.2.md): production steps, backup, rollback by restore only; rehearsal on disposable containers (migration, data kept, provider works, restore works, downgrade starts with a warning only, so it is forbidden); rollback that never restores unguarded actions while MFA accounts exist |
+| KC-SP-14 earlier regressions | **PASS** | every F-0, F-1, F-1R, F-1R-B, F-1R-C, F-2, F-3, F-3K, F-4, recovery-only and R01–R07 test passed on 26.8.2 in the run of §1 (one test helper adapted to 26.8.2's page, no assertion changed, §9) |
+| KC-SP-15 FULL local CI | **PASS as evidence, run FAIL as expected** | §1: every test job passes; `image-scan` fails at its gate on the 6 HIGH findings |
+| KC-SP-16 GitHub CI on the final SHA | **PASS as evidence, run FAIL as expected** | §1: test jobs success, image-scan gate failure, equivalent to the local run |
+| KC-SP-17 matrix of 126 criteria | **PASS** | §8 (checked against the JUnit files of the final run) |
 | KC-SP-18 no open P0/P1 in scope | **PASS** | §3 |
-| KC-SP-19 no unauthorized infrastructure change | **PASS** | only `dev`; no deployment, existing realm, shared service or persistent database touched; Local CI change listed in §6 |
-| KC-SP-20 ready for independent review | **NOT YET** (KC-SP-12) | scope proposal in §12 |
+| KC-SP-19 no unauthorized infrastructure change | **PASS** | only `dev`; no deployment, existing realm, shared service or persistent database touched; the live `docker-compose.yml` unchanged (production configuration prepared in a separate file, not applied); the rehearsal used its own disposable containers on loopback; no Local CI change in this order |
+| KC-SP-20 ready for independent review | **NOT YET** — conditional on the owner's decision on KC-SP-12 and then on the independent security review itself | final scope in §12 |
 
 ### Automatic obligation and existing accounts
 `at_mfa_required` is set by the provider with the first permanent factor, in the same transaction; it is lifted only by the controlled switch-off, together with every factor. `at_mfa_mandatory` (administrators only) blocks the switch-off in the application and in the provider; T10 sets it for grant holders, nothing sets it today (enforcement point tested). Existing realms: `scripts/identity/reconcile_mfa_obligation.py` marks accounts with a permanent factor or codes, withdraws pending set-ups, deletes nothing and lists `locked` and `never` accounts for review (Keycloak keeps no history, so "never" is not proof); K `test_existing_accounts_are_reconciled_without_deleting_anything` on a disposable realm. Accounts holding codes only from before may still move to a permanent factor with a code (previous order, supplement 2); the new order says codes must not authorize new permanent factors on accounts with **active** MFA, which holds. **Owner may decide** to forbid that transition too (they would then wait for the controlled recovery).
@@ -122,8 +165,8 @@ Design, invariants, guarantees, upgrade, rollback and limits: [provider README](
 | F-3 | **CLOSED** | account actions need the factor if there is one; every action is a fresh sign-in at the provider |
 | F-3K | **CLOSED** | the rest closed by the provider (KC-SP-03); a password changed on Keycloak's pages (now only with the factor) is seen by the application with T11 |
 | Held recovery-code sign-in | **CLOSED** | KC-SP-04 |
-| Recovery-only transition | **CLOSED** | owner decision; provider 1.1.0 and realm (§2.1) |
-| Upstream image vulnerabilities (Keycloak 26.4.7) | **OPEN, blocker** | 9 CRITICAL / 93 HIGH; Keycloak upgrade needs authorization (§2.1, §12) |
+| Recovery-only transition | **CLOSED** | owner decision; provider 1.1.0 (1.1.1 on 26.8.2) and realm (§2.1) |
+| Upstream image vulnerabilities | **OPEN, owner decision required** | Keycloak 26.8.2: 0 CRITICAL / 6 HIGH (was 9 / 93 on 26.4.7); 84 of 90 removed by the upgrade; the six are not reachable or mitigated per analysis, recommendation time-limited acceptance (§2.0) |
 | F-4 | **Domain mechanism CLOSED; interface T11, authorisation T10** | unchanged |
 | R01 bootstrap/user context isolation | **CLOSED** | `test_sql_policies_reject_mixed_bootstrap_and_user_context` and the other tests of the previous report |
 | R02 audit read isolation | **CLOSED** | `test_own_audit_read_is_limited_to_current_tenant` |
@@ -231,21 +274,36 @@ This order added none. Earlier ones, with their need (owner review):
 | Criterion | Implemented in T01–T09 | Missing | Package | CP09 blocker? | Owner decision needed? |
 |---|---|---|---|---|---|
 | AC-AUD-08 | sign-in, sign-out, security settings, revocation, context change, refused callbacks, tokens, CSRF, workspaces; provider refusals stored as Keycloak events | failed sign-ins at Keycloak; grant changes; administrative actions | T11 (AC-AUD-10, AC-ADM-01/04), T10 (AC-PLT-10) | no | no (acknowledge the assignment) |
-| AC-CTX-01 | context change additive; all tests green | literally "F1 tests unchanged": 5 of 21 F1 test files changed (`test_ci_workflow` job and timeout counts, `test_idempotency` head, `test_openapi_contract` lists and a redirect relaxation, `test_role_sql` lists, `test_roles_and_migrations` additions) | none (wording) | **yes, until decided** | **yes**: accept or reword |
 | AC-USR-06 | application role cannot change status; platform role has no access | "platform with a grant" | T10 (AC-PLT-07) | no | no |
 | AC-SES-07 | own sessions only; platform role has no access | "platform with a grant" | T10 (AC-PLT-07) | no | no |
-| AC-SES-10 | browser change revokes; country change audited when known | notice; production geo source | T11 (AC-ADM-07) once a source is chosen | no | **yes**: geo source |
+| AC-SES-10 | browser change revokes; country change audited when known | notice; production geo source | T11 (AC-ADM-07); the owner deferred the geo source decision to T11 (D45) | no | no (deferred by the owner) |
 | AC-MOB-04 | Keycloak refuses refresh reuse | revocation with `REFRESH_REUSE` from Keycloak events | T11 (AC-AUD-10) | no | no |
 | AC-POL-06 | application path; Keycloak's password form needs the factor (F-3K closed) | ending application sessions and the notice for a password changed directly on Keycloak's pages | T11 (AC-AUD-10) | no | no |
 | AC-POL-13 | rotation, UA binding, Keycloak reuse refusal | `REFRESH_REUSE`, country notice | T11 | no | no |
 
-None is marked PASS, and no deviation is accepted on the owner's behalf. AC-POL-10 is **PASS** (its P1 findings closed and proven by protection tests).
+None is marked PASS, and no deviation is accepted on the owner's behalf. AC-POL-10 is **PASS** (its P1 findings closed and proven by protection tests). AC-CTX-01 left this table: the owner reworded it (D45) and the equivalence below proves it, so it is **PASS** as evidence (acceptance stays with the owner at CP09).
+
+### 7.1 AC-CTX-01 — equivalence of the F1 security guarantees
+
+Reworded criterion (D45): every previously accepted F1 security guarantee is preserved; F1 tests may change or grow only if no guarantee is removed, no assertion is weakened, the equivalence is documented and proven, and the regressions pass. Basis: the 21 F1 test files as of the F2 plan commit `0e5a2d1` compared with this revision: 16 are byte-identical, 5 changed, and none lost a test function:
+
+| F1 test (module::test) | F1 guarantee | F1 check | Check now | Equivalence | Proof |
+|---|---|---|---|---|---|
+| `test_ci_workflow::test_toolchain_versions_match_the_project` | every CI job that installs Python tooling uses the project's pinned uv and Python; every job has a timeout | uv and Python versions equal in each of **2** jobs; **3** `timeout-minutes` (3 jobs) | the same equality in each of **3** jobs that install uv (`test`, `identity`, `dependencies`); **5** timeouts (5 jobs: F2 added `identity` and `image-scan`) | same rule, over every job that now exists; a job without a pin or timeout still fails the test | M, passes |
+| `test_idempotency::test_idempotency_table_exists_only_as_a_test_fixture` | the idempotency table is a test fixture, never a migration | single head `0001`; no migration mentions `idempotency`; the fixture holds the `CREATE TABLE` | single head `0009`; the other two assertions **unchanged** | the guarantee is carried by the unchanged scan of every migration file; the head now names the end of the F2 chain (D37 0007, isolation 0008, review 0009), still exactly one head | M, passes; `run-migrations` also checks one head |
+| `test_openapi_contract::test_every_operation_is_described_and_has_a_success_response` | every documented operation has a summary and a success response | a `2xx` for every operation | a `2xx` for every operation **except exactly** `GET /api/v1/auth/login` and `GET /api/v1/auth/callback`, which must declare `302` (browser navigations of the sign-in) | strictly bounded: a third operation without `2xx` fails, as before (tightened in this order; the interim relaxation `2xx or 3xx` for any route is gone) | M, passes |
+| `test_openapi_contract::test_errors_are_problem_json_and_no_default_validation_schema` | every error answer is `application/problem+json`; no default validation schema | every non-`2xx` answer is problem JSON | every non-`2xx`, non-`3xx` answer is problem JSON | the only `3xx` answers are the two redirects above (no body); every 4xx/5xx is still checked | M, passes |
+| `test_openapi_contract::test_only_the_health_route_is_exposed_and_nothing_else_is_documented` → `test_only_the_documented_routes_are_exposed_and_nothing_else` | nothing is exposed or documented that was not reviewed | the path list **equals** `[/api/v1/health]`; schemas **equal** `{Health, Problem}` | the path list **equals** F1's health route plus the reviewed F2 routes; schemas **equal** the reviewed set | exact equality kept, so an unreviewed route or schema still fails; the reviewed set grew with authorized packages T06–T09 | M, passes; route access set fixed again by `test_workspace_pipeline::test_every_route_declares_its_access_and_the_set_is_exactly_the_reviewed_one` |
+| `test_role_sql` (`NON_BUSINESS_TABLES`), `test_upgrade_downgrade_upgrade_and_schema_contents` | no business table in `public` before AT-03; upgrade/downgrade/upgrade exact | allow-list of technical tables **empty** | allow-list **exactly** `audit_events`, `users`, `user_sessions`, `email_change_operations`, `email_change_notifications` (D17 additive amendment); three new assertions on guard functions | any other table still fails; new assertions only add | M and migration step, pass |
+| `test_roles_and_migrations` | runtime roles, grants, RLS and migrations as accepted in F1 | — | **only additions** (207 added lines, none removed): named runtime roles before the first statement (R07), exact downgrades of 0007–0009 | stronger | M, passes |
+
+No F1 test was skipped, deselected or removed; every F1 test module runs in the main job of §1 and passes. Unchanged modules: `conftest`, `idempotency_fixture`, `rls_probe`, `test_api_conventions`, `test_api_types`, `test_config`, `test_db`, `test_db_layer`, `test_health`, `test_pagination_versioning`, `test_ratelimit`, `test_rls`, `test_rls_harness`, `test_telemetry_route`, `test_toolchain`, `test_versioning_db`.
 
 ## 8. Acceptance matrix T01–T13
 
 `PASS` is evidence, not acceptance. `PARTIAL` and `OPEN` are never treated as `BOUNDED`; only the owner can bound a criterion.
 
-Summary: DEFERRED: 34; PARTIAL: 8; PASS: 79; PASS with accepted deviation: 5; total 126.
+Summary: DEFERRED: 34; PARTIAL: 7; PASS: 80; PASS with accepted deviation: 5; total 126. (Change in this order: AC-CTX-01 PARTIAL → PASS after the owner's rewording and §7.1.)
 
 | Criterion | Status | Implementation | Test(s) | Result (local run, same SHA) | Deviation / dependency |
 |---|---|---|---|---|---|
@@ -274,7 +332,7 @@ Summary: DEFERRED: 34; PARTIAL: 8; PASS: 79; PASS with accepted deviation: 5; to
 | AC-AUD-09 | PASS | `app/audit/{record,catalog}.py`, 0003, 0008 | `test_audit_db::test_audit_rolls_back_with_its_business_transaction`<br>`test_audit_db::test_independent_audit_survives_a_failed_request` | 2/2 pass (M) | — |
 | AC-AUD-10 | DEFERRED | — | — | — | T11 |
 | AC-AUD-11 | DEFERRED | — | — | — | T11 |
-| AC-CTX-01 | PARTIAL | `app/core/db.py`, `app/auth/context.py`, `app/api/v1/guards.py` | `test_context_bootstrap::test_new_fields_default_to_none_and_old_usage_is_unchanged` | 1/1 pass (M) | literal “F1 tests unchanged” cannot be met: 5 of 21 F1 test files changed (see §9). Owner decision; no later package changes this |
+| AC-CTX-01 | PASS | `app/core/db.py`, `app/auth/context.py`, `app/api/v1/guards.py`; F1 test modules | `test_context_bootstrap::test_new_fields_default_to_none_and_old_usage_is_unchanged`<br>`test_openapi_contract::test_every_operation_is_described_and_has_a_success_response`<br>`test_idempotency::test_idempotency_table_exists_only_as_a_test_fixture` | 3/3 pass (M) | reworded by the owner (D45): F1 security guarantees preserved; equivalence matrix §7.1; every F1 test module passes |
 | AC-CTX-02 | PASS | `app/core/db.py`, `app/auth/context.py`, `app/api/v1/guards.py` | `test_context_bootstrap::test_bootstrap_context_does_not_leak_through_the_pool` | 1/1 pass (M) | — |
 | AC-CTX-03 | PASS | `app/core/db.py`, `app/auth/context.py`, `app/api/v1/guards.py`, 0008 | `test_context_bootstrap::test_bootstrap_fields_are_used_nowhere_outside_the_auth_module_and_the_db_layer`<br>`test_t03_isolation_rec::test_sql_policies_reject_mixed_bootstrap_and_user_context`<br>`test_t03_isolation_rec::test_a_person_context_with_a_bootstrap_proof_sees_and_writes_nothing`<br>`test_t03_isolation_rec::test_a_session_proof_with_a_tenant_reveals_nothing` | 5/5 pass (M) | — |
 | AC-CTX-04 | PASS | `app/core/db.py`, `app/auth/context.py`, `app/api/v1/guards.py` | `test_workspace_pipeline::test_a_selected_workspace_scopes_every_request_and_client_hints_are_ignored` | 1/1 pass (M) | — |
@@ -305,7 +363,7 @@ Summary: DEFERRED: 34; PARTIAL: 8; PASS: 79; PASS with accepted deviation: 5; to
 | AC-SES-07 | PARTIAL | `app/auth/sessions/`, 0005, 0006 | `test_sessions_db::test_people_cannot_see_or_revoke_each_others_sessions`<br>`test_sessions_db::test_privileges_per_role` | 2/2 pass (M) | today the platform role has no access at all. Missing “with a grant”: T10, proven there with AC-PLT-07 |
 | AC-SES-08 | PASS with accepted deviation | `app/auth/sessions/`, 0005, 0006 | `test_sessions_db::test_the_database_keeps_immutable_columns_immutable_even_for_a_superuser` | 7/7 pass (M) | credential hash rotation (CP05) |
 | AC-SES-09 | PASS | `app/auth/sessions/`, 0005, 0006 | `test_sessions_db::test_touch_is_throttled_extends_idle_and_never_passes_the_absolute_deadline` | 1/1 pass (M) | — |
-| AC-SES-10 | PARTIAL | `app/auth/sessions/`, 0005, 0006 | `test_sessions_db::test_a_changed_browser_family_revokes_the_session_through_its_own_transaction`<br>`test_sessions_db::test_a_new_country_is_flagged_and_audited_but_does_not_revoke` | 2/2 pass (M) | browser change revokes; country change is audited when a country is given. Missing: the notice and a production geo source. No package owns the source decision; propose T11 (notices, AC-ADM-07). Mobile has no UA binding (accepted, CP07) |
+| AC-SES-10 | PARTIAL | `app/auth/sessions/`, 0005, 0006 | `test_sessions_db::test_a_changed_browser_family_revokes_the_session_through_its_own_transaction`<br>`test_sessions_db::test_a_new_country_is_flagged_and_audited_but_does_not_revoke` | 2/2 pass (M) | browser change revokes; country change is audited when a country is given. Missing: the notice and a production geo source. The owner deferred the source decision to T11 (D45); notices with AC-ADM-07. Mobile has no UA binding (accepted, CP07) |
 | AC-SES-11 | PASS | `app/auth/sessions/`, 0005, 0006 | `test_sessions_db::test_rotation_invalidates_the_old_credential_at_once`<br>`test_sessions_db::test_step_up_records_the_level_and_rotates_web_credentials_only` | 2/2 pass (M) | — |
 | AC-SES-12 | PASS | 0005 | `test_role_sql::test_upgrade_downgrade_upgrade_and_schema_contents` | 1/1 pass (M) | — |
 | AC-WEB-01 | PASS | `app/api/v1/auth.py`, `app/auth/web/` | `test_web_flow_keycloak::test_sign_in_session_and_logout_with_keycloak` | 1/1 pass (K) | — |
@@ -404,9 +462,18 @@ Keycloak security provider order (2026-11-25):
 
 Final Completion Order: `test_an_unmarked_codes_only_account_is_refused` → `test_a_codes_only_account_waits_for_the_controlled_recovery` (marked and unmarked); `test_a_marked_codes_only_account_moves_to_a_permanent_factor` and `test_the_application_request_moves_a_codes_only_account_too` → `test_an_application_request_cannot_move_a_codes_only_account_either` (the transition is forbidden now); `test_the_last_code_of_a_codes_only_account_leaves_it_closed` → `test_an_obliged_account_without_any_factor_stays_closed`; `test_a_sign_in_left_at_the_code_question_gains_nothing_when_the_codes_run_out` → `test_a_sign_in_left_at_the_factor_question_gains_nothing_when_the_factor_goes` (a codes-only account no longer reaches the code question); the option-A tests expect a refusal for the codes-only account; `test_recovery_codes_alone_protect_level_two` expects the refusal; the reconciliation test lists codes-only accounts for review. New: `tests/identity/test_scan_gate.py` (22), 9 broker self-tests, realm linter case for the codes-only refusal. No assertion was weakened: every changed test asserts the stricter policy.
 
+Keycloak Security Upgrade (26.8.2): no test removed, skipped or weakened.
+- `tests/identity/webauthn.py` (helper, not a test): reads the challenge and relying-party id in both forms the login theme writes (26.4: `'…'`, 26.8: FreeMarker `?c`, `"…"`) and, like a browser, reports `authenticatorAttachment=platform` for its built-in key. Before this, 79 passkey tests failed on 26.8.2 at the helper's own assertion, not at a security assertion.
+- `test_identity_environment::test_test_image_is_pinned_by_digest_to_the_version_in_compose`: the tests' pin must equal the prepared production file (version **and** digest; before: version only, against the live compose); the live `docker-compose.yml` may name only the version the prepared file replaces. `test_the_image_is_built_from_the_same_pinned_images_everywhere` also covers the prepared file.
+- `realm_lint` and `test_realm_lint`: `at-admin-svc` must carry `kc-admin-api` (one new rule, one new negative case).
+- `test_security_provider_keycloak` and the CI import step expect provider version 1.1.1.
+- `test_openapi_contract::test_every_operation_is_described_and_has_a_success_response`: tightened back to F1 strength (§7.1).
+- Docstrings and one recorded spike observation name 26.8.2.
+
 ## 10. Open production blockers
 
-- **Upstream image vulnerabilities (KC-SP-12)**: Keycloak 26.4.7 — 9 CRITICAL / 93 HIGH; needs an authorized upgrade (§12).
+- **Image vulnerabilities (KC-SP-12)**: Keycloak 26.8.2 — 0 CRITICAL / 6 HIGH; owner decision on each (§2.0, §12).
+- **Production Keycloak upgrade**: prepared, not applied ([UPGRADE-26.8.2.md](../../identity/keycloak/UPGRADE-26.8.2.md), `identity/docker-compose.keycloak-production.yml`); needs its own authorization; the one-time 14-day exception does not cover production; existing realms need `kc-admin-api` on `at-admin-svc`; backup first, rollback only by restore.
 
 - Persistent database migration state unverified (F1 R05, §6).
 - Existing realms: the AutoTramita image first, then `reconcile_mfa_obligation.py` and the manual steps of [identity/README](../../identity/README.md); production start-up options of the image (D43).
@@ -423,34 +490,37 @@ Final Completion Order: `test_an_unmarked_codes_only_account_is_refused` → `te
 
 ## 12. Status, blocker and independent security review
 
-**F2-T09-REC — BLOCKED.** Reason: KC-SP-12. The image Keycloak runs from has 9 CRITICAL and 93 HIGH findings in components of Keycloak 26.4.7 itself (Keycloak, JDK, HTTP stack, JSON, cryptography, templates, OS packages), 72 of the 90 distinct ones assessed applicable. The gate correctly fails; it may not be bypassed and nothing was accepted on the owner's behalf. Everything else of the order is done and passes.
+**F2-T09-REC — IMPLEMENTATION COMPLETED / OWNER SECURITY DECISION REQUIRED.** The upgrade, the provider's compatibility, the preservation of the security policy, the migration rehearsal, AC-CTX-01 and the regressions are complete and pass. KC-SP-12 is not a technical blocker any more: 84 of 90 findings are gone, and the six HIGH findings left have no supported fix inside 26.8.2. Each is analysed (§2.0); the gate correctly fails until the owner decides, and nothing was accepted on the owner's behalf.
 
-**Minimal proposal.** Authorize a Keycloak upgrade to **26.8.2** (0 CRITICAL / 6 HIGH with the same database; published 19 Nov 2026, so pinnable under the two-week rule from 3 Dec 2026), or now to **26.8.1** (1 CRITICAL in the JDK, 10 HIGH), as its own package:
-1. Re-verify the provider against the new sources, following its upgrade procedure: the SPIs are internal and the version jump is large.
-2. Run the full regression suite.
-3. Decide on the HIGH findings that remain: either time-limited owner acceptances in `vulnerability-acceptances.json` (JDK CVE-2026-91403 will not be fixed; sqlite has no fix yet; Guava is fixed in 33.7.2), or wait for the next release.
-
-The alternative, accepting the 26.4.7 findings, is a risk acceptance and not recommended.
+**Decision needed from the owner (minimal proposal).** For each of the six findings, either a time-limited acceptance in `vulnerability-acceptances.json` (`accepted_by: owner`, decision reference, expiry at most 90 days; proposed entries and dates in `vulnerability-review-26.8.2.json`) or waiting for the next release:
+1. CVE-2026-102554 (Guava): accept to 2026-12-31, then upgrade to the 26.8.x patch that ships Guava 33.7.2 (patch release, same procedure).
+2. CVE-2026-91403 (JDK): accept to 2027-02-22; the vendor's mitigation (ca-certificates RHSA-2026:88459) is in the image.
+3. CVE-2026-119373, -119374, -119379, -119586 (sqlite-libs): accept to 2027-02-22; not loaded by the service, -119374 not affected per Red Hat, -119586 concerns a program that is not installed.
+Not recommended: disabling the gate, automatic exceptions, or replacing jars or OS packages of the official image.
 
 **Significant decisions taken within the order's autonomy:**
-- the scan runs as its own CI job, so the Keycloak test evidence stays separate;
-- database age limits of 48 h (vulnerabilities) and 7 days (Java);
-- an acceptance must be by the owner and expire within 90 days, and the committed file is empty;
-- codes-only accounts are refused before a code is asked (no code spent), and the transition sub-flow is removed from the realm;
-- broker builds run with `--no-cache`, and the Dockerfile is checked;
-- only the scanner container gets the egress network, never the step container;
-- provider version 1.1.0;
-- the reconciliation script lists codes-only accounts for review.
+- the live `docker-compose.yml` is not changed: it is the definition of the running stack directory, and the first start of 26.8.2 migrates the Keycloak database irreversibly; the future production configuration is a separate prepared file, and a test ties the tests' pin to it (version and digest);
+- `at-admin-svc` gets `kc-admin-api` with its earlier default scopes (the set of Keycloak's own `admin-cli`); roles unchanged; disabling the audience check was not considered;
+- provider version 1.1.1 (compatibility only); `Time.currentTimeSeconds()`; the removal warning of the still abstract `getEntities()` is suppressed on that method only;
+- the tests' software passkey adapted to 26.8.2's page (no assertion changed);
+- the OpenAPI success-response test tightened back to F1 strength for AC-CTX-01;
+- a repeatable rehearsal script (`scripts/identity/upgrade_rehearsal.py`) on disposable containers, its result committed;
+- the JDK build image, PostgreSQL, Redis, Trivy and the gate were not changed; no 26.8.1 step.
 
-**Independent security review — proposed scope** (after the upgrade decision):
-1. **Provider source** (`identity/keycloak/provider`): the policy table, the lock and transaction handling, `getAuthnCredentials`, `ACTION_TOKEN_USER` and the start note, the overridden factories.
-2. **Realm flows** (`realm-template.json`, `realm_lint.py`).
-3. **Application security actions and the switch-off**, plus the admin client.
+**Independent security review — final scope** (after the owner's decision on KC-SP-12):
+1. **Provider source** (`identity/keycloak/provider`, 1.1.1): the policy table, lock and transaction handling, `getAuthnCredentials`, `ACTION_TOKEN_USER` and the start note, the overridden factories; the 26.8.2 review per extension point.
+2. **Realm flows and clients** (`realm-template.json`, `realm_lint.py`), including `kc-admin-api` on `at-admin-svc`.
+3. **Application security actions and the switch-off**, plus the admin client and its token scope.
 4. **Concurrency** with Keycloak's production cache stack and a database failover.
-5. **Supply chain**: Dockerfile, `build.sh`, the broker rules, the scan job and its gate.
-6. **Abuse paths not covered by tests**: the application's service account, the switch-off page template, event and log content on errors, and the administrator race noted in §2.1.
+5. **Supply chain**: Dockerfile, `build.sh`, pins and provenance of 26.8.2, the broker rules, the scan job and its gate; the six remaining findings and the owner's decision on them.
+6. **Upgrade and rollback**: UPGRADE-26.8.2.md, the rehearsal, the prepared production file; restore-only rollback.
+7. **Keycloak 26.8 features on by default but unused** (JWT authorization grant, workflows, SCIM per realm, Kubernetes service accounts, federated client authentication): confirm they stay unreachable in the realms.
+8. **Abuse paths not covered by tests**: the application's service account, the switch-off page template, event and log content on errors, and the administrator race noted in §2.1.
 
-CP09 is **not** accepted; its owner acceptance additionally needs the decisions marked in §7 (AC-CTX-01, AC-SES-10 source) and the production blockers of §10 acknowledged.
+CP09 is **not** accepted; its owner acceptance additionally needs the decision on KC-SP-12 above and the production blockers of §10 acknowledged. AC-SES-10 is deferred to T11 by the owner; AC-CTX-01 is reworded and evidenced (§7.1).
+
+### Files changed by the Keycloak Security Upgrade
+`identity/keycloak/Dockerfile`, `identity/keycloak/provider/**` (two sources, factory version, VERSION 1.1.1, `build.sh` manifest, README), `identity/keycloak/realm-{template,dev,prod,test}.json`, `identity/docker-compose.keycloak-test.yml`, `identity/docker-compose.keycloak-production.yml` (new, prepared), `identity/keycloak/UPGRADE-26.8.2.md` (new), `identity/keycloak/upgrade-rehearsal-26.8.2.json` (new), `identity/keycloak/vulnerability-review-26.8.2.json` (new), `identity/README.md`; `.github/workflows/ci.yml` (pins, job name, provider version); `scripts/identity/upgrade_rehearsal.py` (new); tests: `tests/identity/{realm_lint,test_realm_lint,test_identity_environment,test_security_provider_keycloak,webauthn}.py`, docstrings of the Keycloak test modules, `tests/test_openapi_contract.py`; documents: ADR-008, decision register (D45), execution order, acceptance criteria, AT-02, T09 policy notes, MASTER-BLUEPRINT pointer, this report. Not changed: `docker-compose*.yml` of the stack, `scan_gate.py`, `vulnerability-acceptances.json`, Local CI.
 
 ### Files changed by the Final Completion Order
 `identity/keycloak/provider/**` (policy, VERSION 1.1.0, decision table, README), `identity/keycloak/realm-{template,dev,prod,test}.json`, `identity/keycloak/vulnerability-acceptances.json` (new), `identity/keycloak/vulnerability-review-26.4.7.json` (new), `identity/README.md`; `.github/workflows/ci.yml` (job `image-scan`, provider version), `scripts/ci/lib/{broker,runner,profiles}.py`, `scripts/ci/selftest.py`, `scripts/identity/scan_gate.py` (new), `scripts/identity/reconcile_mfa_obligation.py`; tests: `tests/identity/test_scan_gate.py` (new), `tests/identity/{realm_lint,test_realm_lint,test_recovery_codes_keycloak,test_second_factor_keycloak,test_reconciliation_keycloak,test_security_provider_keycloak}.py`, `tests/test_ci_workflow.py`; documents: ADR-008, decision register, execution order, AT-02, LOCAL-CI.md, this report. Files of the previous revision: see Git history.

@@ -26,7 +26,7 @@ Date: 2026-11-24 | Package: F2-T09 (only) | Status: implemented, awaiting owner 
 |---|---|
 | S2 / D20 | Confirmed and used: recovery is app-owned; `resetPasswordAllowed=false` stays. The reset link was shown single-use and 30 min (test `test_the_recovery_link_works_once`). |
 | S3 / D23 | Step-up and "no MFA forced" re-confirmed through the application (enrolment, LoA2 step-up, removal). |
-| S4 / D41 | **Recovery codes work end to end on Keycloak 26.4.7** (`test_recovery_codes_can_be_enrolled_through_keycloak_d41`), enrolled through `kc_action=CONFIGURE_RECOVERY_AUTHN_CODES`. Keycloak's feature status (preview/supported) is not asserted; the test would fail if a Keycloak upgrade removed it. |
+| S4 / D41 | **Recovery codes work end to end on Keycloak 26.4.7** (`test_recovery_codes_can_be_enrolled_through_keycloak_d41`), enrolled through `kc_action=CONFIGURE_RECOVERY_AUTHN_CODES`. Keycloak's feature status (preview/supported) is not asserted; the test would fail if a Keycloak upgrade removed it. Passes unchanged on 26.8.2 (D45; `RECOVERY_CODES` is a default feature in both versions). |
 | S9 | `UPDATE_PASSWORD` and `CONFIGURE_TOTP` through `kc_action` work with the application's callback. `UPDATE_EMAIL` stays unavailable (see §4). |
 
 ## 3. Acceptance criteria

@@ -1,0 +1,67 @@
+{
+  "backup": {
+    "bytes": 237026,
+    "sha256": "2bd4674d58607447b8247370429df84395bab1533bbc1eb810228bc78ce307d7"
+  },
+  "checks": {
+    "admin_api_after_scope": 200,
+    "admin_api_before_scope": 401,
+    "first_factor_after_upgrade_sets_obligation": true,
+    "guard_in_flow": true,
+    "guard_rows_after_enrolment": 5,
+    "migration_seconds": 16.8,
+    "model_versions": [
+      "26.4.7",
+      "26.8.2"
+    ],
+    "new_provider_version": "1.1.1",
+    "new_started_on_old_database": true,
+    "old_admin_api": 200,
+    "old_provider_version": "1.1.0",
+    "old_started_on_migrated_database": true,
+    "old_started_on_restored_backup": true,
+    "restore_equals_state_before_upgrade": true,
+    "restore_sign_in_otp": "code",
+    "session_from_before": {
+      "refresh_token": 200,
+      "single_sign_on": "code"
+    },
+    "sign_in": {
+      "mandatory": "code",
+      "otp": "code",
+      "passkey": "code",
+      "password_only": "code",
+      "recovery_code": "code"
+    },
+    "users_credentials_obligations_kept": true
+  },
+  "disposable_only": "PostgreSQL 16 (pinned) in tmpfs on 127.0.0.1:15439, Keycloak on 127.0.0.1:18291, throwaway credentials; containers removed afterwards",
+  "downgrade_log": [
+    "2026-11-25 15:09:11,292 WARN  [org.keycloak.storage.datastore.DefaultMigrationManager] (main) Possibly incorrect state of migration. You are trying to run server version '26.4.7' against database, which was already migrated to newer version '26.8.2'."
+  ],
+  "new": "autotramita-keycloak built from this revision: quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e\u2026 + provider 1.1.1",
+  "new_image": "autotramita-keycloak:rehearsal-new",
+  "new_log": [
+    "2026-11-25 15:08:28,115 WARN  [org.keycloak.common.Profile] (build-15) Deprecated features identity-brokering-api:v1, twitter-broker:v1 enabled by default. Check the upgrading guide for steps to use later versions if available.",
+    "2026-11-25 15:08:34,365 WARN  [org.keycloak.common.Profile] (main) Deprecated features identity-brokering-api:v1, twitter-broker:v1 enabled by default. Check the upgrading guide for steps to use later versions if available.",
+    "2026-11-25 15:08:35,088 INFO  [org.keycloak.quarkus.runtime.storage.database.liquibase.QuarkusJpaUpdaterProvider] (main) Updating database. Using changelog META-INF/jpa-changelog-master.xml",
+    "2026-11-25 15:08:37,528 INFO  [org.keycloak.storage.datastore.DefaultMigrationManager] (main) Migrating older model to 26.6.1",
+    "2026-11-25 15:08:38,328 INFO  [org.keycloak.migration.migrators.RealmMigration] (main) migrated realm master to 26.6.1",
+    "2026-11-25 15:08:38,390 INFO  [org.keycloak.migration.migrators.RealmMigration] (main) migrated realm autotramita-test to 26.6.1",
+    "2026-11-25 15:08:38,391 INFO  [org.keycloak.storage.datastore.DefaultMigrationManager] (main) Migrating older model to 26.6.2",
+    "2026-11-25 15:08:38,394 INFO  [org.keycloak.migration.migrators.RealmMigration] (main) migrated realm master to 26.6.2",
+    "2026-11-25 15:08:38,395 INFO  [org.keycloak.migration.migrators.RealmMigration] (main) migrated realm autotramita-test to 26.6.2",
+    "2026-11-25 15:08:38,395 INFO  [org.keycloak.storage.datastore.DefaultMigrationManager] (main) Migrating older model to 26.7.0",
+    "2026-11-25 15:08:38,583 INFO  [org.keycloak.migration.migrators.RealmMigration] (main) migrated realm master to 26.7.0",
+    "2026-11-25 15:08:38,628 INFO  [org.keycloak.migration.migrators.RealmMigration] (main) migrated realm autotramita-test to 26.7.0",
+    "2026-11-25 15:08:38,628 INFO  [org.keycloak.storage.datastore.DefaultMigrationManager] (main) Migrating older model to 26.8.0",
+    "2026-11-25 15:08:38,635 INFO  [org.keycloak.migration.migrators.RealmMigration] (main) migrated realm master to 26.8.0",
+    "2026-11-25 15:08:38,639 INFO  [org.keycloak.migration.migrators.RealmMigration] (main) migrated realm autotramita-test to 26.8.0",
+    "2026-11-25 15:08:38,639 INFO  [org.keycloak.storage.datastore.DefaultMigrationManager] (main) Migrating older model to 26.8.2",
+    "2026-11-25 15:08:38,692 INFO  [org.keycloak.migration.migrators.RealmMigration] (main) migrated realm master to 26.8.2",
+    "2026-11-25 15:08:38,722 INFO  [org.keycloak.migration.migrators.RealmMigration] (main) migrated realm autotramita-test to 26.8.2"
+  ],
+  "old": "autotramita-keycloak built from ad693c5: quay.io/keycloak/keycloak:26.4.7@sha256:9409c59b\u2026 + provider 1.1.0, realm-test.json of ad693c5",
+  "old_image": "autotramita-keycloak:rehearsal-old",
+  "rehearsed": "2026-11-25"
+}

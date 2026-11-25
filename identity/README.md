@@ -9,10 +9,14 @@ realm import are live prerequisites needing separate authorization).
 | `keycloak/realm-{dev,prod,test}.json` | **Generated** by `scripts/identity/render_realms.py`; never edit by hand; tests fail on drift |
 | `keycloak/blacklists/at-common-passwords.txt` | Tiny **test-only** list. Production needs a vetted common-password list (live prerequisite) |
 | `docker-compose.keycloak-test.yml` | Disposable Keycloak for developer machines: builds the same image as CI |
-| `keycloak/Dockerfile` | The AutoTramita Keycloak image: pinned Keycloak 26.4.7 plus the security provider, built from source |
+| `keycloak/Dockerfile` | The AutoTramita Keycloak image: pinned Keycloak 26.8.2 plus the security provider, built from source |
+| `docker-compose.keycloak-production.yml` | **Prepared, not applied**: the future production Keycloak (AutoTramita image, same pins). The live `docker-compose.yml` still names upstream 26.4.7 |
+| `keycloak/UPGRADE-26.8.2.md` | Upgrade from 26.4.7: changes that concern AutoTramita, rehearsal results, production steps and rollback |
+| `keycloak/upgrade-rehearsal-26.8.2.json` | Result of `scripts/identity/upgrade_rehearsal.py` (disposable containers only) |
 | `keycloak/provider/` | The security provider ([its README](keycloak/provider/README.md): invariants, concurrency, upgrade, rollback, image scan) |
 | `keycloak/vulnerability-acceptances.json` | Owner acceptances of CRITICAL/HIGH image findings (time-limited; empty) |
-| `keycloak/vulnerability-review-26.4.7.json` | Reviewed findings of the current image: group, applicability, remedy |
+| `keycloak/vulnerability-review-26.8.2.json` | Reviewed findings of the current image, one by one, with a recommendation for the owner (nothing accepted) |
+| `keycloak/vulnerability-review-26.4.7.json` | Findings of the image before the upgrade, kept for comparison |
 
 ## Workflow
 1. Change `realm-template.json`, then `python scripts/identity/render_realms.py`.
@@ -49,7 +53,8 @@ The realm file applies only when a realm is **first imported**. Nothing in this 
 4. Authentication flows and their configurations: create every flow of the realm file exactly (`browser-loa-forms` with `at-security-guard` first and the levels in the order 1, 3, 2, 4; the probe, deny, level-three and level-four sub-flows; `direct-grant-denied`); bind the direct grant flow to `direct-grant-denied`.
 5. Required actions: `delete_credential` off, both passkey registrations off, `at-disable-mfa` on, and the `max_auth_age` configurations of the realm file. Event type `CUSTOM_REQUIRED_ACTION_ERROR` stored.
 6. Add the `at-loa-times` mapper to `at-web` and `at-mobile`.
-7. Sign out all sessions of the realm, so no session authenticated under the old flow survives.
+7. Add the client scope `kc-admin-api` to `at-admin-svc` as a default scope (Keycloak 26.8 accepts admin API tokens only with it; its migration adds it to `admin-cli` and `admin-console` only).
+8. Sign out all sessions of the realm, so no session authenticated under the old flow survives.
 
 Rollback without re-opening the gap: [provider README](keycloak/provider/README.md#rollback-without-re-opening-the-gap).
 
@@ -63,4 +68,4 @@ Realm files contain no secret. Confidential clients use `${AT_WEB_CLIENT_SECRET}
 The application caches JWKS for 10 minutes and refetches at most once a minute on an unknown `kid` (D05).
 
 ## Not covered here
-Compose import mount, hiding the admin console and `/realms/master` (D43), SMTP settings for dev/prod, production password blacklist, realm backup, Keycloak upgrade procedure.
+Compose import mount, hiding the admin console and `/realms/master` (D43), SMTP settings for dev/prod, production password blacklist. The Keycloak upgrade, its backup and rollback: [keycloak/UPGRADE-26.8.2.md](keycloak/UPGRADE-26.8.2.md).
