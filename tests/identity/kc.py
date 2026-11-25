@@ -303,6 +303,20 @@ class Browser:
             return page  # an SSO session already satisfied the request
         return self.submit(page, {"username": email, "password": secret, "credentialId": ""})
 
+    def sign_in_again(self, page: Page, user: TestUser) -> Page:
+        """Keycloak asks to sign in again before a credential changes (``max_auth_age`` 0) once
+        the earlier sign-in is a second old; answer it with the password when it is asked."""
+        if (
+            page.location is None
+            and 'name="password"' in page.text
+            and "password-new" not in page.text
+        ):
+            fields = {"password": user.password, "credentialId": ""}
+            if 'name="username"' in page.text:
+                fields["username"] = user.email
+            return self.submit(page, fields)
+        return page
+
     def token(
         self, client_id: str, code: str, redirect_uri: str, *, verifier: str | None = None
     ) -> dict[str, Any]:

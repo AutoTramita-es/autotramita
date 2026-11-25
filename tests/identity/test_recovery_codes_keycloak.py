@@ -118,6 +118,7 @@ def test_a_person_without_a_factor_sets_up_a_one_time_code_before_recovery_codes
     other = Browser(env)
     single_sign_on.sign_in(other).require_code()
     page = other.authorize("at-web", WEB_REDIRECT, kc_action=NEW_CODES)
+    page = other.sign_in_again(page, single_sign_on.user)
     assert shown(page) == "otp-setup", page.summary
     single_sign_on.otp, page = set_up_otp(other, page)
     assert shown(page) == "codes-setup", page.summary  # only now, after the code was verified
@@ -161,6 +162,7 @@ def test_new_recovery_codes_from_single_sign_on_need_the_permanent_factor_again(
     browser = Browser(env)
     who.sign_in(browser, signed_in_with).require_code()
     page = browser.authorize("at-web", WEB_REDIRECT, kc_action=NEW_CODES)
+    page = browser.sign_in_again(page, who.user)
     assert page.code is None and who.offered(browser, page) == {OTP}, page.summary
     page = who.prove(browser, page, OTP)
     assert shown(page) == "codes-setup", page.summary  # one question, not two

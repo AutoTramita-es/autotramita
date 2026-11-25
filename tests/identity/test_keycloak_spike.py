@@ -17,6 +17,7 @@ from tests.identity.kc import (
     Browser,
     Env,
     SmtpSink,
+    TestUser,
     decode_jwt,
     form_action,
     hidden_inputs,
@@ -293,14 +294,17 @@ def test_s09_kc_action_update_password_and_configure_totp(env: Env, admin: Admin
     user = admin.create_user()
     b = Browser(env)
     b.login(user).require_code()
-    page = b.authorize("at-web", WEB_REDIRECT, kc_action="UPDATE_PASSWORD")
+    page = b.sign_in_again(b.authorize("at-web", WEB_REDIRECT, kc_action="UPDATE_PASSWORD"), user)
     assert page.code is None and "password-new" in page.text, page.text[:300]
     new_password = "Another-correct-horse-9"
     done = b.submit(page, {"password-new": new_password, "password-confirm": new_password})
     status = done.query.get("kc_action_status", [None])[0]
     record_result("S9.update_password_status", status)
     assert status == "success", done.location or done.text[:300]
-    totp_page = b.authorize("at-web", WEB_REDIRECT, kc_action="CONFIGURE_TOTP")
+    signed = TestUser(id=user.id, email=user.email, password=new_password)
+    totp_page = b.sign_in_again(
+        b.authorize("at-web", WEB_REDIRECT, kc_action="CONFIGURE_TOTP"), signed
+    )
     assert totp_page.code is None and "totp" in totp_page.text.lower()
     # UPDATE_EMAIL and recovery codes are reported, not asserted (feature availability, S4)
     actions = {
