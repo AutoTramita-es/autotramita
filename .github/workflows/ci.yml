@@ -165,6 +165,8 @@ jobs:
       TEST_REDIS_URL: redis://127.0.0.1:6379/14
       # Throwaway values that exist only inside this job; the realm file holds no secret.
       TEST_KEYCLOAK_URL: http://127.0.0.1:18081
+      # Two more nodes on one PostgreSQL database: the provider's lock across instances.
+      TEST_KEYCLOAK_NODE_URLS: http://127.0.0.1:18083 http://127.0.0.1:18084
       TEST_KEYCLOAK_ADMIN_USER: ci-admin
       TEST_KEYCLOAK_ADMIN_PASSWORD: ci-throwaway-admin-password
       AT_WEB_CLIENT_SECRET: ci-throwaway-web-client-secret
@@ -180,6 +182,13 @@ jobs:
           enable-cache: true
       - name: Install locked dependencies
         run: uv sync --locked
+      - name: Build the AutoTramita Keycloak image (pinned upstream, provider from source)
+        run: >-
+          docker build
+          --build-arg KEYCLOAK_IMAGE=quay.io/keycloak/keycloak:26.4.7@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007
+          --build-arg JDK_IMAGE=eclipse-temurin:21-jdk@sha256:8ad118b146aa92da815b576441acd6b42b38236797ad0b6edc8c200b85bb0734
+          --tag autotramita-keycloak:ci
+          "$PWD/identity/keycloak"
       - name: Start Keycloak (pinned by digest, in-memory, test realm only)
         run: >-
           docker run -d --name keycloak --network host
@@ -188,7 +197,7 @@ jobs:
           -e AT_WEB_CLIENT_SECRET -e AT_ADMIN_SVC_CLIENT_SECRET
           -v "$PWD/identity/keycloak/realm-test.json:/opt/keycloak/data/import/realm-test.json:ro"
           -v "$PWD/identity/keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro"
-          quay.io/keycloak/keycloak:26.4.7@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007
+          autotramita-keycloak:ci
           start-dev --import-realm --http-host=127.0.0.1 --http-port=18081 --hostname-strict=false
       - name: Wait for the imported realm
         run: |
@@ -201,6 +210,34 @@ jobs:
           docker logs keycloak | tail -80
           echo "Keycloak did not become ready" >&2
           exit 1
+      - name: Start two Keycloak nodes on one PostgreSQL database
+        run: |
+          set -eu
+          uv run --locked python -c "import os, psycopg; c = psycopg.connect(os.environ['TEST_PG_ADMIN_URL'], autocommit=True); c.execute('CREATE DATABASE keycloak_nodes'); c.close()"
+          for node in 1 2; do
+            port=$((18082 + node))
+            import=""
+            if [ "$node" = 1 ]; then import="--import-realm"; fi
+            docker run -d --name "keycloak-node$node" --network host \
+              -e KC_BOOTSTRAP_ADMIN_USERNAME="$TEST_KEYCLOAK_ADMIN_USER" \
+              -e KC_BOOTSTRAP_ADMIN_PASSWORD="$TEST_KEYCLOAK_ADMIN_PASSWORD" \
+              -e AT_WEB_CLIENT_SECRET -e AT_ADMIN_SVC_CLIENT_SECRET \
+              -v "$PWD/identity/keycloak/realm-test.json:/opt/keycloak/data/import/realm-test.json:ro" \
+              -v "$PWD/identity/keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro" \
+              autotramita-keycloak:ci \
+              start-dev $import --http-host=127.0.0.1 --http-port="$port" --hostname-strict=false \
+              --db=postgres --db-url=jdbc:postgresql://127.0.0.1:5432/keycloak_nodes \
+              --db-username=postgres --db-password=ci-throwaway-password
+            ready=0
+            for attempt in $(seq 1 120); do
+              if curl -sf "http://127.0.0.1:$port/realms/autotramita-test/.well-known/openid-configuration" > /dev/null; then
+                ready=1; break
+              fi
+              sleep 2
+            done
+            if [ "$ready" != 1 ]; then docker logs "keycloak-node$node" | tail -80; exit 1; fi
+            echo "node $node ready"
+          done
       - name: Keycloak spike and OIDC tests (no skipped tests allowed)
         run: |
           export SPIKE_RESULTS_PATH="$RUNNER_TEMP/spike-results.json"
@@ -217,7 +254,7 @@ jobs:
               -e AT_WEB_CLIENT_SECRET -e AT_ADMIN_SVC_CLIENT_SECRET \
               -v "$PWD/identity/keycloak/realm-${kind}.json:/opt/keycloak/data/import/realm.json:ro" \
               -v "$PWD/identity/keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro" \
-              quay.io/keycloak/keycloak:26.4.7@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007 \
+              autotramita-keycloak:ci \
               start-dev --import-realm --http-host=127.0.0.1 --http-port=18082 --hostname-strict=false
             ready=0
             for attempt in $(seq 1 90); do
@@ -248,6 +285,7 @@ jobs:
           attrs = {a["name"]: a for a in profile.json()["attributes"]}
           assert "required" not in attrs["firstName"] and "required" not in attrs["lastName"]
           assert attrs["at_mfa_required"]["permissions"] == {"view": ["admin"], "edit": ["admin"]}
+          assert attrs["at_mfa_mandatory"]["permissions"] == {"view": ["admin"], "edit": ["admin"]}
           actions = httpx.get(base + "/admin/realms/" + realm + "/authentication/required-actions",
                               headers=headers)
           actions.raise_for_status()
@@ -257,6 +295,15 @@ jobs:
           assert enabled["CONFIGURE_TOTP"] is True and enabled["UPDATE_PASSWORD"] is True
           assert enabled["delete_credential"] is False
           assert enabled["CONFIGURE_RECOVERY_AUTHN_CODES"] is True
+          assert enabled["at-disable-mfa"] is True
+          info = httpx.get(base + "/admin/serverinfo", headers=headers)
+          info.raise_for_status()
+          providers = info.json()["providers"]
+          guarded = providers["required-action"]["providers"]
+          for action in ("CONFIGURE_TOTP", "CONFIGURE_RECOVERY_AUTHN_CODES", "UPDATE_PASSWORD",
+                         "webauthn-register", "webauthn-register-passwordless", "at-disable-mfa"):
+              assert guarded[action]["operationalInfo"]["autotramita-guard"] == "1.0.0", action
+          assert "at-security-guard" in providers["authenticator"]["providers"]
           password = httpx.get(base + "/admin/realms/" + realm
                                + "/authentication/required-actions/UPDATE_PASSWORD/config",
                                headers=headers)
@@ -274,6 +321,7 @@ jobs:
                          "webauthn-authenticator-passwordless", "auth-recovery-authn-code-form"):
               assert (factor, "ALTERNATIVE") in found, factor
           assert ("conditional-sub-flow-executed", "REQUIRED") in found
+          assert ("at-security-guard", "REQUIRED") in found
           for step in ("conditional-credential", "conditional-user-attribute",
                        "deny-access-authenticator", "user-session-limits"):
               assert (step, "REQUIRED") in found, step
@@ -290,6 +338,45 @@ jobs:
             docker rm -f "$container" >/dev/null
             trap - EXIT
           done
+      - name: Without the security provider the realm signs nobody in
+        run: |
+          set -eu
+          docker run -d --name keycloak-without-provider --network host \
+            -e KC_BOOTSTRAP_ADMIN_USERNAME="$TEST_KEYCLOAK_ADMIN_USER" \
+            -e KC_BOOTSTRAP_ADMIN_PASSWORD="$TEST_KEYCLOAK_ADMIN_PASSWORD" \
+            -e AT_WEB_CLIENT_SECRET -e AT_ADMIN_SVC_CLIENT_SECRET \
+            -v "$PWD/identity/keycloak/realm-test.json:/opt/keycloak/data/import/realm-test.json:ro" \
+            -v "$PWD/identity/keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro" \
+            quay.io/keycloak/keycloak:26.4.7@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007 \
+            start-dev --import-realm --http-host=127.0.0.1 --http-port=18085 --hostname-strict=false
+          ready=0
+          for attempt in $(seq 1 90); do
+            if curl -sf http://127.0.0.1:18085/realms/master/.well-known/openid-configuration > /dev/null; then
+              ready=1; break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then docker logs keycloak-without-provider | tail -80; exit 1; fi
+          sleep 5
+          TEST_KEYCLOAK_URL=http://127.0.0.1:18085 uv run --locked python - <<'PYGUARD'
+          from tests.identity.kc import Admin, Browser, Env
+          import httpx, os
+
+          env = Env(os.environ["TEST_KEYCLOAK_URL"], os.environ["TEST_KEYCLOAK_ADMIN_USER"],
+                    os.environ["TEST_KEYCLOAK_ADMIN_PASSWORD"], os.environ["AT_WEB_CLIENT_SECRET"],
+                    os.environ["AT_ADMIN_SVC_CLIENT_SECRET"])
+          admin = Admin(env)
+          realm = admin.master("GET", "")
+          if realm.status_code == 404:
+              print("the realm was not imported without the provider: nobody can sign in")
+          else:
+              realm.raise_for_status()
+              user = admin.create_user()
+              page = Browser(env).login(user)
+              assert page.code is None, "a sign-in succeeded without the security provider"
+              print("sign-in refused without the provider:", page.status)
+          PYGUARD
+          docker rm -f keycloak-without-provider > /dev/null
       - name: Spike observations
         if: always()
         run: cat "$RUNNER_TEMP/spike-results.json" || true

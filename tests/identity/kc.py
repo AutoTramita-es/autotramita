@@ -114,6 +114,11 @@ class Admin:
         headers = {"Authorization": f"Bearer {self._master_token()}"}
         return self.http.request(method, f"/admin/realms/{REALM}{path}", headers=headers, **kw)
 
+    def server(self, method: str, path: str, **kw: Any) -> httpx.Response:
+        """A call outside the realm (``/admin{path}``), for example the server information."""
+        headers = {"Authorization": f"Bearer {self._master_token()}"}
+        return self.http.request(method, f"/admin{path}", headers=headers, **kw)
+
     def service(self, method: str, path: str, **kw: Any) -> httpx.Response:
         headers = {"Authorization": f"Bearer {self.service_token()}"}
         return self.http.request(method, f"/admin/realms/{REALM}{path}", headers=headers, **kw)

@@ -6,8 +6,8 @@ credentials cannot be removed at the provider, and the password-only sign-in sta
 people who never set up a factor. Recovery codes and older accounts are in
 ``test_recovery_codes_keycloak.py``.
 
-Two tests at the end record behaviour that is **not** protected (open findings, owner decision
-needed); they exist so that the finding is evidence and cannot change unnoticed."""
+The two tests at the end were open findings (F-1R-C, the rest of F-3K) until the Keycloak
+security provider; they now assert the protection."""
 
 from __future__ import annotations
 
@@ -48,6 +48,7 @@ from tests.identity.kc import (
     decode_jwt,
     form_action,
     hidden_inputs,
+    totp,
 )
 from tests.identity.rig import API as AUTH_API
 from tests.identity.rig import ORIGIN, Rig
@@ -545,6 +546,8 @@ def test_a_password_change_of_a_person_with_a_factor_runs_through_it(
 def test_the_application_keeps_the_last_permanent_factor_at_the_real_provider(
     rig: Rig, env: Env, admin: Admin
 ) -> None:
+    """With codes and, since the provider marks every first factor, without them too: the last
+    permanent factor goes only through the controlled switch-off."""
     who = account(admin, OTP, CODES)
     assert rig.sign_in(who.user, prove=who.answer).status_code == 302
     step_up(rig, who)
@@ -553,10 +556,10 @@ def test_the_application_keeps_the_last_permanent_factor_at_the_real_provider(
     assert refused.status_code == 409, refused.text
     assert refused.json()["code"] == "LAST_PERMANENT_FACTOR"
     assert who.kinds() == sorted([OTP, CODES])
-    for kind in (CODES, OTP):  # the backup first, then the factor itself
-        gone = rig.api.delete(f"{path}/{who.credential_id(kind)}", headers=secure(rig))
-        assert gone.status_code == 204, gone.text
-    assert who.kinds() == []
+    gone = rig.api.delete(f"{path}/{who.credential_id(CODES)}", headers=secure(rig))
+    assert gone.status_code == 204, gone.text  # the backup may go
+    refused = rig.api.delete(f"{path}/{who.credential_id(OTP)}", headers=secure(rig))
+    assert refused.status_code == 409 and who.kinds() == [OTP]
 
 
 def test_the_application_reads_the_factor_obligation_from_the_real_provider(
@@ -596,53 +599,43 @@ def test_the_admin_client_withdraws_credential_setups_and_nothing_else(
     assert client.has_factor_obligation(who.user.id)
 
 
-# --- open findings (recorded, not protected) -----------------------------------------------------
-def test_open_finding_a_set_up_page_opened_before_the_first_factor_still_adds_one(
+# --- held forms (F-1R-C and the rest of F-3K, closed by the Keycloak security provider) ----------
+def test_a_set_up_page_opened_before_the_first_factor_is_refused_after_it(
     env: Env, admin: Admin
 ) -> None:
-    """OPEN, P1 (F-1R-C, owner decision). Somebody who knows the password opens the one-time
-    code set-up while the account has no factor and keeps that page open (reloading it keeps
-    it alive). The person then protects the account. Keycloak accepts the old page afterwards,
-    without asking for the person's factor, and no realm setting, sign-out, password change or
-    disabling of the user ends it: the second factor of the intruder is on the account."""
+    """F-1R-C (P1), closed. Somebody who knows the password opens the one-time code set-up while
+    the account has no factor and keeps the page open. The person then turns a factor on. The old
+    page is refused when it is submitted: the provider decides under the person's lock, on the
+    account as it is then, and this sign-in proved no permanent factor."""
     who = account(admin)
     intruder = Browser(env)
     held = intruder.login(who.user, kc_action="CONFIGURE_TOTP")
-    assert shown(held) == "otp-setup", held.summary
+    manual = re.search(r'href="([^"]*mode=manual[^"]*)"', held.text)
+    if manual:  # the page with the secret, as the intruder keeps it
+        held = intruder.get(manual.group(1).replace("&amp;", "&"))
+    secret = re.search(r'id="kc-totp-secret-key"[^>]*>([^<]+)<', held.text)
+    assert secret, held.summary
     who.enrol(OTP)  # the person turns on the second factor
     admin.master("POST", f"/users/{who.user.id}/logout").raise_for_status()
-    theirs, done = set_up_otp(intruder, held, label="intruder")
-    assert done.code, "the finding changed: update F-1R-C and this test"
-    assert who.credentials() == [OTP, OTP, "password"]
-    browser = Browser(env)
-    page = browser.login(who.user, acr_values="loa2")
-    assert shown(page) == OTP
-    # Keycloak lets the person choose among their one-time code devices: the intruder tries both
-    devices = re.findall(r"toggleOTP\(\d+, '([0-9a-f-]{36})'\)", page.text)
-    assert len(devices) == 2, "no choice between the two devices on the page"
-    for device in devices:
-        fields = {**hidden_inputs(page.text), "otp": theirs.code(), "selectedCredentialId": device}
-        page = browser.submit(page, fields, action=form_action(page.text))
-        if page.code:
-            break
-    assert page.code, page.summary  # level two with the intruder's factor and the password
-    tokens = browser.token("at-web", page.require_code(), WEB_REDIRECT)
-    assert decode_jwt(tokens["id_token"])["acr"] == "loa2"
+    fields = {**hidden_inputs(held.text), "totp": totp(secret.group(1).strip()), "userLabel": "x"}
+    done = intruder.submit(held, fields, action=form_action(held.text))
+    assert done.code is None and done.location and "error=access_denied" in done.location
+    assert who.credentials() == [OTP, "password"]
+    page = Browser(env).login(who.user, acr_values="loa2")
+    assert shown(page) == OTP and "toggleOTP(1," not in page.text  # one device: the person's
+    who.prove(Browser(env), Browser(env).login(who.user), OTP)
 
 
-def test_open_finding_a_password_form_opened_before_the_first_factor_still_changes_it(
+def test_a_password_form_opened_before_the_first_factor_is_refused_after_it(
     env: Env, admin: Admin
 ) -> None:
-    """OPEN (F-3K, the remaining case). The same with the new-password form: submitted after
-    the person turned on a second factor, it changes the password. It gives no level and no
-    session past the factor question."""
+    """F-3K (the remaining case), closed. The same with the new-password form."""
     who = account(admin)
     intruder = Browser(env)
     held = intruder.login(who.user, kc_action="UPDATE_PASSWORD")
     assert shown(held) == "new-password", held.summary
     who.enrol(OTP)
     done = intruder.submit(held, {"password-new": NEW_PASSWORD, "password-confirm": NEW_PASSWORD})
-    assert done.code, "the finding changed: update F-3K and this test"
-    who.user = TestUser(id=who.user.id, email=who.user.email, password=NEW_PASSWORD)
-    page = Browser(env).login(who.user)
+    assert done.code is None and done.location and "error=access_denied" in done.location
+    page = Browser(env).login(who.user)  # the old password is still the password
     assert page.code is None and shown(page) == OTP, page.summary

@@ -3,8 +3,8 @@ the backup of a permanent factor, an account that once had a second factor never
 the password alone, and no e-mail link runs a credential set-up. Runs only in the ``keycloak``
 CI job.
 
-One test records a case that is **not** covered (``test_known_gap_*``): it passes by showing
-the behaviour and is not evidence of protection."""
+The held sign-in with a recovery code was a known gap until the Keycloak security provider; its
+test now asserts the protection."""
 
 from __future__ import annotations
 
@@ -254,25 +254,28 @@ def test_two_sign_ins_at_once_leave_no_session_from_before_the_last_code(
     assert shown(first.authorize("at-web", WEB_REDIRECT)) == "password"
 
 
-def test_known_gap_a_sign_in_held_open_with_a_code_receives_the_pending_new_codes(
+def test_a_sign_in_held_open_with_a_code_gets_no_new_codes_after_the_last_one(
     env: Env, admin: Admin
 ) -> None:
-    """KNOWN GAP (requirement 1 of the final decision; not a password-only path). Whoever has
-    the password **and** a valid recovery code, and holds that sign-in open on another pending
-    page while the last code is spent, is shown the new codes without the permanent factor.
-    Keycloak runs pending actions of the account in every unfinished sign-in."""
+    """The open recovery authentication finding, closed by the Keycloak security provider:
+    whoever has the password and an unused recovery code holds a sign-in open on another pending
+    page while the last code is spent elsewhere. When the held sign-in goes on, the pending new
+    codes are refused: it proved a recovery code, not a permanent factor."""
     who = account(admin, OTP, CODES)
     who.spend_codes(keep=2)
     path = f"/users/{who.user.id}"
     found = admin.master("GET", path).json()
     admin.master(
-        "PUT", path, json={**found, "requiredActions": ["UPDATE_PASSWORD"]}
+        "PUT", path, json={**found, "requiredActions": ["UPDATE_PROFILE"]}
     ).raise_for_status()
     held, page = sign_in_with_code(env, who)
-    assert shown(page) == "new-password", page.summary
+    assert 'name="firstName"' in page.text, page.summary  # the profile page, held open
     sign_in_with_code(env, who)  # the last code, elsewhere
-    done = held.submit(page, {"password-new": NEW_PASSWORD, "password-confirm": NEW_PASSWORD})
-    assert shown(done) == "codes-setup", "the gap changed: update the report and this test"
+    assert "CONFIGURE_RECOVERY_AUTHN_CODES" in who.required_actions()
+    profile = {"firstName": "Ana", "lastName": "Test", "email": who.user.email}
+    done = held.submit(page, {**hidden_inputs(page.text), **profile}, action=form_action(page.text))
+    assert done.code is None and done.location and "error=access_denied" in done.location
+    assert who.kinds() == [OTP]
 
 
 # --- accounts that hold recovery codes only -----------------------------------------------------
@@ -324,11 +327,16 @@ def test_the_application_request_moves_a_codes_only_account_too(env: Env, admin:
 
 
 def locked_account(env: Env, admin: Admin) -> Account:
-    """Marked, every code spent, the set-up of a one-time code abandoned each time."""
+    """Marked, every code spent, the set-up of a one-time code abandoned each time. After the
+    last code the set-up is refused too (the provider): nothing usable is left to prove."""
     who = codes_only_account(admin, marked=True)
     for position in range(len(who.codes)):
         _, page = sign_in_with_code(env, who)
-        assert page.code is None and shown(page) == "otp-setup", (position, page.summary)
+        last = position == len(who.codes) - 1
+        if last:
+            assert page.code is None and page.location and "error=access_denied" in page.location
+        else:
+            assert page.code is None and shown(page) == "otp-setup", (position, page.summary)
     assert who.kinds() == [] and sessions(admin, who) == 0
     return who
 
@@ -470,12 +478,12 @@ def test_a_recovery_link_runs_no_pending_set_up(
     assert shown(page) == ("denied" if state == "locked" else OTP), page.summary
 
 
-def test_the_provider_itself_runs_pending_set_ups_for_a_link(
+def test_a_link_sent_past_the_application_runs_no_set_up_either(
     env: Env, admin: Admin, smtp: SmtpSink
 ) -> None:
-    """Why the application withdraws them: sent past the application, the same link offers new
-    recovery codes to its holder. Only the application and administrators can send it
-    (``resetPasswordAllowed`` is off)."""
+    """Keycloak runs every pending action for the holder of an e-mail link. Sent past the
+    application (only administrators can: ``resetPasswordAllowed`` is off), the pending new codes
+    are refused by the provider: a mailbox proves no factor."""
     who = account(admin, OTP, CODES)
     spend_last_code(env, who)
     sent = admin.service(
@@ -486,7 +494,8 @@ def test_the_provider_itself_runs_pending_set_ups_for_a_link(
     )
     sent.raise_for_status()
     _, page = open_link(env, mail_link(smtp, who.user.email))
-    assert shown(page) == "codes-setup", "the provider changed: review the withdrawal"
+    assert page.code is None and page.location and "error=access_denied" in page.location
+    assert who.kinds() == [OTP]
 
 
 def test_the_worker_withdraws_a_set_up_that_became_pending_after_the_mail(

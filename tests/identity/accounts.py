@@ -202,6 +202,15 @@ class Account:
             wanted = self.permanent()
         return page
 
+    def password_again(self, browser: Browser, page: Page) -> Page:
+        """Keycloak asks to sign in again before a credential changes (``max_auth_age`` 0)."""
+        if shown(page) != "password":
+            return page
+        fields = {"password": self.user.password, "credentialId": ""}
+        if 'name="username"' in page.text:
+            fields["username"] = self.user.email
+        return browser.submit(page, fields)
+
     def spend_codes(self, keep: int) -> None:
         """Sign in with recovery codes until ``keep`` unused ones remain."""
         while True:
@@ -217,6 +226,12 @@ class Account:
         path = f"/users/{self.user.id}"
         found = self.admin.master("GET", path).json()
         found.setdefault("attributes", {})["at_mfa_required"] = ["true"]
+        self.admin.master("PUT", path, json=found).raise_for_status()
+
+    def unmark(self) -> None:
+        path = f"/users/{self.user.id}"
+        found = self.admin.master("GET", path).json()
+        (found.get("attributes") or {}).pop("at_mfa_required", None)
         self.admin.master("PUT", path, json=found).raise_for_status()
 
     def remove_as_administrator(self, kind: str) -> None:
@@ -235,7 +250,7 @@ class Account:
         browser = Browser(self.admin.env)
         self.sign_in(browser).require_code()
         page = browser.authorize("at-web", WEB_REDIRECT, kc_action=name)
-        return browser, self.answer(browser, page)
+        return browser, self.answer(browser, self.password_again(browser, page))
 
     def enrol(self, kind: str) -> Account:
         if kind == OTP:
@@ -296,4 +311,6 @@ def codes_only_account(admin: Admin, *, marked: bool) -> Account:
     admin.master("POST", f"/users/{created.user.id}/logout").raise_for_status()
     if marked:
         created.mark()
+    else:  # an account from before the provider, which now marks every first factor
+        created.unmark()
     return created

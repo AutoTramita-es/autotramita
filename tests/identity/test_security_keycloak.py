@@ -174,6 +174,18 @@ def test_the_fourth_recovery_request_in_an_hour_sends_no_fourth_mail(
 
 
 # --- password change through kc_action (AC-POL-06) ----------------------------------------------
+def at_provider(rig: Rig, user: TestUser, url: str):  # type: ignore[no-untyped-def]
+    """Follow an application-started action; answer the fresh sign-in Keycloak asks first."""
+    rig.browser._last = f"{ORIGIN}{AUTH_API}/callback"
+    page = rig.browser._settle(rig.browser.http.get(url), rig.browser._last)
+    if page.location is None and 'name="password"' in page.text and "password-new" not in page.text:
+        fields = {"password": user.password, "credentialId": ""}
+        if 'name="username"' in page.text:
+            fields["username"] = user.email
+        page = rig.browser.submit(page, fields)
+    return page
+
+
 def password_form(rig: Rig, user: TestUser, url: str):  # type: ignore[no-untyped-def]
     """Keycloak's new-password form; it asks to sign in again first (F-3K)."""
     rig.browser._last = f"{ORIGIN}{AUTH_API}/callback"
@@ -230,10 +242,7 @@ def enrol_totp(rig: Rig, user: TestUser) -> str:
         headers=secure(rig),
     )
     assert started.status_code == 200, started.text
-    rig.browser._last = f"{ORIGIN}{AUTH_API}/callback"
-    page = rig.browser._settle(
-        rig.browser.http.get(started.json()["redirect_url"]), rig.browser._last
-    )
+    page = at_provider(rig, user, started.json()["redirect_url"])
     secret = re.search(r'id="kc-totp-secret-key"[^>]*>([^<]+)<', page.text)
     if not secret:
         manual = re.search(r'href="([^"]*mode=manual[^"]*)"', page.text)
@@ -252,7 +261,7 @@ def enrol_totp(rig: Rig, user: TestUser) -> str:
     return secret.group(1).strip()
 
 
-def test_a_second_factor_is_enrolled_listed_required_for_removal_and_removed(
+def test_a_second_factor_is_enrolled_listed_and_kept_as_the_last_one(
     rig: Rig, admin: Admin
 ) -> None:
     user = admin.create_user()
@@ -287,15 +296,16 @@ def test_a_second_factor_is_enrolled_listed_required_for_removal_and_removed(
     assert page.location, page.summary
     assert rig.api.get(page.location).status_code == 302
     assert rig.api.get(f"{AUTH_API}/session").json()["auth_level"] == "LOA2"
-    gone = rig.api.delete(
+    # the only permanent factor: the provider made the obligation permanent, so it is kept; the
+    # person switches the second factor off through the controlled switch-off instead
+    kept = rig.api.delete(
         f"{API}/me/security/second-factors/{factors[0]['id']}", headers=secure(rig)
     )
-    assert gone.status_code == 204, gone.text
-    assert rig.api.get(f"{API}/me/security").json()["second_factors"] == []
-    assert NoticeKind.MFA_REMOVED in [n.kind for n in rig.notices.notices]
-    assert rig.rows(
-        "SELECT details->>'factor' FROM audit_events WHERE action = 'security.mfa.removed'"
-    ) == [("TOTP",)]
+    assert kept.status_code == 409 and kept.json()["code"] == "LAST_PERMANENT_FACTOR", kept.text
+    assert [f["type"] for f in rig.api.get(f"{API}/me/security").json()["second_factors"]] == [
+        "otp"
+    ]
+    assert NoticeKind.MFA_REMOVED not in [n.kind for n in rig.notices.notices]
 
 
 def test_recovery_codes_can_be_enrolled_through_keycloak_d41(rig: Rig, admin: Admin) -> None:
@@ -306,10 +316,7 @@ def test_recovery_codes_can_be_enrolled_through_keycloak_d41(rig: Rig, admin: Ad
         json={"factor": "RECOVERY_CODES", "return_to": "/me"},
         headers=secure(rig),
     )
-    rig.browser._last = f"{ORIGIN}{AUTH_API}/callback"
-    page = rig.browser._settle(
-        rig.browser.http.get(started.json()["redirect_url"]), rig.browser._last
-    )
+    page = at_provider(rig, user, started.json()["redirect_url"])
     # no factor yet: the provider has a one-time code set up first (final MFA decision)
     _, page = set_up_otp(rig.browser, page)
     record_result("T09.recovery_codes_page", page.summary[:200])

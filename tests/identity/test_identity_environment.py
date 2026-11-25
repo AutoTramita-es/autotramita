@@ -36,3 +36,46 @@ def test_ci_job_uses_only_the_test_realm_and_throwaway_credentials() -> None:
     assert "-m keycloak" in CI
     assert "ci-throwaway" in CI
     assert "${{ secrets." not in CI
+
+
+# --- the AutoTramita Keycloak image (security provider order, 2026-11-25) ---------------------
+DOCKERFILE = (ROOT / "identity" / "keycloak" / "Dockerfile").read_text()
+BUILD = (ROOT / "identity" / "keycloak" / "provider" / "build.sh").read_text()
+SOURCES = sorted((ROOT / "identity" / "keycloak" / "provider" / "src").rglob("*.java"))
+PINNED = re.compile(r"(KEYCLOAK_IMAGE|JDK_IMAGE)[=:] ?([a-z0-9./_-]+:[\w.-]+@sha256:[0-9a-f]{64})")
+
+
+def test_the_image_is_built_from_the_same_pinned_images_everywhere() -> None:
+    dockerfile = dict(PINNED.findall(DOCKERFILE))
+    assert set(dockerfile) == {"KEYCLOAK_IMAGE", "JDK_IMAGE"}
+    assert dict(PINNED.findall(CI)) == dockerfile == dict(PINNED.findall(COMPOSE))
+    assert IMAGE.search(dockerfile["KEYCLOAK_IMAGE"])
+    assert "autotramita-keycloak:ci" in CI
+    assert (
+        "quay.io/keycloak/keycloak"
+        not in CI.split("Without the security provider")[0]
+        .split("Build the AutoTramita Keycloak image")[1]
+        .split("--tag")[1]
+    )  # after the build, every node runs the built image
+
+
+def test_the_runtime_stage_adds_one_read_only_jar_and_stays_non_root() -> None:
+    final = DOCKERFILE.split("FROM ${KEYCLOAK_IMAGE}\n")[-1]
+    instructions = [line.split()[0] for line in final.splitlines() if line and line[0].isupper()]
+    assert instructions == ["COPY", "USER"], instructions
+    assert "--chmod=0444" in final and "/opt/keycloak/providers/" in final
+    assert final.strip().endswith("USER 1000")
+    assert "cmp /first.jar" in DOCKERFILE  # built twice, byte for byte the same
+
+
+def test_the_provider_is_built_offline_from_keycloak_s_own_libraries() -> None:
+    for tool in ("curl", "wget", "mvn", "gradle", "pip", "http://", "https://"):
+        assert tool not in BUILD, tool
+    assert '-cp "$lib/main/*:$lib/boot/*"' in BUILD and "-Werror" in BUILD
+    assert "PolicyCheck" in BUILD and "unexpected jar entry" in BUILD
+    allowed = ("java.", "jakarta.", "org.keycloak.", "org.jboss.logging.", "es.autotramita.")
+    for source in SOURCES:
+        for line in source.read_text().splitlines():
+            if line.startswith("import "):
+                name = line.removeprefix("import ").removeprefix("static ")
+                assert name.startswith(allowed), (source.name, line)

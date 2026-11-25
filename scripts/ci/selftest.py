@@ -146,6 +146,38 @@ class BrokerPolicy(unittest.TestCase):
             with self.subTest(" ".join(request)), self.assertRaises(Refused):
                 self.policy.command(request)
 
+    def test_only_the_keycloak_image_is_built_from_its_directory_without_network(self) -> None:
+        context = self.ws / "src" / "identity" / "keycloak"
+        context.mkdir(parents=True)
+        command = self.policy.command(
+            ["build", "--build-arg", f"KEYCLOAK_IMAGE={self.IMAGE}",
+             "--tag", "autotramita-keycloak:ci", str(context)]
+        )  # fmt: skip
+        self.assertEqual(command[:4], ["docker", "build", "--network", "none"])
+        self.assertEqual(command[-2:], ["atci-run-job-autotramita-keycloak:ci", str(context)])
+        started = self.policy.command(["run", "-d", "--name", "kc", "autotramita-keycloak:ci"])
+        self.assertIn("atci-run-job-autotramita-keycloak:ci", started)
+
+    def test_every_other_build_is_refused(self) -> None:
+        context = self.ws / "src" / "identity" / "keycloak"
+        context.mkdir(parents=True)
+        tag = ["--tag", "autotramita-keycloak:ci"]
+        requests = [
+            ["build", "--tag", "other:1", str(context)],
+            ["build", *tag, str(self.ws / "src")],
+            ["build", *tag, str(self.ws / "escape")],
+            ["build", *tag, "--build-arg", "KEYCLOAK_IMAGE=alpine", str(context)],
+            ["build", *tag, "--build-arg", f"OTHER={self.IMAGE}", str(context)],
+            ["build", *tag, "--network", "host", str(context)],
+            ["build", *tag, "--file", "/tmp/Dockerfile", str(context)],
+            ["build", *tag],
+            ["build", str(context)],
+            ["run", "--rm", "autotramita-keycloak:ci"],  # not built by this job
+        ]  # fmt: skip
+        for request in requests:
+            with self.subTest(" ".join(request)), self.assertRaises(Refused):
+                self.policy.command(request)
+
 
 def summary(status: str = report.PASS, **suite: int) -> dict[str, Any]:
     counts = {"tests": 1, "passed": 1, "failed": 0, "errors": 0, "skipped": 0, **suite}

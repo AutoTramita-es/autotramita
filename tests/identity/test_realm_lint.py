@@ -73,9 +73,13 @@ def _config(realm: dict[str, Any], alias: str) -> dict[str, str]:
 
 
 def _marker_editable(realm: dict[str, Any]) -> None:
+    _attribute_editable(realm, "at_mfa_required")
+
+
+def _attribute_editable(realm: dict[str, Any], name: str) -> None:
     config = realm["components"]["org.keycloak.userprofile.UserProfileProvider"][0]["config"]
     profile = json.loads(config["kc.user.profile.config"][0])
-    marker = next(a for a in profile["attributes"] if a["name"] == "at_mfa_required")
+    marker = next(a for a in profile["attributes"] if a["name"] == name)
     marker["permissions"]["edit"] = ["admin", "user"]
     config["kc.user.profile.config"] = [json.dumps(profile)]
 
@@ -248,6 +252,31 @@ def _client(realm: dict[str, Any], client_id: str) -> dict[str, Any]:
             "password change from an old session",
             lambda r: _action(r, "UPDATE_PASSWORD").pop("config"),
             "fresh authentication",
+        ),
+        (
+            "factor set-up from an old session",
+            lambda r: _action(r, "CONFIGURE_TOTP").update(config={}),
+            "CONFIGURE_TOTP: a credential may change only after a fresh",
+        ),
+        (
+            "no guard step",
+            lambda r: _flow(r, "browser-loa-forms")["authenticationExecutions"].pop(0),
+            "browser-loa-forms differs",
+        ),
+        (
+            "mandatory flag editable by the user",
+            lambda r: _attribute_editable(r, "at_mfa_mandatory"),
+            "at_mfa_mandatory must be visible and changeable by administrators only",
+        ),
+        (
+            "refusals not stored",
+            lambda r: r["enabledEventTypes"].remove("CUSTOM_REQUIRED_ACTION_ERROR"),
+            "stored as events",
+        ),
+        (
+            "switch-off off",
+            lambda r: _action(r, "at-disable-mfa").update(enabled=False),
+            "at-disable-mfa must be on",
         ),
         (
             "password grant flow",

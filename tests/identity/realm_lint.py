@@ -30,8 +30,21 @@ REQUIRED_ACTIONS = {
     "delete_credential": False,  # no person removes a credential at the provider (F-1R-B)
     "idp_link": True,
     "CONFIGURE_RECOVERY_AUTHN_CODES": True,
+    "at-disable-mfa": True,  # the provider's controlled switch-off, started by the application
     "update_user_locale": True,
 }
+# Every credential change and the switch-off start with a fresh sign-in (``max_auth_age`` 0); the
+# provider then checks the proof of that sign-in when the form is submitted.
+ACTION_CONFIG = {
+    "CONFIGURE_TOTP": {"max_auth_age": "0"},
+    "CONFIGURE_RECOVERY_AUTHN_CODES": {"max_auth_age": "0", "warning_threshold": "4"},
+    "UPDATE_PASSWORD": {"max_auth_age": "0"},
+    "webauthn-register": {"max_auth_age": "0"},
+    "webauthn-register-passwordless": {"max_auth_age": "0"},
+    "at-disable-mfa": {"max_auth_age": "0"},
+}
+GUARD = "at-security-guard"  # the provider's first sign-in step; without the provider no sign-in
+MANDATORY = "at_mfa_mandatory"
 # The authenticator that proves each kind of second factor the application knows (F-1R). A kind
 # without one would be offered a new one-time code after the password alone.
 FACTOR_AUTHENTICATORS = {
@@ -121,7 +134,7 @@ FLOWS: dict[str, list[Step]] = {
         _sub("loa-forms", "ALTERNATIVE"),
     ],
     # The order 1, 3, 2, 4 decides the level each kind of credential belongs to.
-    "browser-loa-forms": [_sub(f"loa-{number}") for number in (1, 3, 2, 4)],
+    "browser-loa-forms": [_step(GUARD), *[_sub(f"loa-{number}") for number in (1, 3, 2, 4)]],
     "browser-loa-1": [
         _level("1", "43200"),
         _step("auth-username-password-form"),
@@ -318,9 +331,14 @@ def lint_realm(realm: dict[str, Any], *, kind: str) -> list[str]:
         ]
         need(actual == expected, f"flow {alias} differs from the reviewed one: {actual}")
 
+    for attribute in (MARKER, MANDATORY):
+        need(
+            _profile_permissions(realm, attribute) == {"view": ["admin"], "edit": ["admin"]},
+            f"the attribute {attribute} must be visible and changeable by administrators only",
+        )
     need(
-        _profile_permissions(realm, MARKER) == {"view": ["admin"], "edit": ["admin"]},
-        f"the attribute {MARKER} must be visible and changeable by administrators only",
+        "CUSTOM_REQUIRED_ACTION_ERROR" in realm.get("enabledEventTypes", []),
+        "refused credential changes must be stored as events",
     )
     need(realm.get("attributes", {}).get("acr.loa.map") == LOA_MAP, "realm level map changed")
 
@@ -332,10 +350,11 @@ def lint_realm(realm: dict[str, Any], *, kind: str) -> list[str]:
             found.get("enabled") is enabled and found.get("defaultAction") is False,
             f"required action {alias} must be {'on' if enabled else 'off'} and never forced",
         )
-    need(
-        actions.get("UPDATE_PASSWORD", {}).get("config") == {"max_auth_age": "0"},
-        "a password may be changed only after a fresh authentication",
-    )
+    for alias, config in ACTION_CONFIG.items():
+        need(
+            actions.get(alias, {}).get("config") == config,
+            f"required action {alias}: a credential may change only after a fresh authentication",
+        )
     clients = {c["clientId"]: c for c in realm.get("clients", [])}
     need(set(clients) == {"at-web", "at-mobile", "at-admin-svc"}, "unexpected client set")
     for client_id, client in clients.items():

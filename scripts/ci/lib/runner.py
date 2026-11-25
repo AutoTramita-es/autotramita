@@ -534,6 +534,8 @@ class JobRun:
     def teardown(self) -> None:
         if self.broker:
             self.broker.stop()
+            for image in self.broker.policy.built.values():
+                docker("image", "rm", "-f", image, check=False)
         # Containers started by the steps join the netns, so they go before compose. Only they
         # carry the job label.
         remove_containers(owned_by_job(self.run.run_id, self.job.key))

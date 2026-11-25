@@ -373,6 +373,10 @@ def test_s03_a_passkey_enrolled_earlier_is_the_second_level(
     key = SoftwareKey()
     with required_action_enabled(admin, "webauthn-register"):
         page = rig.browser.authorize("at-web", WEB_REDIRECT, kc_action="webauthn-register")
+        if 'name="password"' in page.text:  # a credential changes only after a fresh sign-in
+            page = rig.browser.submit(
+                page, {"username": user.email, "password": user.password, "credentialId": ""}
+            )
         done = register(rig.browser, page, env.base_url, key)
     assert done.location and "kc_action_status=success" in done.location, done.summary
     factors = rig.api.get(f"{API}/me/security").json()["second_factors"]

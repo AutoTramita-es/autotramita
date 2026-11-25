@@ -1,6 +1,8 @@
 """Host side of the docker stand-in. A CI step may start only the images named by the workflow,
 mount only paths of its own workspace, and use only the isolated network namespace of its job
-(`--network host`, as written in ci.yml) or no network at all. Anything else is refused.
+(`--network host`, as written in ci.yml) or no network at all. It may build exactly one image,
+the AutoTramita Keycloak image, from a directory of its own workspace, from base images the
+workflow names by digest, without network. Anything else is refused.
 
 No Docker socket is ever mounted into a container that runs repository code.
 """
@@ -16,6 +18,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 RUNNER_USER = "1001:1001"
+# The only image a step may build, and the only build arguments it may pass (each must be one
+# of the pinned images named by the workflow).
+BUILDABLE = {"autotramita-keycloak:ci": "identity/keycloak"}
+BUILD_ARGS = frozenset({"KEYCLOAK_IMAGE", "JDK_IMAGE"})
 
 
 class Refused(Exception):
@@ -31,6 +37,7 @@ class Policy:
     read_only_roots: tuple[Path, ...]
     images: frozenset[str]
     created: set[str] = field(default_factory=set)
+    built: dict[str, str] = field(default_factory=dict)  # name in ci.yml -> tag of this job
 
     def command(self, argv: list[str]) -> list[str]:
         if not argv:
@@ -38,6 +45,8 @@ class Policy:
         verb, rest = argv[0], argv[1:]
         if verb == "run":
             return self._run(rest)
+        if verb == "build":
+            return self._build(rest)
         if verb == "logs" and len(rest) == 1:
             return ["docker", "logs", self._own(rest[0])]
         if verb == "rm" and len(rest) == 2 and rest[0] == "-f":
@@ -62,6 +71,38 @@ class Policy:
             raise Refused(f"mount source {source!r} is outside the job workspace")
         read_only = len(parts) == 3 or resolved in self.read_only_roots
         return f"{resolved}:{target}" + (":ro" if read_only else "")
+
+    def _build(self, args: list[str]) -> list[str]:
+        out = ["docker", "build", "--network", "none"]
+        for key, value in self.labels.items():
+            out += ["--label", f"{key}={value}"]
+        tag = ""
+        index = 0
+        while index < len(args) and args[index].startswith("-"):
+            flag = args[index]
+            if index + 1 >= len(args):
+                raise Refused(f"flag {flag} has no value")
+            value = args[index + 1]
+            if flag in ("-t", "--tag"):
+                if value not in BUILDABLE or tag:
+                    raise Refused(f"image {value!r} may not be built in Local CI")
+                tag = value
+            elif flag == "--build-arg":
+                key, _, image = value.partition("=")
+                if key not in BUILD_ARGS or image not in self.images:
+                    raise Refused(f"build argument {value!r} is not allowed")
+                out += ["--build-arg", value]
+            else:
+                raise Refused(f"docker build flag {flag} is not allowed in Local CI")
+            index += 2
+        if not tag or index != len(args) - 1:
+            raise Refused("docker build needs one --tag and one context directory")
+        context = Path(os.path.realpath(args[index]))
+        if context != (self.workspace / "src" / BUILDABLE[tag]).resolve():
+            raise Refused(f"build context {args[index]!r} is not allowed")
+        actual = f"{self.prefix}-{tag}"
+        self.built[tag] = actual
+        return [*out, "--tag", actual, str(context)]
 
     def _run(self, args: list[str]) -> list[str]:
         out = ["docker", "run", "--security-opt", "no-new-privileges:true"]
@@ -102,8 +143,8 @@ class Policy:
             index += 2
         if index >= len(args):
             raise Refused("no image given")
-        image = args[index]
-        if image not in self.images:
+        image = self.built.get(args[index], args[index])
+        if image not in self.images and image not in self.built.values():
             raise Refused(f"image {image!r} is not named by the workflow or the contract script")
         full = f"{self.prefix}-{name or f'anon{len(self.created)}'}"
         self.created.add(full)
