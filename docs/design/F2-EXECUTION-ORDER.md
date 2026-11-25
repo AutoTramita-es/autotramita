@@ -355,6 +355,21 @@ Zabranjeno: T10–T13, prihvaćanje CP09 i F2, INFRA-AI-01 S2–S4, INFRA-CI-02,
 Završni status: "F2-T09-REC — COMPLETED / READY FOR INDEPENDENT SECURITY REVIEW" ili "F2-T09-REC — BLOCKED" s razlozima i minimalnim prijedlogom.
 ```
 
+```
+F2-T09-REC — Keycloak Security Upgrade | 2026-11-25 | Referentni HEAD ad693c5
+Tekst vlasnika (doslovno, izvaci): "Autoriziram izravnu nadogradnju Keycloaka s verzije 26.4.7 na verziju 26.8.2 radi uklanjanja KC-SP-12 sigurnosnog blockera."
+14 dana: "Odobravam jednokratnu iznimku od pravila čekanja 14 dana nakon objave nove verzije, isključivo za razvoj, testiranje i CI." "Ova iznimka ne autorizira produkcijski deployment i ne mijenja trajno postojeću politiku nadogradnji." "Ne prelaziti na verziju 26.8.1 kao međukorak."
+AC-CTX-01: "Autoriziram preformuliranje kriterija AC-CTX-01 tako da zahtijeva očuvanje svih prethodno prihvaćenih F1 sigurnosnih jamstava, umjesto zahtjeva da postojeći testovi ostanu doslovno nepromijenjeni." Uvjeti: nijedno jamstvo uklonjeno, nijedna tvrdnja oslabljena, ekvivalentnost dokumentirana i dokazana, regresije prolaze; kratka matrica ekvivalentnosti.
+AC-SES-10: "Odluka o izvoru geolokacije odgađa se do T11." "Ne implementirati geolokaciju u ovom paketu."
+Ranjivosti: "Ne autoriziram automatsko prihvaćanje preostalih HIGH ili CRITICAL ranjivosti." "Svaki preostali nalaz mora biti pojedinačno analiziran." Ništa u vulnerability-acceptances.json bez izričite autorizacije; scan_gate.py se ne mijenja radi zaobilaženja; bez automatskih iznimki; podržano sigurno rješenje unutar verzije i arhitekture implementirati samostalno; bez proizvoljnih zamjena Java biblioteka ili OS paketa.
+Opseg (zamrznut): nadogradnja Keycloaka, kompatibilnost providera, očuvanje sigurnosne politike, ranjivosti, AC-CTX-01, regresije, dokumentacija. Bez novih funkcionalnosti i bez proširenja politike; bez ponavljanja arhitekturne analize F2.
+Nadogradnja: provjeriti dostupnost, release notes, advisories, upgrade guide, breaking changes, PostgreSQL, realmove, Javu i build, interne SPI-je, autentičnost i digest; sve reference ažurirati; build i runtime image po digestu; DEV, TEST i CI ista verzija i isti provider; buduća produkcijska konfiguracija pripremljena, ne primijenjena; bez nadogradnje nepovezanih komponenti.
+Migracije: samo izolirane privremene baze; čista instalacija, uvoz realmova, nadogradnja baze s 26.4.7, očuvanje korisnika, vjerodajnica i MFA obveza, sesije, provider nakon nadogradnje, backup i restore; dokumentirati produkcijski upgrade i rollback; ne pretpostavljati da je downgrade podržan.
+CI: ciljani testovi tijekom rada; FULL lokalni CI na konačnom SHA, push na dev, GitHub CI istog SHA, ekvivalentnost; bez promjene triggera, bez uklanjanja image-scan joba, bez smanjenja provjera; CI nije PASS ako gate pada.
+Zabranjeno: T10–T13, prihvaćanje CP09 i F2, INFRA-AI-01, INFRA-CI-02, INFRA-CI-03, produkcijski deployment, trajne baze, aktivni realmovi, merge u main, force push, nove grane, vidljivost repozitorija, slabljenje politika, automatsko prihvaćanje ranjivosti, paralelne izmjene.
+Završni status: "F2-T09-REC — COMPLETED / READY FOR INDEPENDENT SECURITY REVIEW", "F2-T09-REC — IMPLEMENTATION COMPLETED / OWNER SECURITY DECISION REQUIRED" ili "F2-T09-REC — BLOCKED". KC-SP-20 ostaje uvjetovan neovisnom sigurnosnom revizijom.
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
