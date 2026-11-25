@@ -18,6 +18,7 @@ SPEC_ACTIONS = {  # AT-02 section 9.2, expanded
     "session.expired_detected", "session.context.changed", "session.theft_suspected",
     "security.password.changed", "security.password.recovery.requested",
     "security.password.recovery.limited", "security.mfa.enrolled", "security.mfa.removed",
+    "security.mfa.disabled",
     "security.step_up.succeeded", "security.step_up.failed", "security.settings.changed",
     "authz.platform_grant.requested", "authz.platform_grant.approved",
     "authz.platform_grant.activated", "authz.platform_grant.revoked",

@@ -25,6 +25,9 @@ class FakeAdmin:
     deleted: list[tuple[str, str]] = field(default_factory=list)
     pending: dict[str, list[str]] = field(default_factory=dict)  # pending provider actions
     obliged: set[str] = field(default_factory=set)  # subjects that must keep a second factor
+    mandatory: set[str] = field(
+        default_factory=set
+    )  # subjects whose factor may not be switched off
     down: bool = False
 
     def add(self, email: str, subject: str, *, enabled: bool = True, verified: bool = True) -> None:
@@ -86,6 +89,10 @@ class FakeAdmin:
             self.pending[subject] = [
                 a for a in self.pending[subject] if a not in CREDENTIAL_SETUP_ACTIONS
             ]
+
+    def is_factor_mandatory(self, subject: str) -> bool:
+        self._check("mandatory")
+        return subject in self.mandatory
 
     def has_factor_obligation(self, subject: str) -> bool:
         self._check("obligation")

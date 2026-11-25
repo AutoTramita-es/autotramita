@@ -48,6 +48,9 @@ SECOND_FACTOR_TYPES = PERMANENT_FACTOR_TYPES | {RECOVERY_CODES_TYPE}
 # Realm attribute of an account that once used a second factor and may never fall back to the
 # password alone (set by an operator; only administrators can see or change it).
 FACTOR_OBLIGATION_ATTRIBUTE = "at_mfa_required"
+# Realm attribute: a policy forbids switching the second factor off. Its only writer will be the
+# platform-grant module (T10); the Keycloak provider and the application both read it.
+FACTOR_MANDATORY_ATTRIBUTE = "at_mfa_mandatory"
 
 # Pending provider actions that create or remove a sign-in credential.
 CREDENTIAL_SETUP_ACTIONS = frozenset(
@@ -94,3 +97,5 @@ class IdentityProviderAdmin(Protocol):
         ...
 
     def has_factor_obligation(self, subject: str) -> bool: ...
+
+    def is_factor_mandatory(self, subject: str) -> bool: ...

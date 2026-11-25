@@ -155,6 +155,7 @@ F2_AUTH_PATHS = [
     "/api/v1/me/email-verification",
     "/api/v1/me/security",
     "/api/v1/me/security/mfa-enrollment-requests",
+    "/api/v1/me/security/mfa-disable-requests",
     "/api/v1/me/security/password-change-requests",
     "/api/v1/me/security/second-factors/{credential_id}",
 ]
@@ -177,7 +178,8 @@ def test_common_response_models(spec: dict[str, Any]) -> None:
         "StepUpResult", "UserSummary", "WorkspaceInfo", "CursorPage_SessionSummary_", "DeviceBody",
         "MobileSessionRequest", "Revoked", "SessionSummary", "CursorPage_WorkspaceOption_",
         "ProfilePatch", "UserProfile", "WorkspaceOption", "WorkspaceSwitch",
-        "Accepted", "ActionStart", "MfaEnrollment", "PasswordChange", "RecoveryAccepted",
+        "Accepted", "ActionStart", "MfaEnrollment", "MfaDisable", "PasswordChange",
+        "RecoveryAccepted",
         "RecoveryRequest", "SecondFactor", "SecurityOverview",
         "EmailChangeRequest", "EmailChangeConfirmation",
     }  # fmt: skip

@@ -44,6 +44,7 @@ class SecurityAction(StrEnum):
     PASSWORD_CHANGE = "PASSWORD_CHANGE"  # noqa: S105 - an action name, not a password
     MFA_TOTP = "MFA_TOTP"
     MFA_RECOVERY_CODES = "MFA_RECOVERY_CODES"
+    MFA_DISABLE = "MFA_DISABLE"
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,6 +60,8 @@ SPECS: dict[SecurityAction, ActionSpec] = {
     SecurityAction.MFA_RECOVERY_CODES: ActionSpec(
         "CONFIGURE_RECOVERY_AUTHN_CODES", frozenset({"recovery-authn-codes"}), "RECOVERY_CODES"
     ),
+    # The Keycloak provider's controlled switch-off: done there in one transaction under its lock.
+    SecurityAction.MFA_DISABLE: ActionSpec("at-disable-mfa", frozenset(), None),
 }
 
 
@@ -68,6 +71,7 @@ class ActionResult:
     secret: str = ""
     absolute_expires_at: datetime | None = None
     unproven: bool = False  # the change happened without the existing second factor
+    signed_out: bool = False  # every session of the person ended, this one included
 
 
 def _created_since(credentials: list[IdpCredential], types: frozenset[str], since: float) -> bool:
@@ -108,7 +112,11 @@ def complete_action(
             except IdpAdminError:
                 found = []
             since = float(flow["created"]) - rt.settings.leeway_seconds
-            verified = _created_since(found, spec.credential_types, since)
+            if action is SecurityAction.MFA_DISABLE:
+                # Trust the provider's state, never the status in the address.
+                verified = bool(found) and not any(c.type in SECOND_FACTOR_TYPES for c in found)
+            else:
+                verified = _created_since(found, spec.credential_types, since)
         user: UUID = resolved.user.id
         if not verified:
             return ActionResult(False)
@@ -136,6 +144,13 @@ def complete_action(
                 actor_user_id=user,
             )  # fmt: skip
             secret = sessions.rotate_credential(db, resolved.session.id)
+        elif action is SecurityAction.MFA_DISABLE:
+            # The provider checked the fresh permanent factor and the confirmation, removed every
+            # factor and the obligation together and ended its own other sessions. Every
+            # application session ends too, this one included: its level no longer holds.
+            sessions.DatabaseSessionRevoker().revoke_all(
+                db, user, reason=RevokeReason.SECURITY_POLICY.value, actor_user_id=user
+            )
         if action is SecurityAction.PASSWORD_CHANGE:
             audit = AuditEvent(
                 action="security.password.changed",
@@ -147,6 +162,17 @@ def complete_action(
                 details={},
             )
             kind = NoticeKind.PASSWORD_CHANGED
+        elif action is SecurityAction.MFA_DISABLE:
+            audit = AuditEvent(
+                action="security.mfa.disabled",
+                outcome=Outcome.SUCCESS,
+                actor_type=ActorType.USER,
+                actor_user_id=user,
+                subject_user_id=user,
+                actor_session_id=resolved.session.id,
+                details={},
+            )
+            kind = NoticeKind.MFA_DISABLED
         else:
             audit = AuditEvent(
                 action="security.mfa.enrolled",
@@ -172,6 +198,8 @@ def complete_action(
     send_quietly(rt.notifier, Notice(kind, email, datetime.now(UTC)))
     if unproven:
         return ActionResult(False, unproven=True)
+    if action is SecurityAction.MFA_DISABLE:
+        return ActionResult(True, signed_out=True)
     return ActionResult(True, secret, absolute)
 
 

@@ -489,6 +489,7 @@ EXPECTED_ACCESS = {
     ("POST", "/api/v1/me/email-verification"): AccessKind.USER,
     ("POST", "/api/v1/me/security/password-change-requests"): AccessKind.USER,
     ("POST", "/api/v1/me/security/mfa-enrollment-requests"): AccessKind.USER,
+    ("POST", "/api/v1/me/security/mfa-disable-requests"): AccessKind.USER,
     ("DELETE", "/api/v1/me/security/second-factors/{credential_id}"): AccessKind.USER,
 }
 

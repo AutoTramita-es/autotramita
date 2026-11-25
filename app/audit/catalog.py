@@ -73,6 +73,7 @@ CATALOG: dict[str, ActionSpec] = {
     "security.password.recovery.limited": _spec(SS, limit="code"),
     "security.mfa.enrolled": _spec(SS, factor="code"),
     "security.mfa.removed": _spec(SS, factor="code"),
+    "security.mfa.disabled": _spec(SS),
     "security.step_up.succeeded": _spec(SS, level="code"),
     "security.step_up.failed": _spec(SS, level="code"),
     "security.settings.changed": _spec(SS, setting="code"),

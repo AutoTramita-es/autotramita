@@ -14,6 +14,7 @@ from urllib.parse import quote
 import httpx
 from app.auth.idp import (
     CREDENTIAL_SETUP_ACTIONS,
+    FACTOR_MANDATORY_ATTRIBUTE,
     FACTOR_OBLIGATION_ATTRIBUTE,
     IdpAdminError,
     IdpConflict,
@@ -192,6 +193,12 @@ class KeycloakAdmin:
         if not isinstance(attributes, dict):
             raise IdpAdminError("invalid identity state")
         return attributes.get(FACTOR_OBLIGATION_ATTRIBUTE) == ["true"]
+
+    def is_factor_mandatory(self, subject: str) -> bool:
+        attributes = self._user(subject).get("attributes") or {}
+        if not isinstance(attributes, dict):
+            raise IdpAdminError("invalid identity state")
+        return attributes.get(FACTOR_MANDATORY_ATTRIBUTE) == ["true"]
 
     def _user(self, subject: str) -> dict[str, Any]:
         try:

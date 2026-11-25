@@ -26,6 +26,7 @@ class NoticeKind(StrEnum):
     PASSWORD_CHANGED = "PASSWORD_CHANGED"  # noqa: S105 - a notice name
     MFA_ENROLLED = "MFA_ENROLLED"
     MFA_REMOVED = "MFA_REMOVED"
+    MFA_DISABLED = "MFA_DISABLED"
     SESSIONS_REVOKED = "SESSIONS_REVOKED"
     EMAIL_CHANGED = "EMAIL_CHANGED"
     PASSWORD_RESET_COMPLETED = "PASSWORD_RESET_COMPLETED"  # noqa: S105 - a notice name
@@ -58,6 +59,10 @@ _WHAT = {
     NoticeKind.MFA_REMOVED: (
         "Se ha quitado un segundo factor",
         "se quitó un segundo factor de autenticación de tu cuenta",
+    ),
+    NoticeKind.MFA_DISABLED: (
+        "Has desactivado el segundo factor",
+        "se desactivó el segundo factor de autenticación de tu cuenta y se cerraron tus sesiones",
     ),
     NoticeKind.EMAIL_CHANGED: (
         "Tu dirección de correo ha cambiado",

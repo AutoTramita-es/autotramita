@@ -77,6 +77,20 @@ class LastPermanentFactor(Conflict):
     title = "The last permanent second factor cannot be removed"
 
 
+class NoSecondFactor(Conflict):
+    """409 NO_SECOND_FACTOR: there is no second factor to switch off."""
+
+    code = "NO_SECOND_FACTOR"
+    title = "No second factor"
+
+
+class SecondFactorMandatory(Forbidden):
+    """403 SECOND_FACTOR_MANDATORY: a policy (platform grants, T10) keeps the second factor on."""
+
+    code = "SECOND_FACTOR_MANDATORY"
+    title = "The second factor is mandatory"
+
+
 class AccountDisabled(Forbidden):
     """403 ACCOUNT_DISABLED, only ever returned after the person authenticated successfully."""
 

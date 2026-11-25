@@ -355,7 +355,7 @@ def build_auth_router(
         if outcome.unproven:
             status = "reauthentication_required"
         response = RedirectResponse(f"{target}{joiner}security_action={status}", status_code=302)
-        if outcome.unproven:
+        if outcome.unproven or outcome.signed_out:
             cookies.clear_session_cookie(response, rt.settings)
         if outcome.succeeded and outcome.secret and outcome.absolute_expires_at:
             remaining = int((outcome.absolute_expires_at - datetime.now(UTC)).total_seconds())
