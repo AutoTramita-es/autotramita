@@ -2,6 +2,8 @@
 
 Datum: 2026-11-24 | Status: **ACCEPTED uz CP00 (2026-11-24)** | Povezano: [Execution order](F2-EXECUTION-ORDER.md) · [Plan §4](F2-IMPLEMENTATION-PLAN.md) · [AT-02](../specifications/AT-02-identity-security.md) · [Registar](F2-DECISION-REGISTER.md)
 
+> **F2-CP09 accepted (2026-11-25, D47):** the owner accepted CP09 on `b24da2a`; the T01–T09 results of the [CP09 matrix](F2-CP09-RECONCILIATION-REPORT.md#8-acceptance-matrix-t01t13) are accepted as recorded there. Only F2-T10 is authorized; AC-PLT-12 uses migration **0010** (the next free number after 0001–0009).
+>
 > **F2-T09-REC Keycloak Security Upgrade (2026-11-25, D45):** Keycloak 26.8.2 umjesto 26.4.7; AC-CTX-01 preformuliran (očuvana F1 sigurnosna jamstva umjesto doslovno nepromijenjenih testova); izvor geolokacije za AC-SES-10 odgođen do T11.
 >
 > **F2-T09-REC:** [Izvještaj CP09 s dokazom po kriteriju](F2-CP09-RECONCILIATION-REPORT.md#8-acceptance-matrix-t01t13) bilježi trenutne rezultate i nedostatke. Kriteriji ostaju normativni; CP09 nije prihvaćen (stanje 2026-11-25, nakon neovisne revizije i korekcija F2-CP09-REC, D46: 80 PASS, 5 PASS s prihvaćenim odstupanjem, **7 PARTIAL** (T10/T11), 34 DEFERRED; **AC-POL-10 PASS**; KC-SP-12 PASS uz vremenski ograničeno prihvaćanje vlasnika). Odluke vlasnika F-2 i F-3 preciziraju AC-POL-06 i AC-POL-10: svježina se mjeri od stvarne provjere faktora, a osoba s MFA-om mora faktor dokazati za osjetljive radnje. Migracija 0007 pripada D37, 0008 izolaciji konteksta i audita, a 0009 razrješenju D37 (F-4): brojevi u AC-PLT-12 (0006), AC-ADM-10 (0007) i raspon u §13.2 čitaju se kao sljedeći slobodni brojevi (od 0010).

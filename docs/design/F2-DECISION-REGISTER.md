@@ -1,6 +1,6 @@
 # F2 — Registar odluka (identitet, autentifikacija, sigurnost)
 
-Datum: 2026-11-24 | Status dokumenta: **D01–D41 i D43 ACCEPTED (owner, 2026-11-24, F2-CP00); D42 OPEN (AT-20)** | Bez implementacije izvan odobrenog paketa
+Datum: 2026-11-24, stanje 2026-11-25 | Status dokumenta: **D01–D41 i D43 ACCEPTED (owner, 2026-11-24, F2-CP00); D44–D47 ACCEPTED (2026-11-25); D42 OPEN (AT-20); CP09 prihvaćen, autoriziran samo F2-T10 (D47)** | Bez implementacije izvan odobrenog paketa
 Povezano: [AT-02 specifikacija](../specifications/AT-02-identity-security.md) · [Plan](F2-IMPLEMENTATION-PLAN.md) · [Execution order](F2-EXECUTION-ORDER.md) · [Kriteriji prihvaćanja](F2-ACCEPTANCE-CRITERIA.md)
 
 **2026-11-24 — F2-T09-REC:** Owner confirmed D37 requires verification before changing the existing login and confirmed token minimization and optional first/last names, and approved the limited durable D37 recovery and notification mechanism. Implementation and verification: [CP09 reconciliation](F2-CP09-RECONCILIATION-REPORT.md) (D37 implemented, disabled in production by O15). CP09 is not accepted; D42 remains OPEN. This note supersedes conflicting older D37 and proposal-status wording below, not the remaining accepted decisions.
@@ -42,6 +42,10 @@ Povezano: [AT-02 specifikacija](../specifications/AT-02-identity-security.md) ·
 - **IR-04** (P3): the severity difference of CVE-2026-91403 is documented (Red Hat: Critical, CVSS 6.8; Trivy: HIGH). The scanner's severity data and the acceptance are not changed; the mitigation analysis stays.
 - **IR-05** (P3, scan-gate hardening) and **IR-06** (P3, Local CI broker build without `--network none`): **deferred to INFRA-CI-02**; existing network access is not extended.
 - **IR-07** (production cache stack and database failover not demonstrated): a **mandatory production blocker**.
+
+**D47 (ACCEPTED 2026-11-25, owner, F2-CP09 acceptance and F2-T10 authorization)** (record in the [execution order](F2-EXECUTION-ORDER.md)): F2-CP09 is **accepted** and F2-T09 is **closed** on the verified SHA `b24da2a`, with the independent verification results, AC-POL-10, AC-CTX-01, the documented deviations and the evidence limitations (independent acceptance review `F2-CP09-INDEPENDENT-ACCEPTANCE-REVIEW.md`, kept outside the repository). Only **F2-T10** is authorized; T11–T13, production deployment and infrastructure projects are not.
+- **IR-05 severity binding — mandatory INFRA-CI-02 requirement:** INFRA-CI-02 must bind every vulnerability acceptance to the severity it was accepted at (the gate fails when the reported severity rises above it). Until INFRA-CI-02 implements it: the severity is reassessed whenever an acceptance is renewed or extended, and zero CRITICAL findings are confirmed **manually** before any production deployment (the gate alone is not enough). The scan gate and the six acceptances are unchanged.
+- IR-05 and IR-06 stay deferred to INFRA-CI-02; IR-07 and every earlier production blocker stay mandatory.
 
 ## Zapis prihvaćanja (F2-CP00, 2026-11-24)
 Vlasnik projekta je izričito napisao: „Prihvaćam D01–D43 kako su predloženi; autoriziram samo F2-T01." Time su **ACCEPTED** D01–D41 i D43, uključujući D17 (aditivni F1 amandman) i D20 (aplikacijski oporavak lozinke, odstupanje od formulacije G6 koraka 6a) te potvrdu O04 (D02) i O05 (D15). **D42 ostaje OPEN** jer je pravno pitanje za AT-20 (prijedlog nije odluka). Prihvaćanje odluka ne autorizira druge pakete: autoriziran je isključivo **F2-T01**. Odluke ovisne o spiku (D19, D20, D22, D23, D24, D37, D41) prihvaćene su kao dizajn **uz uvjet** da ishod spika S1–S10 to potvrdi; opovrgnuta tvrdnja zaustavlja rad na CP01 (STOP), ne improvizira se.
