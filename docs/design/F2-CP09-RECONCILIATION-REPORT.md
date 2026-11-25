@@ -1,27 +1,71 @@
 # F2-CP09 — reconciliation report (F2-T09-REC)
 
-Date: 2026-11-25 (revised after the Keycloak security provider order). **Status: F2-T09-REC — IMPLEMENTATION COMPLETED; proposed READY FOR INDEPENDENT SECURITY REVIEW, subject to one owner decision (KC-SP-12, image vulnerability scanning, [§2](#2-keycloak-security-provider)).** No P0 or P1 finding is open in the authorized scope; F-1R-C (P1), the rest of F-3K and the held recovery-code sign-in are closed by the provider and proven on one and on two Keycloak instances. **CP09 is not accepted** (owner decision) and T10 is not started. T10–T13, merging, deployment, shared infrastructure, existing realms and persistent databases were not touched. D42 stays OPEN (AT-20), R10 stays deferred, O15 blocks production mail.
+Date: 2026-11-25 (revised after the Final Completion Order). **Status: F2-T09-REC — BLOCKED.** Every requirement of the order is implemented and every test passes, but KC-SP-12 fails as it must: the pinned Keycloak 26.4.7 image carries **9 CRITICAL and 93 HIGH** findings (90 distinct), nearly all fixed only in later Keycloak releases, and a Keycloak upgrade is not authorized. Minimal proposal in [§12](#12-status-blocker-and-independent-security-review). No P0 or P1 finding of the AutoTramita code is open. **CP09 is not accepted**; T10 is not started; nothing was deployed, no existing realm or persistent database was touched. D42 stays OPEN (AT-20), R10 stays deferred, O15 blocks production mail.
 
 ## 1. Revisions and evidence
 
 | Item | Value |
 |---|---|
-| Start of the provider order | `7e0065ba1f302b4b77584556c8c277b09d96772d` |
-| **Final implementation SHA** | `cacb67c4eee151bc8947f30607aa303136e174bb` |
-| **Local FULL CI on that SHA** | run `20261125-124227-de8633`, clean tree (`aee3065ac6572a3d3a31266f982e400831331a53`), **PASS**, 375.4 s (main job 373.4 s, Keycloak job 367.2 s, secret scan 4.7 s, audit 4.9 s) |
-| **GitHub CI on that SHA** | [45617394445](https://github.com/AutoTramita-es/autotramita/actions/runs/45617394445), all four jobs **success** (Keycloak job 12 min 16 s); `compare-github.sh`: **EQUIVALENT** |
-| Main tests | **1,414 passed**, 0 failed, 0 errors, 0 skipped |
-| Keycloak tests | **259 passed** (one node, two nodes on one PostgreSQL database, the application), 0 failed, 0 errors, 0 skipped. **Total 1,673** distinct tests (before this order: 1,628) |
-| Further checks in the same run | migrations step 6; rate-limit regression 59 × 3; all invocations 1,856; Ruff, mypy (148 files); OpenAPI valid and current; TypeScript and Dart generation; gitleaks; pip-audit; DEV and PROD realm import on the AutoTramita image with provider assertions; **a realm without the provider signs nobody in** (step PASS: Keycloak answers 400 at the first step) |
-| Provider build | Keycloak 26.4.7 (`quay.io/keycloak/keycloak:26.4.7@sha256:9409c59b…`), JDK `eclipse-temurin:21-jdk@sha256:8ad118b1…`; provider **1.0.0**, jar SHA-256 `7e9e297e58b4ed4542a933e64d3d74e3e737ff1e5108adb5909b897d54f32732` (built twice per build, identical; the GitHub build of the same commit produced the same hash on another machine; decision table 2,048 cases checked) |
+| Start of the Final Completion Order | `5340fb78bae07f809b3b9fad84b21478fb341c99` |
+| **Final implementation SHA** | `8e49b9150cb7e9a9b15bfdb22ab6ae67fb88c99d` |
+| **Local FULL CI on that SHA** | run `20261125-140644-a99236`, clean tree (`201e7bb4ec0efa3ed3731da71f907c546b6b483c`), 376.7 s: **every test job PASS**; `image-scan` **FAIL** at its gate (§2.1), so the run is FAIL |
+| **GitHub CI on that SHA** | [45632069412](https://github.com/AutoTramita-es/autotramita/actions/runs/45632069412): every test job **success**, `image-scan` **failure** at its gate (102 findings, same databases as locally); `compare-github.sh`: **EQUIVALENT** |
+| Main tests | **1,436 passed**, 0 failed, 0 errors, 0 skipped |
+| Keycloak tests | **257 passed** (one node, two nodes on one database, the application), 0 failed, 0 errors, 0 skipped. **Total 1,693** distinct tests; all invocations 1,876 |
+| Image scan | Trivy 0.76.2 (pinned by digest); vulnerability DB schema 2, updated 2026-11-25T13:07Z (age 1.0 h, sha256 `1581858e…`); Java DB schema 1, updated 2026-11-25T00:58Z (13.2 h, `538098aa…`); image `autotramita-keycloak:ci`, Red Hat 9.7, OS packages and Java components covered; **9 CRITICAL, 93 HIGH**, none accepted |
+| Provider | **1.1.0**, jar SHA-256 `12cfbc6695834303e04c1b220ed42c405687c631103941dbb72fc408694ad94a` (built twice per build, identical; decision table 2,048 cases) |
 
-**After the implementation run:** the local FULL run on the documentation commit `f7fe062` failed one Keycloak test (`test_a_person_without_a_factor_sets_up_a_one_time_code_before_recovery_codes[at-web]`): with `max_auth_age` 0 Keycloak asks to sign in again once the earlier sign-in is a second old, and two more tests had the same dependence on the clock. Fixed in `d3aa3a1` (the tests answer that question; assertions unchanged, no product change); local FULL on `d3aa3a1`: `20261125-131054-258d29`, **PASS**, 371.2 s, 1,856 invocations, 0 failed. The GitHub run of the final commit is recorded in the execution order's final message.
-
-Commits of this order: `a378cac` (owner authorization, before the code), `c293c9c` (provider and image), `e58ff13` (application switch-off), `c7f19fd` (tests, CI, reconciliation script), `cacb67c` (fail-closed check accepts the refusal at the first step); then the documentation commit with this revision. Development runs before the final one are not evidence. Local CI limits LCI-04 and LCI-05 apply as accepted.
+Commits of this order: `7cacef8` (owner decisions, before the code), `382bcdb` (recovery-only policy, provider 1.1.0), `8e49b91` (image scan, broker corrections); then the documentation commit. Earlier: see §1 of the previous revision in Git history (`5340fb7`). Local CI limits LCI-04 and LCI-05 apply as accepted (also to the scanner's download).
 
 The matrix in [§8](#8-acceptance-matrix-t01t13) was generated from the JUnit files of the local run above; the generator refuses a row whose named test is missing or did not pass. `M` = main job, `K` = Keycloak job.
 
 ## 2. Keycloak security provider
+
+### 2.1 Final Completion Order (2026-11-25)
+
+**KC-SP-12 — image scan (result: FAIL, blocker).** Job `image-scan` in `ci.yml` (and Local CI): build the image; the pinned scanner downloads its two databases (the only container with a network: the job's egress network in Local CI); `docker save`; scan with `--network none` (OS and Java, JSON); `scripts/identity/scan_gate.py` fails on a database older than 48 h (Java 7 days) or missing, a report of another image or scanner version or without OS and Java coverage, and every CRITICAL or HIGH without a time-limited owner acceptance (`identity/keycloak/vulnerability-acceptances.json`, empty; 22 tests in `tests/identity/test_scan_gate.py`, the false-PASS cases above all). No automatic exception exists. Result: 90 distinct CRITICAL/HIGH findings, reviewed in [`vulnerability-review-26.4.7.json`](../../identity/keycloak/vulnerability-review-26.4.7.json):
+
+| Group | Findings | Applicability | Remedy |
+|---|---|---|---|
+| Keycloak (`keycloak-services`, `-server-spi-private`, `-saml-core`; one CRITICAL CVE-2026-18963) | 19 | applicable: the internet-facing sign-in | Keycloak upgrade |
+| JDK (`java-21-openjdk-headless`; one CRITICAL) | 14 | applicable: the runtime | Keycloak upgrade; CVE-2026-91403 will not be fixed by Red Hat |
+| HTTP stack (Netty, Quarkus Vert.x HTTP; one CRITICAL) | 23 | applicable | Keycloak upgrade |
+| JSON (Jackson) | 8 | applicable | Keycloak upgrade |
+| Cryptography (Bouncy Castle; two CRITICAL) | 4 | applicable | Keycloak upgrade |
+| Templates (FreeMarker, CRITICAL) | 1 | applicable: every login page | Keycloak upgrade |
+| JDBC (PostgreSQL applicable; SQL Server not loaded) | 3 | 2 applicable, 1 not | Keycloak upgrade |
+| Other libraries (HTML sanitizer, Guava, Micrometer) | 3 | likely / conditional | Keycloak upgrade (Guava fix not yet in 26.8.2) |
+| OS packages (ca-certificates CRITICAL; pcre2, sqlite, libcap, libacl) | 15 | ca-certificates applicable, others limited | Keycloak upgrade (newer UBI); sqlite has no fix |
+
+Same database, published releases: **26.8.2** (19 Nov 2026) 0 CRITICAL / 6 HIGH (JDK will-not-fix, 4 sqlite without fix, Guava); **26.8.1** (31 Oct 2026) 1 / 10; **26.7.5** 2 / 18; **26.4.7** 9 / 93. The 26.4 patch releases named by some advisories are not published as community images. Not upgraded: needs authorization.
+
+**Recovery-only accounts (closed).** Provider 1.1.0: a recovery code never authorizes a permanent factor, also not for an account holding codes only (`controlled_recovery_required`); the realm refuses such an account before a code is asked (`browser-deny-codes-only`, `browser-loa-1-legacy-enrol` removed), so no code is spent and nothing is deleted. Codes still never authorize new codes, a password change or the switch-off. K `test_a_codes_only_account_waits_for_the_controlled_recovery` (marked and unmarked, every client and request, credential untouched), `test_an_application_request_cannot_move_a_codes_only_account_either`, `test_recovery_codes_alone_protect_level_two`, the codes-only rows of the option-A tests; first factor of people without MFA: `test_the_first_permanent_factor_makes_the_obligation_permanent`, `test_without_a_second_factor_level_two_means_setting_one_up`. `PolicyCheck` has the invariant "no permanent factor after a recovery code".
+
+**Broker review (Local CI).** Found and corrected:
+1. The build context was compared after resolving both sides, so `identity/keycloak` as a link to elsewhere passed. It must now be reached without any link.
+2. The Dockerfile was not checked. A `# syntax=` directive would pull an arbitrary frontend image, and `ADD <url>`, `COPY --from=<image>`, `RUN --network=host`, `--security=insecure` and ssh, secret or cache mounts would reach past the sandbox. All are refused now; FROM may only name the two build arguments, and ARG defaults must be pinned images of the workflow.
+3. Builds shared the host's build cache. They now run with `--no-cache`.
+4. Built images of finished runs were not removed by `cleanup.sh`. They are now.
+
+New operations, each as narrow as possible: `docker save` of the built image into the workspace (handed to uid 1001, read only), the scanner's download (exact arguments, one cache mount, egress network only for it), `--network none`. Command injection: none possible (argument lists, no shell). 9 new negative self-tests (22 in all), including the repository's own Dockerfile passing. Not changed: host firewall, Docker daemon, networks, branch protection.
+
+**Focused security check of the provider and the last corrections.**
+
+| Topic | Result |
+|---|---|
+| F-1R-C, F-3K, held recovery-code sign-in | protection tests pass (one and two nodes) |
+| Recovery-only accounts | closed (above) |
+| Automatic `at_mfa_required`, controlled switch-off, `at_mfa_mandatory` | tests pass |
+| Concurrency and several instances | tests pass |
+| Freshness of the state | credentials always fresh; attribute limit documented |
+| Transactions and rollback | one transaction per change; a refusal writes nothing |
+| Admin API | outside the guard (trust boundary). New note: an administrator removing the last permanent factor while a sign-in waits at the factor question lets that sign-in finish with a recovery code (still two factors); documented |
+| Without the provider | nobody signs in (CI step) |
+| Database unavailable (exploration on two nodes) | stopped database: the form answers 500, nothing written; paused database: the request waits and the decision is taken when the database returns |
+| Internal SPIs | unchanged risk, upgrade procedure mandatory |
+| Earlier findings | all regression tests pass |
+
+No new P0 or P1 finding.
 
 Design, invariants, guarantees, upgrade, rollback and limits: [provider README](../../identity/keycloak/provider/README.md). Summary of what the analysis of the exact version (sources of 26.4.7 from Maven Central; the image's jars are byte-identical to those artifacts) established:
 
@@ -52,15 +96,15 @@ Design, invariants, guarantees, upgrade, rollback and limits: [provider README](
 | KC-SP-09 Keycloak paths | **PASS** | web, phone and account console in `test_the_password_alone_cannot_add_a_factor` (now including the password action), `test_the_password_alone_cannot_remove_a_factor`, `test_nobody_removes_a_credential_at_the_provider`; e-mail links: `test_a_recovery_link_runs_no_pending_set_up`, `test_a_link_sent_past_the_application_runs_no_set_up_either` |
 | KC-SP-10 fail closed | **PASS** | CI step "Without the security provider the realm signs nobody in"; refusals end with `access_denied` and roll back; the loser of a concurrent first change rolls back |
 | KC-SP-11 reproducible image | **PASS** | two builds per build compared byte for byte; same jar hash on every machine; static tests keep the pinned references equal (Dockerfile, CI, compose) |
-| KC-SP-12 Java dependencies and image | **PARTIAL** | no third-party Java dependency (build classpath = the pinned image's jars, no download; jar entries allow-listed; imports restricted by a test); runtime = pinned upstream + one 0444 jar, non-root (test). **Missing: a vulnerability scan of the image in CI** — Local CI gives steps no network for a vulnerability database, and the order excludes INFRA-CI-02. **Owner decision:** accept the exposure as that of the pinned upstream image, or authorize a scanner with its database in Local CI |
+| KC-SP-12 Java dependencies and image | **FAIL (blocker)** — Trivy gate: 9 CRITICAL / 93 HIGH in upstream 26.4.7, none accepted (§2.1). Earlier evidence still holds: | no third-party Java dependency (build classpath = the pinned image's jars, no download; jar entries allow-listed; imports restricted by a test); runtime = pinned upstream + one 0444 jar, non-root (test). the scan now runs in CI (§2.1) |
 | KC-SP-13 upgrade and rollback | **PASS** (documentation) | provider README: upgrade steps and mandatory tests; rollback that never restores unguarded actions while MFA accounts exist |
 | KC-SP-14 earlier regressions | **PASS** | every F-0, F-1, F-1R, F-1R-B, F-2, F-3, F-4 and R01–R07 test passed in the run of §1 (some adapted, §9) |
 | KC-SP-15 FULL local CI | **PASS** | §1 |
-| KC-SP-16 GitHub CI on the final SHA | **PASS** | [45617394445](https://github.com/AutoTramita-es/autotramita/actions/runs/45617394445) on `cacb67c`, equivalent to the local run; the documentation commit has its own run |
+| KC-SP-16 GitHub CI on the final SHA | **PASS as evidence, run FAIL as expected** | [45632069412](https://github.com/AutoTramita-es/autotramita/actions/runs/45632069412) on `8e49b91`: test jobs success, image-scan gate failure, equivalent to the local run |
 | KC-SP-17 matrix of 126 criteria | **PASS** | §8 |
 | KC-SP-18 no open P0/P1 in scope | **PASS** | §3 |
 | KC-SP-19 no unauthorized infrastructure change | **PASS** | only `dev`; no deployment, existing realm, shared service or persistent database touched; Local CI change listed in §6 |
-| KC-SP-20 ready for independent review | **PASS**, subject to KC-SP-12 | scope proposal in §12 |
+| KC-SP-20 ready for independent review | **NOT YET** (KC-SP-12) | scope proposal in §12 |
 
 ### Automatic obligation and existing accounts
 `at_mfa_required` is set by the provider with the first permanent factor, in the same transaction; it is lifted only by the controlled switch-off, together with every factor. `at_mfa_mandatory` (administrators only) blocks the switch-off in the application and in the provider; T10 sets it for grant holders, nothing sets it today (enforcement point tested). Existing realms: `scripts/identity/reconcile_mfa_obligation.py` marks accounts with a permanent factor or codes, withdraws pending set-ups, deletes nothing and lists `locked` and `never` accounts for review (Keycloak keeps no history, so "never" is not proof); K `test_existing_accounts_are_reconciled_without_deleting_anything` on a disposable realm. Accounts holding codes only from before may still move to a permanent factor with a code (previous order, supplement 2); the new order says codes must not authorize new permanent factors on accounts with **active** MFA, which holds. **Owner may decide** to forbid that transition too (they would then wait for the controlled recovery).
@@ -78,6 +122,8 @@ Design, invariants, guarantees, upgrade, rollback and limits: [provider README](
 | F-3 | **CLOSED** | account actions need the factor if there is one; every action is a fresh sign-in at the provider |
 | F-3K | **CLOSED** | the rest closed by the provider (KC-SP-03); a password changed on Keycloak's pages (now only with the factor) is seen by the application with T11 |
 | Held recovery-code sign-in | **CLOSED** | KC-SP-04 |
+| Recovery-only transition | **CLOSED** | owner decision; provider 1.1.0 and realm (§2.1) |
+| Upstream image vulnerabilities (Keycloak 26.4.7) | **OPEN, blocker** | 9 CRITICAL / 93 HIGH; Keycloak upgrade needs authorization (§2.1, §12) |
 | F-4 | **Domain mechanism CLOSED; interface T11, authorisation T10** | unchanged |
 | R01 bootstrap/user context isolation | **CLOSED** | `test_sql_policies_reject_mixed_bootstrap_and_user_context` and the other tests of the previous report |
 | R02 audit read isolation | **CLOSED** | `test_own_audit_read_is_limited_to_current_tenant` |
@@ -182,18 +228,18 @@ This order added none. Earlier ones, with their need (owner review):
 
 ## 7. Criteria that stay PARTIAL
 
-| Criterion | Done in T01–T09 | Missing evidence | Package and criterion that must supply it |
-|---|---|---|---|
-| AC-AUD-08 | sign-in, sign-out, security settings, revocation, context change, refused callbacks, tokens, CSRF and workspaces | failed sign-ins at Keycloak; grant changes; administrative actions | T11 (AC-AUD-10, AC-ADM-01/04), T10 (AC-PLT-10) |
-| AC-CTX-01 | context change is additive; all tests green | the words “F1 tests unchanged”: 16 of 21 F1 test files are unchanged, 5 changed: `test_ci_workflow` (job counts), `test_idempotency` (head revision), `test_openapi_contract` (route and schema lists, one test renamed, redirects now count as success without a problem body — a relaxation for redirect routes), `test_role_sql` (table and function lists), `test_roles_and_migrations` (additions only) | **owner decision** (accept or reword) |
-| AC-USR-06 | application role cannot change status; platform role has no access | “platform with a grant” | T10 (AC-PLT-07) |
-| AC-SES-07 | own sessions only; platform role has no access | “platform with a grant” | T10 (AC-PLT-07) |
-| AC-SES-10 | browser change revokes; country change audited when known | notice, production geo source | source undecided; proposed T11 (AC-ADM-07) |
-| AC-MOB-04 | Keycloak refuses reuse | revocation `REFRESH_REUSE` | T11 (AC-AUD-10 ingestion) |
-| AC-POL-06 | application path with factor; Keycloak's password form needs the factor (F-3K closed) | ending application sessions and the notice for a password changed directly on Keycloak's pages | T11 (AC-AUD-10 event ingestion) |
-| AC-POL-13 | rotation, UA binding, Keycloak reuse refusal | `REFRESH_REUSE`, country notice | T11 |
+| Criterion | Implemented in T01–T09 | Missing | Package | CP09 blocker? | Owner decision needed? |
+|---|---|---|---|---|---|
+| AC-AUD-08 | sign-in, sign-out, security settings, revocation, context change, refused callbacks, tokens, CSRF, workspaces; provider refusals stored as Keycloak events | failed sign-ins at Keycloak; grant changes; administrative actions | T11 (AC-AUD-10, AC-ADM-01/04), T10 (AC-PLT-10) | no | no (acknowledge the assignment) |
+| AC-CTX-01 | context change additive; all tests green | literally "F1 tests unchanged": 5 of 21 F1 test files changed (`test_ci_workflow` job and timeout counts, `test_idempotency` head, `test_openapi_contract` lists and a redirect relaxation, `test_role_sql` lists, `test_roles_and_migrations` additions) | none (wording) | **yes, until decided** | **yes**: accept or reword |
+| AC-USR-06 | application role cannot change status; platform role has no access | "platform with a grant" | T10 (AC-PLT-07) | no | no |
+| AC-SES-07 | own sessions only; platform role has no access | "platform with a grant" | T10 (AC-PLT-07) | no | no |
+| AC-SES-10 | browser change revokes; country change audited when known | notice; production geo source | T11 (AC-ADM-07) once a source is chosen | no | **yes**: geo source |
+| AC-MOB-04 | Keycloak refuses refresh reuse | revocation with `REFRESH_REUSE` from Keycloak events | T11 (AC-AUD-10) | no | no |
+| AC-POL-06 | application path; Keycloak's password form needs the factor (F-3K closed) | ending application sessions and the notice for a password changed directly on Keycloak's pages | T11 (AC-AUD-10) | no | no |
+| AC-POL-13 | rotation, UA binding, Keycloak reuse refusal | `REFRESH_REUSE`, country notice | T11 | no | no |
 
-None is marked PASS, and no deviation is accepted on the owner's behalf. AC-POL-10 is **PASS** (its P1 findings closed and proven by protection tests, none by a test that shows a gap). AC-POL-06 stays PARTIAL for the T11 part only.
+None is marked PASS, and no deviation is accepted on the owner's behalf. AC-POL-10 is **PASS** (its P1 findings closed and proven by protection tests).
 
 ## 8. Acceptance matrix T01–T13
 
@@ -294,7 +340,7 @@ Summary: DEFERRED: 34; PARTIAL: 8; PASS: 79; PASS with accepted deviation: 5; to
 | AC-POL-07 | PASS | `identity/keycloak/realm-template.json` | `test_keycloak_spike::test_s10_password_policy_enforced_including_blacklist` | 1/1 pass (K) | production blacklist is a live prerequisite |
 | AC-POL-08 | PASS | `identity/keycloak/realm-template.json` | `test_keycloak_spike::test_s03_step_up_loa2_requires_otp_and_loa1_does_not`<br>`test_security_keycloak::test_a_second_factor_is_enrolled_listed_and_kept_as_the_last_one` | 2/2 pass (K) | — |
 | AC-POL-09 | DEFERRED | `app/auth/security/`, `app/api/v1/{auth,me,sessions}.py` | — | — | T10: must require an enrolled factor before a grant takes effect and set `at_mfa_mandatory` for grant holders (the switch-off is refused then; enforcement point tested) |
-| AC-POL-10 | PASS | `identity/keycloak/provider/`, `identity/keycloak/realm-template.json`, `app/auth/security/{step_up,actions}.py`, `app/auth/web/stepup.py` | `test_security_policies::test_sensitive_actions_need_a_fresh_authentication_and_second_factor_removal_needs_loa2`<br>`test_reconciliation_keycloak::test_keycloak_needs_level_two_to_remove_a_second_factor`<br>`test_reconciliation_keycloak::test_f1_nobody_can_register_a_passkey`<br>`test_reconciliation_keycloak::test_recovery_codes_alone_protect_level_two`<br>`test_second_factor_keycloak::test_with_a_second_factor_the_password_alone_never_reaches_level_two`<br>`test_second_factor_keycloak::test_every_registered_factor_reaches_level_two_and_records_when`<br>`test_second_factor_keycloak::test_the_password_alone_cannot_add_a_factor`<br>`test_second_factor_keycloak::test_the_password_alone_cannot_remove_a_factor`<br>`test_second_factor_keycloak::test_no_client_may_exchange_a_password_for_a_token`<br>`test_second_factor_keycloak::test_a_recovery_code_works_once`<br>`test_second_factor_keycloak::test_neither_single_sign_on_nor_a_refresh_nor_the_password_moves_the_factor_time`<br>`test_account_step_up::test_with_a_second_factor_proven_the_action_is_open`<br>`test_account_step_up::test_without_a_second_factor_a_fresh_password_is_enough`<br>`test_account_step_up::test_a_refreshed_bearer_token_does_not_renew_the_step_up`<br>`test_second_factor_keycloak::test_nobody_removes_a_credential_at_the_provider`<br>`test_second_factor_keycloak::test_people_who_never_set_up_a_second_factor_see_no_change`<br>`test_second_factor_keycloak::test_the_application_keeps_the_last_permanent_factor_at_the_real_provider`<br>`test_second_factor_keycloak::test_the_application_reads_the_factor_obligation_from_the_real_provider`<br>`test_second_factor_keycloak::test_a_set_up_page_opened_before_the_first_factor_is_refused_after_it`<br>`test_recovery_codes_keycloak::test_a_person_without_a_factor_sets_up_a_one_time_code_before_recovery_codes`<br>`test_recovery_codes_keycloak::test_recovery_codes_are_generated_only_after_a_permanent_factor`<br>`test_recovery_codes_keycloak::test_a_step_up_of_an_existing_session_never_takes_a_recovery_code`<br>`test_recovery_codes_keycloak::test_spending_the_last_code_needs_the_permanent_factor_and_ends_every_other_session`<br>`test_recovery_codes_keycloak::test_an_abandoned_regeneration_is_never_served_to_the_password_alone`<br>`test_recovery_codes_keycloak::test_two_sign_ins_at_once_leave_no_session_from_before_the_last_code`<br>`test_recovery_codes_keycloak::test_an_unmarked_codes_only_account_is_refused`<br>`test_recovery_codes_keycloak::test_a_marked_codes_only_account_moves_to_a_permanent_factor`<br>`test_recovery_codes_keycloak::test_the_last_code_of_a_codes_only_account_leaves_it_closed`<br>`test_recovery_codes_keycloak::test_a_sign_in_left_at_the_code_question_gains_nothing_when_the_codes_run_out`<br>`test_recovery_codes_keycloak::test_the_user_can_neither_see_nor_lift_the_factor_obligation`<br>`test_recovery_codes_keycloak::test_a_sign_in_held_open_with_a_code_gets_no_new_codes_after_the_last_one`<br>`test_last_permanent_factor::test_the_last_permanent_factor_stays_while_recovery_codes_remain`<br>`test_last_permanent_factor::test_two_removals_at_once_cannot_both_take_a_permanent_factor`<br>`test_last_permanent_factor::test_an_account_that_must_keep_a_factor_never_ends_without_a_permanent_one`<br>`test_security_provider_keycloak::test_the_provider_replaces_every_credential_action_and_guards_the_sign_in`<br>`test_security_provider_keycloak::test_a_held_form_is_refused_and_the_refusal_is_recorded`<br>`test_security_provider_keycloak::test_the_first_permanent_factor_makes_the_obligation_permanent`<br>`test_security_provider_keycloak::test_a_second_one_time_code_needs_the_permanent_factor_in_this_sign_in`<br>`test_security_provider_keycloak::test_an_obliged_account_without_a_factor_cannot_set_one_up`<br>`test_security_provider_keycloak::test_a_person_switches_the_second_factor_off_with_the_factor_and_a_confirmation`<br>`test_security_provider_keycloak::test_a_recovery_code_cannot_switch_the_second_factor_off`<br>`test_security_provider_keycloak::test_the_switch_off_is_refused_at_the_provider_itself`<br>`test_security_provider_keycloak::test_two_first_activations_at_once_leave_exactly_one_factor`<br>`test_security_provider_keycloak::test_a_form_held_on_one_node_is_refused_after_the_factor_was_set_up_on_the_other`<br>`test_security_provider_keycloak::test_first_activations_on_two_nodes_at_once_leave_exactly_one_factor`<br>`test_security_provider_keycloak::test_new_recovery_codes_on_two_nodes_at_once_leave_one_set`<br>`test_mfa_disable::test_a_password_alone_cannot_start_it`<br>`test_mfa_disable::test_a_mandatory_second_factor_cannot_be_switched_off` | 216/216 pass (M+K) | F-1R-B closed (option A); F-1R-C, the rest of F-3K and the held recovery-code sign-in closed by the Keycloak security provider (decision at submit, under a database lock, on fresh state; two nodes tested). The 5-minute window for grant changes is applied by T10 (AC-PLT) |
+| AC-POL-10 | PASS | `identity/keycloak/provider/`, `identity/keycloak/realm-template.json`, `app/auth/security/{step_up,actions}.py`, `app/auth/web/stepup.py` | `test_security_policies::test_sensitive_actions_need_a_fresh_authentication_and_second_factor_removal_needs_loa2`<br>`test_reconciliation_keycloak::test_keycloak_needs_level_two_to_remove_a_second_factor`<br>`test_reconciliation_keycloak::test_f1_nobody_can_register_a_passkey`<br>`test_reconciliation_keycloak::test_recovery_codes_alone_protect_level_two`<br>`test_second_factor_keycloak::test_with_a_second_factor_the_password_alone_never_reaches_level_two`<br>`test_second_factor_keycloak::test_every_registered_factor_reaches_level_two_and_records_when`<br>`test_second_factor_keycloak::test_the_password_alone_cannot_add_a_factor`<br>`test_second_factor_keycloak::test_the_password_alone_cannot_remove_a_factor`<br>`test_second_factor_keycloak::test_no_client_may_exchange_a_password_for_a_token`<br>`test_second_factor_keycloak::test_a_recovery_code_works_once`<br>`test_second_factor_keycloak::test_neither_single_sign_on_nor_a_refresh_nor_the_password_moves_the_factor_time`<br>`test_account_step_up::test_with_a_second_factor_proven_the_action_is_open`<br>`test_account_step_up::test_without_a_second_factor_a_fresh_password_is_enough`<br>`test_account_step_up::test_a_refreshed_bearer_token_does_not_renew_the_step_up`<br>`test_second_factor_keycloak::test_nobody_removes_a_credential_at_the_provider`<br>`test_second_factor_keycloak::test_people_who_never_set_up_a_second_factor_see_no_change`<br>`test_second_factor_keycloak::test_the_application_keeps_the_last_permanent_factor_at_the_real_provider`<br>`test_second_factor_keycloak::test_the_application_reads_the_factor_obligation_from_the_real_provider`<br>`test_second_factor_keycloak::test_a_set_up_page_opened_before_the_first_factor_is_refused_after_it`<br>`test_recovery_codes_keycloak::test_a_person_without_a_factor_sets_up_a_one_time_code_before_recovery_codes`<br>`test_recovery_codes_keycloak::test_recovery_codes_are_generated_only_after_a_permanent_factor`<br>`test_recovery_codes_keycloak::test_a_step_up_of_an_existing_session_never_takes_a_recovery_code`<br>`test_recovery_codes_keycloak::test_spending_the_last_code_needs_the_permanent_factor_and_ends_every_other_session`<br>`test_recovery_codes_keycloak::test_an_abandoned_regeneration_is_never_served_to_the_password_alone`<br>`test_recovery_codes_keycloak::test_two_sign_ins_at_once_leave_no_session_from_before_the_last_code`<br>`test_recovery_codes_keycloak::test_a_codes_only_account_waits_for_the_controlled_recovery`<br>`test_recovery_codes_keycloak::test_an_application_request_cannot_move_a_codes_only_account_either`<br>`test_recovery_codes_keycloak::test_an_obliged_account_without_any_factor_stays_closed`<br>`test_recovery_codes_keycloak::test_a_sign_in_left_at_the_factor_question_gains_nothing_when_the_factor_goes`<br>`test_recovery_codes_keycloak::test_the_user_can_neither_see_nor_lift_the_factor_obligation`<br>`test_recovery_codes_keycloak::test_a_sign_in_held_open_with_a_code_gets_no_new_codes_after_the_last_one`<br>`test_last_permanent_factor::test_the_last_permanent_factor_stays_while_recovery_codes_remain`<br>`test_last_permanent_factor::test_two_removals_at_once_cannot_both_take_a_permanent_factor`<br>`test_last_permanent_factor::test_an_account_that_must_keep_a_factor_never_ends_without_a_permanent_one`<br>`test_security_provider_keycloak::test_the_provider_replaces_every_credential_action_and_guards_the_sign_in`<br>`test_security_provider_keycloak::test_a_held_form_is_refused_and_the_refusal_is_recorded`<br>`test_security_provider_keycloak::test_the_first_permanent_factor_makes_the_obligation_permanent`<br>`test_security_provider_keycloak::test_a_second_one_time_code_needs_the_permanent_factor_in_this_sign_in`<br>`test_security_provider_keycloak::test_an_obliged_account_without_a_factor_cannot_set_one_up`<br>`test_security_provider_keycloak::test_a_person_switches_the_second_factor_off_with_the_factor_and_a_confirmation`<br>`test_security_provider_keycloak::test_a_recovery_code_cannot_switch_the_second_factor_off`<br>`test_security_provider_keycloak::test_the_switch_off_is_refused_at_the_provider_itself`<br>`test_security_provider_keycloak::test_two_first_activations_at_once_leave_exactly_one_factor`<br>`test_security_provider_keycloak::test_a_form_held_on_one_node_is_refused_after_the_factor_was_set_up_on_the_other`<br>`test_security_provider_keycloak::test_first_activations_on_two_nodes_at_once_leave_exactly_one_factor`<br>`test_security_provider_keycloak::test_new_recovery_codes_on_two_nodes_at_once_leave_one_set`<br>`test_mfa_disable::test_a_password_alone_cannot_start_it`<br>`test_mfa_disable::test_a_mandatory_second_factor_cannot_be_switched_off` | 215/215 pass (M+K) | F-1R-B closed (option A); F-1R-C, the rest of F-3K and the held recovery-code sign-in closed by the Keycloak security provider (decision at submit, under a database lock, on fresh state; two nodes tested); a recovery code never authorizes a permanent factor, accounts holding codes only wait for the controlled recovery (T10/T11). The 5-minute window for grant changes is applied by T10 (AC-PLT) |
 | AC-POL-11 | PASS | `app/auth/security/notify.py` | `test_security_units::test_every_notice_is_spanish_short_and_carries_nothing_but_the_kind_and_the_time`<br>`test_security_units::test_production_default_sends_nothing_and_smtp_needs_a_host` | 8/8 pass (M) | — |
 | AC-POL-12 | PASS with accepted deviation | `app/api/v1/auth.py`, `app/auth/web/` | `test_web_flow::test_a_logout_token_is_accepted_once`<br>`test_web_flow::test_a_replayed_callback_is_refused` | 2/2 pass (M) | no Idempotency-Key (CP07, CP08) |
 | AC-POL-13 | PARTIAL | `app/auth/sessions/`, 0005, 0006 | `test_sessions_db::test_a_changed_browser_family_revokes_the_session_through_its_own_transaction`<br>`test_sessions_db::test_rotation_invalidates_the_old_credential_at_once`<br>`test_reconciliation_keycloak::test_refresh_token_reuse_is_refused_by_keycloak_without_telling_the_application` | 3/3 pass (M+K) | rotation and web UA binding proven; refresh reuse proven at Keycloak only. Missing: `REFRESH_REUSE` (T11, with AC-MOB-04); country notice (see AC-SES-10) |
@@ -356,9 +402,12 @@ Keycloak security provider order (2026-11-25):
 - `test_realm_lint`: five new cases; `test_identity_environment`: three supply-chain tests; Local CI self-test: two broker cases.
 - No test was removed without a replacement, none is skipped.
 
+Final Completion Order: `test_an_unmarked_codes_only_account_is_refused` → `test_a_codes_only_account_waits_for_the_controlled_recovery` (marked and unmarked); `test_a_marked_codes_only_account_moves_to_a_permanent_factor` and `test_the_application_request_moves_a_codes_only_account_too` → `test_an_application_request_cannot_move_a_codes_only_account_either` (the transition is forbidden now); `test_the_last_code_of_a_codes_only_account_leaves_it_closed` → `test_an_obliged_account_without_any_factor_stays_closed`; `test_a_sign_in_left_at_the_code_question_gains_nothing_when_the_codes_run_out` → `test_a_sign_in_left_at_the_factor_question_gains_nothing_when_the_factor_goes` (a codes-only account no longer reaches the code question); the option-A tests expect a refusal for the codes-only account; `test_recovery_codes_alone_protect_level_two` expects the refusal; the reconciliation test lists codes-only accounts for review. New: `tests/identity/test_scan_gate.py` (22), 9 broker self-tests, realm linter case for the codes-only refusal. No assertion was weakened: every changed test asserts the stricter policy.
+
 ## 10. Open production blockers
 
-- **KC-SP-12**: no vulnerability scan of the AutoTramita Keycloak image in CI (owner decision, §2).
+- **Upstream image vulnerabilities (KC-SP-12)**: Keycloak 26.4.7 — 9 CRITICAL / 93 HIGH; needs an authorized upgrade (§12).
+
 - Persistent database migration state unverified (F1 R05, §6).
 - Existing realms: the AutoTramita image first, then `reconcile_mfa_obligation.py` and the manual steps of [identity/README](../../identity/README.md); production start-up options of the image (D43).
 - D37: O15 mail provider; F-4 needs T10 authority and T11 interface.
@@ -372,19 +421,38 @@ Keycloak security provider order (2026-11-25):
 - **T12:** frozen API contract (AC-API).
 - **T13:** final acceptance and traceability test.
 
-## 12. CP09 proposal and independent security review
+## 12. Status, blocker and independent security review
 
-**Proposed status: F2-T09-REC — IMPLEMENTATION COMPLETED / READY FOR INDEPENDENT SECURITY REVIEW, subject to the owner's decision on KC-SP-12.** No P0 or P1 finding is open in the authorized scope and the concurrency guarantees are proven on two instances. CP09 is **not** accepted by this report; T10 is not started. Before owner acceptance of CP09: the review below, the decision on KC-SP-12, the owner's view on AC-CTX-01 and on the codes-only transition (§2), and the production blockers of §10 acknowledged as not closed by CP09.
+**F2-T09-REC — BLOCKED.** Reason: KC-SP-12. The image Keycloak runs from has 9 CRITICAL and 93 HIGH findings in components of Keycloak 26.4.7 itself (Keycloak, JDK, HTTP stack, JSON, cryptography, templates, OS packages), 72 of the 90 distinct ones assessed applicable. The gate correctly fails; it may not be bypassed and nothing was accepted on the owner's behalf. Everything else of the order is done and passes.
 
-Proposed scope of the independent review:
-1. The provider source (`identity/keycloak/provider`, 12 classes): the policy table, the lock and transaction handling, the use of `getAuthnCredentials`, `ACTION_TOKEN_USER` and the start note, the override of the built-in factories.
-2. The realm flows (`realm-template.json`, `realm_lint.py`): levels 1–4, probes, deny sub-flows, `at-security-guard`, required-action configurations.
-3. The application's security actions and switch-off (`app/auth/security/actions.py`, `app/api/v1/me.py`, `app/api/v1/auth.py`) and the admin client (`app/auth/idp_admin.py`).
-4. Concurrency: lock semantics on PostgreSQL with Keycloak's production cache stack (tests use local caches), lock timeout, behaviour under a database failover.
-5. Supply chain: Dockerfile, `build.sh`, the Local CI broker's build rule (`scripts/ci/lib/broker.py`).
-6. Abuse paths not covered by tests: admin REST API misuse by the application's service account, theme injection through the switch-off page, event and log content under error conditions.
+**Minimal proposal.** Authorize a Keycloak upgrade to **26.8.2** (0 CRITICAL / 6 HIGH with the same database; published 19 Nov 2026, so pinnable under the two-week rule from 3 Dec 2026), or now to **26.8.1** (1 CRITICAL in the JDK, 10 HIGH), as its own package:
+1. Re-verify the provider against the new sources, following its upgrade procedure: the SPIs are internal and the version jump is large.
+2. Run the full regression suite.
+3. Decide on the HIGH findings that remain: either time-limited owner acceptances in `vulnerability-acceptances.json` (JDK CVE-2026-91403 will not be fixed; sqlite has no fix yet; Guava is fixed in 33.7.2), or wait for the next release.
 
-### Files changed by this order
-`identity/keycloak/Dockerfile`, `identity/keycloak/provider/**` (new), `identity/keycloak/realm-{template,dev,prod,test}.json`, `identity/docker-compose.keycloak-test.yml`, `identity/README.md`; `app/api/v1/{auth,me}.py`, `app/audit/catalog.py`, `app/auth/{errors,idp,idp_admin}.py`, `app/auth/security/{actions,notify}.py`, `openapi/openapi.json`; `.github/workflows/ci.yml`, `scripts/ci/lib/{broker,runner}.py`, `scripts/ci/selftest.py`, `scripts/identity/reconcile_mfa_obligation.py` (new); tests: `tests/auth/security/test_mfa_disable.py` (new), `tests/identity/test_security_provider_keycloak.py` (new), `tests/auth/fake_admin.py`, `tests/audit/test_catalog_and_validation.py`, `tests/auth/context/test_workspace_pipeline.py`, `tests/test_openapi_contract.py`, `tests/identity/{accounts,kc,realm_lint,test_identity_environment,test_realm_lint,test_reconciliation_keycloak,test_recovery_codes_keycloak,test_second_factor_keycloak,test_security_keycloak}.py`; documents: ADR-008, F2 decision register, acceptance criteria, implementation plan, execution order, AT-02, MASTER-BLUEPRINT, this report.
+The alternative, accepting the 26.4.7 findings, is a risk acceptance and not recommended.
+
+**Significant decisions taken within the order's autonomy:**
+- the scan runs as its own CI job, so the Keycloak test evidence stays separate;
+- database age limits of 48 h (vulnerabilities) and 7 days (Java);
+- an acceptance must be by the owner and expire within 90 days, and the committed file is empty;
+- codes-only accounts are refused before a code is asked (no code spent), and the transition sub-flow is removed from the realm;
+- broker builds run with `--no-cache`, and the Dockerfile is checked;
+- only the scanner container gets the egress network, never the step container;
+- provider version 1.1.0;
+- the reconciliation script lists codes-only accounts for review.
+
+**Independent security review — proposed scope** (after the upgrade decision):
+1. **Provider source** (`identity/keycloak/provider`): the policy table, the lock and transaction handling, `getAuthnCredentials`, `ACTION_TOKEN_USER` and the start note, the overridden factories.
+2. **Realm flows** (`realm-template.json`, `realm_lint.py`).
+3. **Application security actions and the switch-off**, plus the admin client.
+4. **Concurrency** with Keycloak's production cache stack and a database failover.
+5. **Supply chain**: Dockerfile, `build.sh`, the broker rules, the scan job and its gate.
+6. **Abuse paths not covered by tests**: the application's service account, the switch-off page template, event and log content on errors, and the administrator race noted in §2.1.
+
+CP09 is **not** accepted; its owner acceptance additionally needs the decisions marked in §7 (AC-CTX-01, AC-SES-10 source) and the production blockers of §10 acknowledged.
+
+### Files changed by the Final Completion Order
+`identity/keycloak/provider/**` (policy, VERSION 1.1.0, decision table, README), `identity/keycloak/realm-{template,dev,prod,test}.json`, `identity/keycloak/vulnerability-acceptances.json` (new), `identity/keycloak/vulnerability-review-26.4.7.json` (new), `identity/README.md`; `.github/workflows/ci.yml` (job `image-scan`, provider version), `scripts/ci/lib/{broker,runner,profiles}.py`, `scripts/ci/selftest.py`, `scripts/identity/scan_gate.py` (new), `scripts/identity/reconcile_mfa_obligation.py`; tests: `tests/identity/test_scan_gate.py` (new), `tests/identity/{realm_lint,test_realm_lint,test_recovery_codes_keycloak,test_second_factor_keycloak,test_reconciliation_keycloak,test_security_provider_keycloak}.py`, `tests/test_ci_workflow.py`; documents: ADR-008, decision register, execution order, AT-02, LOCAL-CI.md, this report. Files of the previous revision: see Git history.
 
 `scripts/ci/**` is outside the D35 path list: the broker gained exactly one build rule (the AutoTramita Keycloak image, from its directory, from pinned images, without network), as the order asked for the integration into Local CI; listed for the owner's review. **D40 / T13:** `tests/test_f2_scope.py`, which D40 names as the scope check of every diff, does not exist; T13 lists the final one. Recorded as a discrepancy, not implemented here (T13 not authorized).

@@ -10,7 +10,9 @@ realm import are live prerequisites needing separate authorization).
 | `keycloak/blacklists/at-common-passwords.txt` | Tiny **test-only** list. Production needs a vetted common-password list (live prerequisite) |
 | `docker-compose.keycloak-test.yml` | Disposable Keycloak for developer machines: builds the same image as CI |
 | `keycloak/Dockerfile` | The AutoTramita Keycloak image: pinned Keycloak 26.4.7 plus the security provider, built from source |
-| `keycloak/provider/` | The security provider ([its README](keycloak/provider/README.md): invariants, concurrency, upgrade, rollback) |
+| `keycloak/provider/` | The security provider ([its README](keycloak/provider/README.md): invariants, concurrency, upgrade, rollback, image scan) |
+| `keycloak/vulnerability-acceptances.json` | Owner acceptances of CRITICAL/HIGH image findings (time-limited; empty) |
+| `keycloak/vulnerability-review-26.4.7.json` | Reviewed findings of the current image: group, applicability, remedy |
 
 ## Workflow
 1. Change `realm-template.json`, then `python scripts/identity/render_realms.py`.
@@ -23,8 +25,8 @@ The realm file lists every required action. Passkey registration (`webauthn-regi
 ## Sign-in and levels (F-1R, F-2, final MFA decision and security provider of 2026-11-25)
 - `browser-loa-forms` starts with `at-security-guard` (the provider): it records when the sign-in started. Without the provider nobody signs in.
 - **Level one** (`browser-loa-1`): the password and, for whoever has one, a second factor (one-time code, passkey, passwordless passkey or recovery code). People who never set up a factor see only the password.
-- Silent probes (`browser-probe-*`) find out which credentials a person has without asking anything; the deny sub-flows refuse an account with recovery codes only unless it is marked, and a marked account without any factor.
-- A recovery code without a permanent factor leads to setting up a one-time code. Spending the **last** code also needs the permanent factor and ends every other session of the person (`user-session-limits`, one session).
+- Silent probes (`browser-probe-*`) find out which credentials a person has without asking anything; the deny sub-flows refuse an account that holds recovery codes only (before any code is asked, so none is spent) and a marked account without any factor. Both wait for the controlled recovery (T10/T11): a recovery code is no proof of a permanent factor (owner decision of 2026-11-25).
+- Spending the **last** code also needs the permanent factor and ends every other session of the person (`user-session-limits`, one session).
 - **Level three** (internal): a permanent factor proven in this authentication. **Level four** holds the recovery codes, so new codes need level three first. The order of the levels in `browser-loa-forms` (1, 3, 2, 4) is what assigns them; Keycloak refuses two conditions for the same level.
 - **Level two** (`browser-loa-2`): a step-up of an existing session asks for a permanent factor (never a recovery code); a factor proven in the same sign-in counts. Only a person without any factor and without the marker is offered a one-time code set-up.
 - `directGrantFlow` is `direct-grant-denied`: no client can exchange a password for a token, including the built-in `admin-cli` of the application realm.
@@ -33,7 +35,7 @@ The realm file lists every required action. Passkey registration (`webauthn-regi
 
 ## `at_mfa_required` and `at_mfa_mandatory`
 User-profile attributes visible and changeable by **administrators only**.
-- `at_mfa_required=true`: the account must never fall back to the password alone. The provider sets it with the first permanent factor, in the same transaction; the controlled switch-off lifts it, only together with every factor. A marked account without any usable factor is locked until a controlled recovery (T10/T11).
+- `at_mfa_required=true`: the account must never fall back to the password alone. The provider sets it with the first permanent factor, in the same transaction; the controlled switch-off lifts it, only together with every factor. A marked account without any usable factor, and any account holding recovery codes only, is locked until a controlled recovery (T10/T11).
 - `at_mfa_mandatory=true`: the second factor may not be switched off (platform grants). T10 sets it; nothing does today. The application and the provider both refuse the switch-off when it is set.
 
 ## Switching the second factor off

@@ -1,6 +1,6 @@
 # F2 — Redoslijed izvršavanja (execution order)
 
-Datum: 2026-11-24, stanje 2026-11-25 | Status: **CP00–CP08 prihvaćeni 2026-11-24; autoriziran F2-T09-REC; CP09 nije prihvaćen; F2-T09-REC implementacija dovršena, predložena za neovisnu sigurnosnu reviziju (KC-SP-12 čeka odluku)** | T10–T13 nisu autorizirani
+Datum: 2026-11-24, stanje 2026-11-25 | Status: **CP00–CP08 prihvaćeni 2026-11-24; autoriziran F2-T09-REC; CP09 nije prihvaćen; F2-T09-REC BLOCKED: KC-SP-12 (ranjivosti upstream Keycloaka 26.4.7, nadogradnja traži autorizaciju)** | T10–T13 nisu autorizirani
 [Plan](F2-IMPLEMENTATION-PLAN.md) · [Specifikacija AT-02](../specifications/AT-02-identity-security.md) · [Registar odluka](F2-DECISION-REGISTER.md) · [Kriteriji](F2-ACCEPTANCE-CRITERIA.md) · [G6 (F1 obrazac)](../G6-EXECUTION-ORDER.md)
 
 **Sažetak:** 13 paketa (F2-T01…T13), 14 checkpointova (F2-CP00 planiranje, CP01…CP12 po paketu, CP13 završno prihvaćanje).
@@ -367,7 +367,7 @@ Završni status: "F2-T09-REC — COMPLETED / READY FOR INDEPENDENT SECURITY REVI
 | F2-CP06 | T06 | **PRIHVAĆEN 2026-11-24**: web tok, kolačić, CSRF | CI run 45467370715 (kod e2736d6) |
 | F2-CP07 | T07 | **PRIHVAĆEN 2026-11-24**: mobilni tok | CI run 45469542994 (kod 850316b) |
 | F2-CP08 | T08 | **PRIHVAĆEN 2026-11-24**: pipeline konteksta, port AT-03, cross-tenant | CI run 45472663659 (kod dd7f492) |
-| F2-CP09 | T09-REC | **NIJE PRIHVAĆEN**; F-0, F-1, F-1R, F-1R-B, F-1R-C, F-2, F-3, F-3K i F-4 izvedeni uz navedene granice (Keycloak security provider); bez otvorenih P0/P1; predloženo za neovisnu sigurnosnu reviziju, KC-SP-12 čeka odluku | [Izvještaj CP09](F2-CP09-RECONCILIATION-REPORT.md); kod cacb67c, CI run [45617394445](https://github.com/AutoTramita-es/autotramita/actions/runs/45617394445), lokalni FULL 20261125-124227-de8633 |
+| F2-CP09 | T09-REC | **NIJE PRIHVAĆEN**; F2-T09-REC **BLOCKED** zbog KC-SP-12 (Trivy: 9 CRITICAL / 93 HIGH u Keycloaku 26.4.7); sve ostalo izvedeno i testirano, bez otvorenih P0/P1 u kodu AutoTramite | [Izvještaj CP09](F2-CP09-RECONCILIATION-REPORT.md); kod 8e49b91, CI run [45632069412](https://github.com/AutoTramita-es/autotramita/actions/runs/45632069412), lokalni FULL 20261125-140644-a99236 |
 | F2-CP10 | T10 | `platform_grants`, eskalacije, bootstrap | CI run, pregled migracije (sljedeći slobodan broj, od 0009) |
 | F2-CP11 | T11 | Admin korisnika, outbox, KC događaji | CI run, pregled migracije (sljedeći slobodan broj) |
 | F2-CP12 | T12 | Zamrznuti API ugovor | CI run, OpenAPI diff, klijenti |
@@ -385,4 +385,6 @@ D37 koristi 0007; 0008 zatvara nalaze konteksta/audita. Sve migracije dodjeljuju
 **Stanje 2026-11-25 (završna MFA odluka):** autorizacija evidentirana u `dc8089b` prije koda; implementacija `07d6c91` i `ddf1869`, lokalni FULL CI `20261125-095114-34ffa4` i CI run [45590446828](https://github.com/AutoTramita-es/autotramita/actions/runs/45590446828). Opcija A sa svim dopunama izvedena; F-1R-B zatvoren. Integracijski testovi pokazali su novi P1 **F-1R-C** (stranica za postavu otvorena prije prvog faktora dodaje faktor i nakon njega) koji nijedna postavka realma ne zatvara; prijedlog minimalnog rješenja (mali Keycloak provider, nova komponenta) traži zasebnu autorizaciju ([izvještaj §2](F2-CP09-RECONCILIATION-REPORT.md)). F2-CP09 se **ne** predlaže za prihvaćanje.
 
 **Stanje 2026-11-25 (Keycloak security provider):** autorizacija evidentirana u `a378cac` prije koda; implementacija `c293c9c`, `e58ff13`, `c7f19fd`, `cacb67c`; lokalni FULL CI `20261125-124227-de8633` (1.414 + 259 testova) i CI run [45617394445](https://github.com/AutoTramita-es/autotramita/actions/runs/45617394445). F-1R-C (P1), ostatak F-3K i otvorena prijava s recovery kodom zatvoreni i dokazani na jednoj i na dvije Keycloak instance. Otvoreno: KC-SP-12 (skeniranje ranjivosti slike, odluka vlasnika). CP09 se ne prihvaća samostalno; T10 nije započet.
+
+**Stanje 2026-11-25 (Final Completion Order):** odluke evidentirane u `7cacef8` prije koda; implementacija `382bcdb` (recovery-only, provider 1.1.0) i `8e49b91` (Trivy, broker); lokalni FULL CI `20261125-140644-a99236`: svi testovi prolaze (1.436 + 257), `image-scan` pada na provjeri (9 CRITICAL / 93 HIGH, ništa prihvaćeno); CI run [45632069412](https://github.com/AutoTramita-es/autotramita/actions/runs/45632069412). Status **F2-T09-REC — BLOCKED**; prijedlog: autorizirati nadogradnju Keycloaka na 26.8.2 (izvještaj §12). CP09 se ne prihvaća; T10 nije započet.
 
