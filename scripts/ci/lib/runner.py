@@ -46,6 +46,9 @@ CACHE_VOLUMES = {"atci-uv-cache": "/cache/uv", "atci-npm-cache": "/cache/npm"}
 RUNNER_UID = 1001
 MIN_FREE_BYTES = 10 * 1024**3
 NEEDS_EGRESS = re.compile(r"\buv sync\b|check-clients\.sh|\buvx\b")
+# A step that has the pinned scanner download its databases: the job gets an egress network,
+# used by that scanner container only (the broker), never by the step container itself.
+SCANNER_DOWNLOAD = re.compile(r"--download-(?:java-)?db-only\b")
 NEEDS_DOCKER = re.compile(r"\bdocker\b|check-clients\.sh")
 IMAGE_REF = re.compile(r"[a-z0-9./_-]+:[A-Za-z0-9._-]+@sha256:[0-9a-f]{64}")
 
@@ -271,7 +274,7 @@ class JobRun:
                 for name in [".", *directories, *files]:
                     os.lchown(os.path.join(root, name), RUNNER_UID, RUNNER_UID)
         self.start_services()
-        if any(NEEDS_EGRESS.search(step.run) for step in steps):
+        if any(NEEDS_EGRESS.search(s.run) or SCANNER_DOWNLOAD.search(s.run) for s in steps):
             self.egress = f"{self.project}-egress"
             docker("network", "create", *self.label_args(), self.egress)
         if any(NEEDS_DOCKER.search(step.run) for step in steps):
@@ -282,6 +285,7 @@ class JobRun:
                 workspace=self.workspace.resolve(),
                 read_only_roots=(src.resolve(),),
                 images=self.run.broker_images,
+                egress=self.egress,
             )
             self.broker = Broker(self.workspace / "broker", policy)
             self.broker.start()
@@ -863,6 +867,15 @@ def cleanup(options: argparse.Namespace) -> int:
     )
     for identifier in [] if dry else networks:
         docker("network", "rm", identifier, check=False)
+    built = stale(
+        "image",
+        docker(
+            "image", "ls", "--filter", of_a_run, "--format",
+            "{{.ID}}\t{{.Repository}}\t" + run_label,
+        ).stdout.splitlines(),
+    )  # fmt: skip
+    for identifier in [] if dry else built:
+        docker("image", "rm", "-f", identifier, check=False)
     work = STATE / "work"
     for directory in sorted(work.iterdir()) if work.exists() else []:
         if not is_active(directory.name):

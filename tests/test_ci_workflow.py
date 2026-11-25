@@ -65,7 +65,8 @@ def test_toolchain_versions_match_the_project() -> None:
 
 
 def test_every_job_has_a_timeout_and_the_required_checks_exist() -> None:
-    assert len(re.findall(r"timeout-minutes:", WORKFLOW)) == 4  # F2-T01 added the identity job
+    # F2-T01 added the identity job, the Keycloak security provider order the image scan
+    assert len(re.findall(r"timeout-minutes:", WORKFLOW)) == 5
     for required in (
         "uv sync --locked",
         "ruff check .",

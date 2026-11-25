@@ -73,9 +73,9 @@ Untracked files named like secrets (`.env*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`,
 | `run-fast.sh` | Ruff lint and format, mypy, tests that need no PostgreSQL or Redis, test counts, runner self-test | none | 77 s |
 | `run-unit.sh` | the same tests and counts only | none | 69 s |
 | `run-integration.sh` | tests that depend on the PostgreSQL or Redis fixtures (RLS, privileges, sessions, authentication, recovery, notifications, rate limiting), test counts, isolation check | PG, Redis | 174 s |
-| `run-keycloak.sh` | the whole `identity` job: Keycloak tests, DEV and PROD realm import | PG, Redis, Keycloak | 139 s |
+| `run-keycloak.sh` | the whole `identity` job: builds the AutoTramita Keycloak image, Keycloak tests on one node and on two nodes sharing one PostgreSQL database, DEV and PROD realm import, a realm without the provider | PG, Redis, Keycloak ×4 | ~370 s |
 | `run-migrations.sh` | the workflow's upgrade/downgrade/upgrade step, exactly one migration head, the complete role and migration test files | PG, Redis | 25 s |
-| `run-security.sh` | the `secrets` and `dependencies` jobs (gitleaks, pip-audit), gitleaks on uncommitted files | none | 6 s |
+| `run-security.sh` | the `secrets`, `dependencies` and `image-scan` jobs (gitleaks, pip-audit, Trivy scan of the AutoTramita Keycloak image with its gate), gitleaks on uncommitted files | none | ~60 s |
 | `run-contracts.sh` | OpenAPI 3.1 validation, contract is current, TypeScript and Dart generation | none | 14 s |
 | `run-all.sh` | **every job and every run step of `ci.yml`**, plus the local checks | all | 303–316 s |
 | `compare-github.sh [dir] [--run id]` | compares a clean full run with the GitHub run of the same commit | | seconds |
@@ -116,13 +116,25 @@ The report of such a run is marked `TARGETED: not acceptance evidence`. If the s
 | No route anywhere from tests | the namespace is created with `network_mode: none`; every full, integration, migration and Keycloak run verifies it |
 | No production data or secrets | only the throwaway values written in `ci.yml`; no host environment, `.env` or `.secrets` reaches a container; `docker compose` runs with `--env-file /dev/null` |
 | No real mail | tests run their own SMTP sink on `127.0.0.1:18025`; there is no Mailpit |
-| No Docker socket | steps that call `docker` talk to a broker on the host that allows only `run`, `logs` and `rm -f` of the job's own containers, only the images named in the repository, only mounts inside the job workspace, and only the job's namespace or no network |
+| No Docker socket | steps that call `docker` talk to a broker on the host that allows only `run`, `logs` and `rm -f` of the job's own containers, only the images named in the repository, only mounts inside the job workspace, and only the job's namespace or no network; in addition exactly the operations below (Keycloak image and its scan) |
 | Unprivileged steps | uid 1001, all capabilities dropped, `no-new-privileges` |
 | Parallel runs | every run has its own names, namespace and workspace; several runs may execute at once. Caches are shared and safe for concurrent use |
 
+### Keycloak image build and scan (F2-T09-REC, owner authorization of 2026-11-25)
+
+The broker (`scripts/ci/lib/broker.py`, guarded by `selftest.py`) allows three more operations, nothing wider:
+
+| Operation | Allowed only as | Refused (negative self-tests) |
+|---|---|---|
+| `docker build` | tag `autotramita-keycloak:ci`, context exactly `<job source>/identity/keycloak` reached without any symbolic link, build arguments `KEYCLOAK_IMAGE`/`JDK_IMAGE` naming pinned images of the workflow, run with `--network none` and `--no-cache`; the Dockerfile may only use those arguments in `FROM`, stages in `COPY --from`, pinned ARG defaults, and no parser directive (`# syntax=` pulls a frontend image), `ADD`, `--network`, `--security`, ssh, secret or cache mounts | any other tag, context, link, build flag, argument or Dockerfile construct |
+| `docker save` | `--output <file>` inside the job workspace (new file, no link) of the image this job built; the file is handed to uid 1001, read only | any other image, path, existing file or link |
+| scanner downloads | the pinned `aquasec/trivy` image with exactly `--cache-dir /cache image --download-db-only|--download-java-db-only --no-progress`, one cache mount; this is the **only** container placed on the job's egress network (the step container itself stays without network) | another image, argument, network flag or mount; a scan always runs with `--network none` |
+
+The built image is removed when the job ends; `cleanup.sh` removes images of finished runs by their run label. The vulnerability databases live in the job workspace and are deleted with it. The gate `scripts/identity/scan_gate.py` fails on a missing or old database (vulnerabilities 48 h, Java 7 days), on a report of another image, another scanner version or without operating-system and Java coverage, and on every CRITICAL or HIGH finding not accepted by the owner (`identity/keycloak/vulnerability-acceptances.json`, time-limited, empty). The known boundary below applies to the scanner download as to `uv sync`.
+
 Keycloak is not declared in [compose.ci.yml](../../compose.ci.yml): the workflow step that starts it (`docker run`, pinned by digest) is executed through the broker, so it has one definition.
 
-**Known boundary.** Steps that need the network (`uv sync`, `npm ci`, `pip-audit`) run on a per-job bridge network. Measured from such a network: the host's PostgreSQL and Redis containers are **not** reachable, and neither is a service bound to the host's loopback. Services the host publishes on all interfaces **are** reachable through the gateway (on this server ports 22, 25, 80, 443, 587, 993, 8001, 8010, 9000). Those steps run dependency tooling, not tests, and hold no credentials. Blocking this needs host firewall rules, which Local CI does not change.
+**Known boundary.** Steps that need the network (`uv sync`, `npm ci`, `pip-audit`) and the scanner's database download run on a per-job bridge network. Measured from such a network: the host's PostgreSQL and Redis containers are **not** reachable, and neither is a service bound to the host's loopback. Services the host publishes on all interfaces **are** reachable through the gateway (on this server ports 22, 25, 80, 443, 587, 993, 8001, 8010, 9000). Those steps run dependency tooling, not tests, and hold no credentials. Blocking this needs host firewall rules, which Local CI does not change.
 
 Local CI shares the Docker daemon, CPU, memory and disk with the other services of the host.
 

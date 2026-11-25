@@ -118,9 +118,11 @@ def select(profile: str, workflow: Workflow) -> list[Selection]:
     scan = local_worktree_scan(gitleaks_image(workflow))
     if profile == "security":
         secrets, dependencies = _job(workflow, "secrets"), _job(workflow, "dependencies")
+        scanner = _job(workflow, "image-scan")
         return [
             Selection(secrets, list(secrets.steps), local=[scan]),
             Selection(dependencies, list(dependencies.steps)),
+            Selection(scanner, list(scanner.steps), services=False),
         ]
     if profile == "all":
         # Every job and every step of the workflow, including any added later.

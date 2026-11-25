@@ -6,6 +6,7 @@ outside its workspace. Run: python3 scripts/ci/selftest.py
 from __future__ import annotations
 
 import copy
+import re
 import subprocess
 import sys
 import tempfile
@@ -146,30 +147,53 @@ class BrokerPolicy(unittest.TestCase):
             with self.subTest(" ".join(request)), self.assertRaises(Refused):
                 self.policy.command(request)
 
-    def test_only_the_keycloak_image_is_built_from_its_directory_without_network(self) -> None:
+    SCANNER = "aquasec/trivy:0.76.2@sha256:" + "b" * 64
+    DOCKERFILE = (
+        "# AutoTramita Keycloak image\n"
+        f"ARG KEYCLOAK_IMAGE={IMAGE}\n"
+        f"ARG JDK_IMAGE={IMAGE}\n"
+        "FROM ${KEYCLOAK_IMAGE} AS keycloak\n"
+        "FROM ${JDK_IMAGE} AS build\n"
+        "COPY --from=keycloak /opt/keycloak/lib/lib /keycloak-lib\n"
+        "RUN /provider/build.sh /keycloak-lib /x.jar\n"
+        "FROM ${KEYCLOAK_IMAGE}\n"
+        "COPY --from=build --chown=1000:0 /x.jar /opt/keycloak/providers/x.jar\n"
+        "USER 1000\n"
+    )
+
+    def context(self, dockerfile: str | None = None) -> Path:
         context = self.ws / "src" / "identity" / "keycloak"
-        context.mkdir(parents=True)
-        command = self.policy.command(
+        context.mkdir(parents=True, exist_ok=True)
+        (context / "Dockerfile").write_text(dockerfile or self.DOCKERFILE)
+        return context
+
+    def build(self, context: Path | str) -> list[str]:
+        return self.policy.command(
             ["build", "--build-arg", f"KEYCLOAK_IMAGE={self.IMAGE}",
              "--tag", "autotramita-keycloak:ci", str(context)]
         )  # fmt: skip
+
+    def test_only_the_keycloak_image_is_built_from_its_directory_without_network(self) -> None:
+        context = self.context()
+        command = self.build(context)
         self.assertEqual(command[:4], ["docker", "build", "--network", "none"])
+        self.assertIn("--no-cache", command)  # nothing is taken from, or left for, other builds
         self.assertEqual(command[-2:], ["atci-run-job-autotramita-keycloak:ci", str(context)])
         started = self.policy.command(["run", "-d", "--name", "kc", "autotramita-keycloak:ci"])
         self.assertIn("atci-run-job-autotramita-keycloak:ci", started)
 
     def test_every_other_build_is_refused(self) -> None:
-        context = self.ws / "src" / "identity" / "keycloak"
-        context.mkdir(parents=True)
+        context = self.context()
         tag = ["--tag", "autotramita-keycloak:ci"]
         requests = [
             ["build", "--tag", "other:1", str(context)],
             ["build", *tag, str(self.ws / "src")],
             ["build", *tag, str(self.ws / "escape")],
+            ["build", *tag, f"{context}/../.."],  # traversal to another directory
             ["build", *tag, "--build-arg", "KEYCLOAK_IMAGE=alpine", str(context)],
             ["build", *tag, "--build-arg", f"OTHER={self.IMAGE}", str(context)],
             ["build", *tag, "--network", "host", str(context)],
-            ["build", *tag, "--file", "/tmp/Dockerfile", str(context)],
+            ["build", *tag, "--file", "/tmp/Dockerfile", str(context)],  # noqa: S108
             ["build", *tag],
             ["build", str(context)],
             ["run", "--rm", "autotramita-keycloak:ci"],  # not built by this job
@@ -177,6 +201,111 @@ class BrokerPolicy(unittest.TestCase):
         for request in requests:
             with self.subTest(" ".join(request)), self.assertRaises(Refused):
                 self.policy.command(request)
+
+    def test_the_repository_dockerfile_passes_with_the_images_ci_yml_names(self) -> None:
+        repo = Path(__file__).resolve().parents[2]
+        workflow = (repo / ".github" / "workflows" / "ci.yml").read_text()
+        images = set(re.findall(r"[a-z0-9./_-]+:[\w.-]+@sha256:[0-9a-f]{64}", workflow))
+        policy = Policy(
+            "atci-run-job", {"com.autotramita.ci": "1"}, "netns-id", self.ws,
+            (self.ws / "src",), frozenset(images),
+        )  # fmt: skip
+        context = self.context((repo / "identity" / "keycloak" / "Dockerfile").read_text())
+        policy.command(["build", "--tag", "autotramita-keycloak:ci", str(context)])
+
+    def test_a_context_reached_through_a_link_is_refused(self) -> None:
+        outside = Path(self.temporary.name) / "outside"
+        outside.mkdir()
+        (outside / "Dockerfile").write_text(self.DOCKERFILE)
+        (self.ws / "src" / "identity").mkdir(parents=True)
+        (self.ws / "src" / "identity" / "keycloak").symlink_to(outside)
+        with self.assertRaises(Refused):
+            self.build(self.ws / "src" / "identity" / "keycloak")
+        linked = self.ws / "src" / "identity" / "keycloak"
+        linked.unlink()
+        linked.mkdir()
+        (linked / "Dockerfile").symlink_to(outside / "Dockerfile")
+        with self.assertRaises(Refused):
+            self.build(linked)
+
+    def test_a_dockerfile_that_reaches_past_the_pinned_images_is_refused(self) -> None:
+        bad = {
+            "syntax frontend": "# syntax=docker/dockerfile:1\n",
+            "remote ADD": "ADD https://example.test/x.jar /x.jar\n",
+            "local ADD": "ADD x.jar /x.jar\n",
+            "host network": "RUN --network=host true\n",
+            "insecure": "RUN --security=insecure true\n",
+            "ssh": "RUN --mount=type=ssh true\n",
+            "secret": "RUN --mount=type=secret,id=x true\n",
+            "shared cache": "RUN --mount=type=cache,target=/c true\n",
+            "other image": "FROM alpine:3\n",
+            "image digest": f"FROM {self.IMAGE}\n",
+            "copy from image": "COPY --from=alpine:3 /bin/sh /sh\n",
+            "other default": "ARG JDK_IMAGE=alpine:3\n",
+        }
+        for label, line in bad.items():
+            with self.subTest(label), self.assertRaises(Refused):
+                self.build(self.context(self.DOCKERFILE + line))
+
+    def test_the_built_image_is_saved_only_into_the_workspace(self) -> None:
+        self.build(self.context())
+        temp = self.ws / "runner_temp"
+        temp.mkdir()
+        command = self.policy.command(
+            ["save", "--output", str(temp / "image.tar"), "autotramita-keycloak:ci"]
+        )
+        self.assertEqual(
+            command,
+            ["docker", "save", "--output", str(temp / "image.tar"),
+             "atci-run-job-autotramita-keycloak:ci"],
+        )  # fmt: skip
+        (temp / "taken").write_text("x")
+        (temp / "link").symlink_to("/etc")
+        for request in (
+            ["save", "--output", "/tmp/image.tar", "autotramita-keycloak:ci"],  # noqa: S108
+            ["save", "--output", str(temp / "taken"), "autotramita-keycloak:ci"],
+            ["save", "--output", str(temp / "link" / "x.tar"), "autotramita-keycloak:ci"],
+            ["save", "--output", "relative.tar", "autotramita-keycloak:ci"],
+            ["save", "--output", str(temp / "x.tar"), self.IMAGE],  # not built by this job
+            ["save", str(temp / "x.tar"), "autotramita-keycloak:ci"],
+        ):
+            with self.subTest(" ".join(request)), self.assertRaises(Refused):
+                self.policy.command(request)
+
+    def scanner_policy(self, egress: str) -> Policy:
+        return Policy(
+            "atci-run-job", {"com.autotramita.ci": "1"}, "netns-id", self.ws,
+            (self.ws / "src",), frozenset({self.IMAGE, self.SCANNER}), egress=egress,
+        )  # fmt: skip
+
+    def test_only_the_pinned_scanner_downloads_and_only_its_databases(self) -> None:
+        cache = self.ws / "runner_temp" / "trivy"
+        cache.mkdir(parents=True)
+        policy = self.scanner_policy("atci-run-job-egress")
+        mount = ["-v", f"{cache}:/cache"]
+        download = ["--cache-dir", "/cache", "image", "--download-db-only", "--no-progress"]
+        command = policy.command(["run", "--rm", *mount, self.SCANNER, *download])
+        self.assertEqual(command[command.index("--network") + 1], "atci-run-job-egress")
+        scan = ["--cache-dir", "/cache", "image", "--input", "/image.tar", "--offline-scan"]
+        offline = policy.command(["run", "--rm", "--network", "none", *mount, self.SCANNER, *scan])
+        self.assertEqual(offline[offline.index("--network") + 1], "none")
+        refused = [
+            (policy, ["run", "--rm", "--network", "host", *mount, self.SCANNER, *download]),
+            (policy, ["run", "--rm", self.SCANNER, *download]),  # no cache mount
+            (policy, ["run", "--rm", *mount, *mount, self.SCANNER, *download]),
+            (self.scanner_policy(""), ["run", "--rm", *mount, self.SCANNER, *download]),
+        ]
+        for which, request in refused:
+            with self.subTest(" ".join(request)), self.assertRaises(Refused):
+                which.command(request)
+        # anything else, the same arguments included, gets no network
+        for request in (
+            ["run", "--rm", *mount, self.IMAGE, *download],
+            ["run", "--rm", *mount, self.SCANNER, *download, "--db-repository", "evil.test/db"],
+        ):
+            with self.subTest(" ".join(request)):
+                command = policy.command(request)
+                self.assertEqual(command[command.index("--network") + 1], "none")
 
 
 def summary(status: str = report.PASS, **suite: int) -> dict[str, Any]:
