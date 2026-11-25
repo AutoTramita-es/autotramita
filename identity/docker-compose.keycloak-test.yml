@@ -9,7 +9,13 @@
 name: autotramita-keycloak-test
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:26.4.7@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007
+    # The pinned upstream image plus the AutoTramita security provider (identity/keycloak/Dockerfile).
+    image: autotramita-keycloak:dev
+    build:
+      context: ./keycloak
+      args:
+        KEYCLOAK_IMAGE: quay.io/keycloak/keycloak:26.4.7@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007
+        JDK_IMAGE: eclipse-temurin:21-jdk@sha256:8ad118b146aa92da815b576441acd6b42b38236797ad0b6edc8c200b85bb0734
     network_mode: host # the tests receive SMTP and back-channel logout calls on 127.0.0.1
     command:
       - start-dev

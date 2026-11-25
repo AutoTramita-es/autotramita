@@ -1,0 +1,6 @@
+es.autotramita.keycloak.security.GuardedActionFactory$Totp
+es.autotramita.keycloak.security.GuardedActionFactory$Passkey
+es.autotramita.keycloak.security.GuardedActionFactory$PasswordlessPasskey
+es.autotramita.keycloak.security.GuardedActionFactory$RecoveryCodes
+es.autotramita.keycloak.security.GuardedActionFactory$Password
+es.autotramita.keycloak.security.DisableSecondFactor
