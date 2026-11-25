@@ -370,6 +370,18 @@ Zabranjeno: T10–T13, prihvaćanje CP09 i F2, INFRA-AI-01, INFRA-CI-02, INFRA-C
 Završni status: "F2-T09-REC — COMPLETED / READY FOR INDEPENDENT SECURITY REVIEW", "F2-T09-REC — IMPLEMENTATION COMPLETED / OWNER SECURITY DECISION REQUIRED" ili "F2-T09-REC — BLOCKED". KC-SP-20 ostaje uvjetovan neovisnom sigurnosnom revizijom.
 ```
 
+```
+F2-CP09-REC — Final Independent Review Corrections | 2026-11-25 | Referentni HEAD cfbc8f7
+Tekst vlasnika (doslovno, izvaci): "Autoriziram završne korekcije prema neovisnoj sigurnosnoj reviziji CP09."
+Odluke: IR-01 "Ispraviti determinističko testiranje i dopustiti prikaz recovery metode uz obaveznu provjeru trajnog faktora"; IR-02 "Uskladiti test s autoriziranim vulnerability acceptances"; IR-03 "Ažurirati zastarjelu dokumentaciju"; IR-04 "Dokumentirati razliku u klasifikaciji CVE-a"; IR-05 "Odgoditi za INFRA-CI-02"; IR-06 "Odgoditi za INFRA-CI-02, bez proširenja postojećeg mrežnog pristupa"; IR-07 "Evidentirati kao obavezni produkcijski blocker".
+IR-01: "Prihvaćam da Keycloak tijekom ponovne autentifikacije može prikazati recovery kod kao jednu od mogućnosti prijave." "Recovery kod samostalno ne smije autorizirati izdavanje novih recovery kodova." "Recovery kod samostalno ne smije autorizirati promjenu vjerodajnica." "Za zaštićene operacije mora postojati svjež dokaz trajnog MFA faktora." "Sve postojeće sigurnosne politike ostaju na snazi." Test bez ovisnosti o istoj sekundi, oba scenarija deterministički, recovery kod ne daje nove kodove bez trajnog faktora, trajni faktor omogućuje operaciju, postojeće tvrdnje sačuvane, bez povećanja timeouta ili OTP prozora kao rješenja; provider se ne mijenja ako ispravno provodi politiku; ciljani test najmanje pet puta uzastopno.
+IR-02: točne CVE/package kombinacije, datumi isteka, referenca na autorizaciju vlasnika, bez duplikata, bez neautoriziranih prihvaćanja, isteklo prihvaćanje odbijeno; kontrolirano referentno vrijeme; scan_gate.py i šest prihvaćanja se ne mijenjaju; negativni testovi se ne slabe.
+Dokumentacija: F2-DECISION-REGISTER, F2-ACCEPTANCE-CRITERIA, F2-CP09-RECONCILIATION-REPORT, README-i, KC-SP-01–20; IR-05 i IR-06 kao odgođeni INFRA-CI-02 zadaci; IR-07 produkcijski blocker.
+CI: ciljani testovi tijekom rada; jedan lokalni FULL CI na konačnom SHA, push na dev, automatski GitHub CI istog SHA, ekvivalentnost; bez ručnog ponavljanja uspješnih jobova; bez promjene workflowa, triggera ili obaveznih provjera.
+Zabranjeno: nove sigurnosne funkcionalnosti, T10–T13, INFRA-AI-01, INFRA-CI-02, INFRA-CI-03, nadogradnje, promjene arhitekture, deployment, migracije trajnih baza, aktivni realmovi, nove grane, merge u main, force push, samostalno prihvaćanje CP09.
+Završni status: "F2-CP09-REC — COMPLETED / READY FOR TARGETED INDEPENDENT VERIFICATION".
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
