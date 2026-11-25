@@ -343,6 +343,18 @@ Zabranjeno: T10–T13, samostalno prihvaćanje CP09/F2, deployment, izmjene traj
 Završni status: "F2-CP09 — NOT READY FOR OWNER ACCEPTANCE" ako postoje otvoreni P0/P1 ili nije dokazana sigurnost konkurentnih operacija; inače "F2-T09-REC — IMPLEMENTATION COMPLETED / READY FOR INDEPENDENT SECURITY REVIEW".
 ```
 
+```
+F2-T09-REC — Final Completion Order | 2026-11-25 | Referentni HEAD 5340fb7
+Tekst vlasnika (doslovno, izvaci): "Autoriziram završetak svih preostalih implementacijskih korekcija F2-T09-REC u jednom radnom paketu."
+Prihvaćene odluke: "Odobravam uvođenje Trivy skenera za Keycloak image." "Ne prihvaćam izloženost upstream imagea kao zamjenu za skeniranje ranjivosti." "Zabranjujem prijelaz računa koji ima samo recovery kodove na TOTP bez dokaza postojećeg trajnog faktora." "Takvi računi moraju čekati kontrolirani oporavak kroz T10/T11." "Odobravam pregled i potrebne usko ograničene sigurnosne korekcije lokalnog CI brokera vezane uz Keycloak build i skeniranje imagea."
+Autonomija: tehnički detalji, organizacija koda, manji refactoring, regresijski testovi, ispravci nestabilnih testova bez slabljenja tvrdnji, P2/P3 i P0/P1 korekcije unutar autorizirane arhitekture i politike. Zaustaviti se samo za novu arhitekturnu odluku, komponentu izvan opsega, promjenu ili slabljenje politike, prihvaćanje rizika, izmjenu trajne infrastrukture ili produkcijskih podataka, blocker izvan opsega.
+KC-SP-12: pinani Trivy, kontrolirano preuzimanje baze odvojeno od izoliranih testova, offline skeniranje provjerene lokalne baze, evidencija verzije/starosti/identiteta baze i maksimalna starost, skeniranje stvarnog runtime imagea (OS i Java), strojno čitljiv izvještaj, CI exit code, ekvivalentno lokalno i na GitHubu; CRITICAL i HIGH pregledani; "Ne uvoditi automatska sigurnosna izuzeća radi prolaska CI-ja."; bez nadogradnje Keycloaka; nedostupna ili zastarjela baza ne smije dati lažni PASS; bez općeg mrežnog pristupa izoliranim kontejnerima; bez kompletnog INFRA-CI-02.
+Recovery-only: recovery kod nije dokaz trajnog faktora i ne autorizira registraciju TOTP-a ili passkeya, regeneraciju kodova ni isključivanje MFA-a; bez prijelaza na password-only uz MFA obvezu; oporavak ostaje T10/T11; bez automatskog brisanja vjerodajnica i bez privremenog recovery endpointa; regresijski testovi na stvarnom Keycloaku; prvi faktor osoba bez MFA-a ostaje moguć.
+Broker: pregled i negativni testovi (dopuštene operacije, validacija, command injection, path traversal i symlinkovi, build kontekst, proizvoljno Docker izvršavanje, trajni servisi, pinanje, integritet, izolacija build cachea, čišćenje, fail-closed); bez općeg refactoringa, bez izmjena firewalla, Docker daemona, mreže ili branch protectiona.
+Zabranjeno: T10–T13, prihvaćanje CP09 i F2, INFRA-AI-01 S2–S4, INFRA-CI-02, INFRA-CI-03, deployment, trajne baze i aktivni realmovi, merge u main, force push, nove grane, vidljivost repozitorija, slabljenje politika ili testova, paralelne izmjene.
+Završni status: "F2-T09-REC — COMPLETED / READY FOR INDEPENDENT SECURITY REVIEW" ili "F2-T09-REC — BLOCKED" s razlozima i minimalnim prijedlogom.
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
