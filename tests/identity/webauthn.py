@@ -13,8 +13,9 @@ import secrets
 import struct
 from typing import Any
 
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
-from tests.identity.kc import Browser, Page, form_action
+from tests.identity.kc import Browser, Page, form_action, hidden_inputs
 
 
 def _b64(data: bytes) -> str:
@@ -42,14 +43,24 @@ def cbor(value: Any) -> bytes:
     return _head(5, len(value)) + b"".join(cbor(k) + cbor(v) for k, v in value.items())
 
 
-def register(browser: Browser, page: Page, origin: str) -> Page:
+class SoftwareKey:
+    """The private half of a registered software passkey, to answer sign-in challenges."""
+
+    def __init__(self) -> None:
+        self.private = ec.generate_private_key(ec.SECP256R1())
+        self.credential = secrets.token_bytes(32)
+        self.counter = 0
+
+
+def register(browser: Browser, page: Page, origin: str, key: SoftwareKey | None = None) -> Page:
     """Answer Keycloak's passkey registration page."""
+    holder = key or SoftwareKey()
     challenge = re.search(r"challenge : '([^']+)'", page.text)
     rp = re.search(r"rpId : '([^']+)'", page.text)
     assert challenge and rp, page.summary
-    numbers = ec.generate_private_key(ec.SECP256R1()).public_key().public_numbers()
-    credential = secrets.token_bytes(32)
-    key = cbor(
+    numbers = holder.private.public_key().public_numbers()
+    credential = holder.credential
+    public_key = cbor(
         {
             1: 2,
             3: -7,
@@ -65,7 +76,7 @@ def register(browser: Browser, page: Page, origin: str) -> Page:
         + bytes(16)
         + struct.pack(">H", len(credential))
         + credential
-        + key
+        + public_key
     )
     client_data = json.dumps(
         {
@@ -88,3 +99,52 @@ def register(browser: Browser, page: Page, origin: str) -> Page:
         },
         action=form_action(page.text),
     )
+
+
+def authenticate(
+    browser: Browser, page: Page, origin: str, key: SoftwareKey, *, forged: bool = False
+) -> Page:
+    """Answer Keycloak's passkey sign-in page, as a browser would after
+    ``navigator.credentials.get``. ``forged`` signs with a different private key."""
+    challenge = re.search(r"challenge : '([^']+)'", page.text) or re.search(
+        r'"challenge"\s*:\s*"([^"]+)"', page.text
+    )
+    rp = re.search(r"rpId : '([^']+)'", page.text) or re.search(
+        r'"rpId"\s*:\s*"([^"]+)"', page.text
+    )
+    assert challenge and rp, page.summary
+    key.counter += 1
+    authenticator_data = (
+        hashlib.sha256(rp.group(1).encode()).digest()
+        + bytes([0x05])  # user present, user verified
+        + struct.pack(">I", key.counter)
+    )
+    client_data = json.dumps(
+        {
+            "type": "webauthn.get",
+            "challenge": challenge.group(1),
+            "origin": origin,
+            "crossOrigin": False,
+        }
+    ).encode()
+    signer = ec.generate_private_key(ec.SECP256R1()) if forged else key.private
+    signature = signer.sign(
+        authenticator_data + hashlib.sha256(client_data).digest(), ec.ECDSA(hashes.SHA256())
+    )
+    fields = hidden_inputs(page.text)
+    fields.pop("tryAnotherWay", None)  # the hidden field of the other form on this page
+    fields.update(
+        {
+            "clientDataJSON": _b64(client_data),
+            "authenticatorData": _b64(authenticator_data),
+            "signature": _b64(signature),
+            "credentialId": _b64(key.credential),
+            "userHandle": "",
+            "error": "",
+        }
+    )
+    action = re.search(r'<form[^>]*id="webauth"[^>]*action="([^"]+)"', page.text) or re.search(
+        r'<form[^>]*action="([^"]+)"[^>]*id="webauth"', page.text
+    )
+    target = action.group(1).replace("&amp;", "&") if action else form_action(page.text)
+    return browser.submit(page, fields, action=target)

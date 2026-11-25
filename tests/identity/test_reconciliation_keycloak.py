@@ -46,7 +46,7 @@ from tests.identity.test_security_keycloak import (
     secure,
     settings_admin,
 )
-from tests.identity.webauthn import register
+from tests.identity.webauthn import SoftwareKey, authenticate, register
 
 pytestmark = pytest.mark.keycloak
 
@@ -370,18 +370,17 @@ def test_f1_nobody_can_register_a_passkey(env: Env, admin: Admin, alias: str) ->
     assert kinds == {"password"}
 
 
-def test_s03_webauthn_enrols_but_the_realm_does_not_use_it_for_level_two(
+def test_s03_a_passkey_enrolled_earlier_is_the_second_level(
     rig: Rig, env: Env, admin: Admin
 ) -> None:
-    """Why registration is off (F-1). With the action switched on for this test only: a person
-    whose only second factor is a passkey reaches level two with the password alone, because
-    the flow knows only one-time codes and offers to set one up. This must be changed together
-    with the realm flow before passkeys are switched on again."""
+    """F-1R (d): registration stays off (F-1 b), but a passkey an account already has is proven
+    at level two; it is never answered with the offer to set up a one-time code."""
     user = admin.create_user()
     assert rig.sign_in(user).status_code == 302
+    key = SoftwareKey()
     with required_action_enabled(admin, "webauthn-register"):
         page = rig.browser.authorize("at-web", WEB_REDIRECT, kc_action="webauthn-register")
-        done = register(rig.browser, page, env.base_url)
+        done = register(rig.browser, page, env.base_url, key)
     assert done.location and "kc_action_status=success" in done.location, done.summary
     factors = rig.api.get(f"{API}/me/security").json()["second_factors"]
     assert [f["type"] for f in factors] == ["webauthn"]
@@ -391,16 +390,18 @@ def test_s03_webauthn_enrols_but_the_realm_does_not_use_it_for_level_two(
     assert removal.status_code == 401 and removal.json()["code"] == "STEP_UP_REQUIRED"
     password_only = Browser(env)
     assert password_only.login(user, acr_values="loa1").code
-    offered = Browser(env).login(user, acr_values="loa2")
-    assert offered.code is None and "totp" in offered.text.lower(), offered.summary
-    assert "webauthn" not in offered.text.lower()
+    second = Browser(env)
+    asked = second.login(user, acr_values="loa2")
+    assert asked.code is None and 'id="webauth"' in asked.text, asked.summary
+    assert "kc-totp-secret-key" not in asked.text and "mode=manual" not in asked.text
+    proven = authenticate(second, asked, env.base_url, key)
+    tokens = second.token("at-web", proven.require_code(), WEB_REDIRECT)
+    assert decode_jwt(tokens["id_token"])["acr"] == "loa2"
 
 
-def test_recovery_codes_alone_do_not_protect_level_two(rig: Rig, env: Env, admin: Admin) -> None:
-    """OPEN FINDING (not covered by F-1 (b); owner decision). An account whose only second
-    factor is a set of recovery codes, which the application itself can enrol, is also offered
-    one-time code setup after the password alone. This records the behaviour; it must be
-    changed together with the realm flow or the enrolment rule."""
+def test_recovery_codes_alone_protect_level_two(rig: Rig, env: Env, admin: Admin) -> None:
+    """F-1R: an account whose only second factor is a set of recovery codes must use one for
+    level two; the password alone offers neither a code nor a new one-time code setup."""
     user = admin.create_user()
     assert rig.sign_in(user).status_code == 302
     page = rig.browser.authorize("at-web", WEB_REDIRECT, kc_action="CONFIGURE_RECOVERY_AUTHN_CODES")
@@ -411,8 +412,9 @@ def test_recovery_codes_alone_do_not_protect_level_two(rig: Rig, env: Env, admin
     assert done.location and "kc_action_status=success" in done.location, done.summary
     factors = rig.api.get(f"{API}/me/security").json()["second_factors"]
     assert [f["type"] for f in factors] == ["recovery-authn-codes"]
-    offered = Browser(env).login(user, acr_values="loa2")
-    assert offered.code is None and "totp" in offered.text.lower(), offered.summary
+    asked = Browser(env).login(user, acr_values="loa2")
+    assert asked.code is None and 'name="recoveryCodeInput"' in asked.text, asked.summary
+    assert "kc-totp-secret-key" not in asked.text and "mode=manual" not in asked.text
 
 
 # --- what Keycloak tells the application --------------------------------------------------------

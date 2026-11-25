@@ -264,6 +264,12 @@ def test_a_second_factor_is_enrolled_listed_required_for_removal_and_removed(
     page = rig.browser._settle(
         rig.browser.http.get(asked.json()["redirect_url"]), rig.browser._last
     )
+    assert page.location is None, "an MFA step-up asks again (F-2)"
+    if 'name="password"' in page.text:
+        answer = {"password": user.password, "credentialId": ""}
+        if 'name="username"' in page.text:
+            answer["username"] = user.email
+        page = rig.browser.submit(page, answer)
     if page.location is None:  # Keycloak asks for the code (the next 30 s window: no reuse)
         fields = hidden_inputs(page.text)
         fields["otp"] = totp(secret, at=time.time() + 30)
