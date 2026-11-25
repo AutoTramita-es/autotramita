@@ -1,6 +1,6 @@
 # F2 — Redoslijed izvršavanja (execution order)
 
-Datum: 2026-11-24, stanje 2026-11-25 | Status: **CP00–CP08 prihvaćeni 2026-11-24; autoriziran F2-T09-REC; CP09 nije prihvaćen ni spreman (otvoren P1 F-1R-B)** | T10–T13 nisu autorizirani
+Datum: 2026-11-24, stanje 2026-11-25 | Status: **CP00–CP08 prihvaćeni 2026-11-24; autoriziran F2-T09-REC; CP09 nije prihvaćen ni spreman (F-1R-B zatvoren; otvoren novi P1 F-1R-C)** | T10–T13 nisu autorizirani
 [Plan](F2-IMPLEMENTATION-PLAN.md) · [Specifikacija AT-02](../specifications/AT-02-identity-security.md) · [Registar odluka](F2-DECISION-REGISTER.md) · [Kriteriji](F2-ACCEPTANCE-CRITERIA.md) · [G6 (F1 obrazac)](../G6-EXECUTION-ORDER.md)
 
 **Sažetak:** 13 paketa (F2-T01…T13), 14 checkpointova (F2-CP00 planiranje, CP01…CP12 po paketu, CP13 završno prihvaćanje).
@@ -338,7 +338,7 @@ STOP: ako zahtjevi nisu ostvarivi postojećom arhitekturom, dostaviti konkretan 
 | F2-CP06 | T06 | **PRIHVAĆEN 2026-11-24**: web tok, kolačić, CSRF | CI run 45467370715 (kod e2736d6) |
 | F2-CP07 | T07 | **PRIHVAĆEN 2026-11-24**: mobilni tok | CI run 45469542994 (kod 850316b) |
 | F2-CP08 | T08 | **PRIHVAĆEN 2026-11-24**: pipeline konteksta, port AT-03, cross-tenant | CI run 45472663659 (kod dd7f492) |
-| F2-CP09 | T09-REC | **NIJE PRIHVAĆEN, NIJE SPREMAN**; F-0, F-1, F-1R (d), F-2, F-3 i F-4 izvedeni uz navedene granice; otvoreni F-1R-B (P1) i F-3K (P2) čekaju odluku vlasnika | [Izvještaj CP09](F2-CP09-RECONCILIATION-REPORT.md); kod 7945a06, CI run 45527442553 (1.359 + 118 testova), lokalni FULL 20261125-013406-55ff7f |
+| F2-CP09 | T09-REC | **NIJE PRIHVAĆEN, NIJE SPREMAN**; F-0, F-1, F-1R (d), F-2, F-3, F-4 i završna MFA odluka izvedeni uz navedene granice; F-1R-B zatvoren; otvoreni F-1R-C (P1) i ostatak F-3K čekaju odluku vlasnika | [Izvještaj CP09](F2-CP09-RECONCILIATION-REPORT.md); kod ddf1869, CI run [45590446828](https://github.com/AutoTramita-es/autotramita/actions/runs/45590446828), lokalni FULL `20261125-095114-34ffa4` |
 | F2-CP10 | T10 | `platform_grants`, eskalacije, bootstrap | CI run, pregled migracije (sljedeći slobodan broj, od 0009) |
 | F2-CP11 | T11 | Admin korisnika, outbox, KC događaji | CI run, pregled migracije (sljedeći slobodan broj) |
 | F2-CP12 | T12 | Zamrznuti API ugovor | CI run, OpenAPI diff, klijenti |
@@ -352,3 +352,5 @@ D37 koristi 0007; 0008 zatvara nalaze konteksta/audita. Sve migracije dodjeljuju
 **Stanje 2026-11-24:** implementacijski SHA `822a4e7e098baa38750499be06fe082e906ef215`, CI run [45509883690](https://github.com/AutoTramita-es/autotramita/actions/runs/45509883690) zelen; F-0 (a) i F-1 (b) izvedeni.
 
 **Stanje 2026-11-25:** implementacijski SHA `7945a060f9d5264348b0d90ca648710f4566ea51`, lokalni FULL CI `20261125-013406-55ff7f` i CI run [45527442553](https://github.com/AutoTramita-es/autotramita/actions/runs/45527442553) zeleni (ekvivalentni). F-1R (d), F-2, F-3 i F-4 izvedeni; T10 i T11 koriste migracije od 0010. Arhitekturni blocker: F-1R-B (P1) i F-3K (P2) traže odluku koja mijenja D23 ili D41 (izvještaj §2). F2-CP09 se **ne** predlaže za prihvaćanje.
+
+**Stanje 2026-11-25 (završna MFA odluka):** autorizacija evidentirana u `dc8089b` prije koda; implementacija `07d6c91` i `ddf1869`, lokalni FULL CI `20261125-095114-34ffa4` i CI run [45590446828](https://github.com/AutoTramita-es/autotramita/actions/runs/45590446828). Opcija A sa svim dopunama izvedena; F-1R-B zatvoren. Integracijski testovi pokazali su novi P1 **F-1R-C** (stranica za postavu otvorena prije prvog faktora dodaje faktor i nakon njega) koji nijedna postavka realma ne zatvara; prijedlog minimalnog rješenja (mali Keycloak provider, nova komponenta) traži zasebnu autorizaciju ([izvještaj §2](F2-CP09-RECONCILIATION-REPORT.md#2-final-mfa-decision-what-was-done-and-the-new-blocker)). F2-CP09 se **ne** predlaže za prihvaćanje.

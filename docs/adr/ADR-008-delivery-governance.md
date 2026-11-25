@@ -24,3 +24,6 @@ Tenant and its dependencies on User and TenantMembership; branch/business-unit s
 
 ## Scope
 Governance only; no implementation authorized by this ADR.
+
+## Amendments
+- **2026-11-25 (owner, F2-T09-REC final MFA decision):** recorded as an application of this ADR, not a change of its rules. The owner approved changes to accepted decisions D22, D23 and D41 explicitly before the code was written (record in `docs/design/F2-EXECUTION-ORDER.md`). The decision also states, for this and later work: a security finding is not downgraded while a takeover remains possible, and a new architectural component (for example a Keycloak extension) needs its own justification and authorization before it is implemented.
