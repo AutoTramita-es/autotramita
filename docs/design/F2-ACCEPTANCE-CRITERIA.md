@@ -196,3 +196,29 @@ F2 je **prihvaćen** samo ako su ispunjeni svi uvjeti:
 8. Završni dokaz `F2-FINAL-ACCEPTANCE-EVIDENCE.md` + pointer statusa u MASTER-BLUEPRINT i G6 ažuriran.
 9. Preduvjeti za live (R05, R11, R12, `TRUSTED_PROXY_CIDRS`, D13, D43, O15, O06–O17, AT-20) izričito navedeni kao **neispunjeni** i kao zaseban gate; F2 ih ne zatvara.
 10. Prihvaćanje ne znači merge u `main`, release ni deployment; F3a ostaje blokiran do AT-03 usklađivanja.
+
+## Keycloak security provider (owner order of 2026-11-25)
+Normative for F2-T09-REC; evidence per criterion in the [CP09 report](F2-CP09-RECONCILIATION-REPORT.md).
+
+| ID | Criterion | Verification |
+|---|---|---|
+| KC-SP-01 | Feasibility of the SPI approach proven on the exact Keycloak version | source analysis + real Keycloak |
+| KC-SP-02 | F-1R-C closed | KC |
+| KC-SP-03 | Remaining F-3K closed | KC |
+| KC-SP-04 | Open recovery-authentication finding closed | KC |
+| KC-SP-05 | Obligation `at_mfa_required` set automatically, consistently with the first permanent factor | KC |
+| KC-SP-06 | Controlled switch-off of MFA | KC + integration |
+| KC-SP-07 | No automatic security downgrade | build check + KC |
+| KC-SP-08 | Protection of concurrent operations proven (one and several instances) | KC, two nodes |
+| KC-SP-09 | Relevant Keycloak paths protected | KC |
+| KC-SP-10 | Fail-closed behaviour | KC + CI step |
+| KC-SP-11 | Reproducible Keycloak image | build check |
+| KC-SP-12 | Java dependencies and the image checked | build check + static tests |
+| KC-SP-13 | Upgrade and safe rollback documented | review |
+| KC-SP-14 | Every earlier security regression test passes | CI |
+| KC-SP-15 | FULL local CI PASS | Local CI |
+| KC-SP-16 | GitHub CI PASS on the final SHA | GitHub |
+| KC-SP-17 | Matrix of all 126 criteria updated | CP09 report |
+| KC-SP-18 | No open P0/P1 finding within the authorized scope | CP09 report |
+| KC-SP-19 | No unauthorized infrastructure or production change | review |
+| KC-SP-20 | Ready for an independent security review | CP09 report |

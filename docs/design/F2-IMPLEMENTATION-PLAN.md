@@ -83,6 +83,9 @@ Načela iz F1: stvarni PostgreSQL 16 i Redis 7 (ne SQLite), CI-only integracija,
 3. Postojeći korak „owner-migration" proširen na F2 migracije.
 4. Bez novih tajni i bez deploy koraka; `permissions: read` ostaje (guard `tests/test_ci_workflow.py` se proširuje).
 
+### Keycloak security provider (2026-11-25, owner order)
+The credential-change decision runs inside Keycloak, in an own minimal provider (`identity/keycloak/provider`, D44), because Keycloak checks a set-up form only when it is shown. CI builds the AutoTramita Keycloak image from pinned images (GitHub and Local CI, one allowed offline build in the Local CI broker) and runs the Keycloak tests on it, on two nodes sharing one PostgreSQL database, and once without the provider (fail closed).
+
 ## 6. Rizici i blokeri
 | ID | Rizik / bloker | Učinak | Ublažavanje | Vrsta |
 |---|---|---|---|---|
