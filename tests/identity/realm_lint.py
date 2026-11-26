@@ -90,6 +90,18 @@ def _marked(negated: str) -> Step:
     return ("conditional-user-attribute", "REQUIRED", config)
 
 
+def _mandatory(negated: str) -> Step:
+    """The platform-grant mark (T10-REC OD-5): it binds like the obligation."""
+    config = {
+        "attribute_name": MANDATORY,
+        "attribute_expected_value": "true",
+        "not": negated,
+        "include_group_attributes": "false",
+        "regex": "false",
+    }
+    return ("conditional-user-attribute", "REQUIRED", config)
+
+
 def _level(number: str, max_age: str) -> Step:
     config = {
         "loa-condition-level": number,
@@ -142,6 +154,7 @@ FLOWS: dict[str, list[Step]] = {
         _sub("probe-codes"),
         _sub("deny-codes-only"),
         _sub("deny-marked-without-factor"),
+        _sub("deny-mandatory-without-factor"),
         _sub("loa-1-factor"),
         _sub("probe-codes-left"),
         _sub("loa-1-codes-spent"),
@@ -158,6 +171,12 @@ FLOWS: dict[str, list[Step]] = {
     ],
     "browser-deny-marked-without-factor": [
         _marked("false"),
+        _ran("browser-probe-permanent", "not-executed"),
+        _ran("browser-probe-codes", "not-executed"),
+        _DENY,
+    ],
+    "browser-deny-mandatory-without-factor": [
+        _mandatory("false"),
         _ran("browser-probe-permanent", "not-executed"),
         _ran("browser-probe-codes", "not-executed"),
         _DENY,
@@ -193,6 +212,7 @@ FLOWS: dict[str, list[Step]] = {
         _used(_PERMANENT_TYPES, "false"),
         _ran("browser-loa-3-prove", "not-executed"),
         _marked("true"),
+        _mandatory("true"),
         _step("auth-otp-form"),
     ],
     "browser-loa-3-proven": [_used(_PERMANENT_TYPES, "true"), _ALLOW],
@@ -214,6 +234,7 @@ FLOWS: dict[str, list[Step]] = {
         _ran("browser-loa-3-prove", "not-executed"),
         _ran("browser-loa-2-factor", "not-executed"),
         _marked("true"),
+        _mandatory("true"),
         _step("auth-otp-form"),
     ],
     "browser-loa-2-proven": [_ran("browser-loa-1-factor"), _ALLOW],
@@ -225,7 +246,9 @@ FLOWS: dict[str, list[Step]] = {
     "browser-loa-4": [_level("4", "0"), _ALLOW, _step(_CODE, "DISABLED")],
     "direct-grant-denied": [_DENY],
 }
-LOA_MAP = '{"loa1":1,"loa2":2}'
+# loa3 (T10-REC OD-1): a permanent factor proven in this very authentication; platform actions
+# need it, a recovery code never reaches it.
+LOA_MAP = '{"loa1":1,"loa2":2,"loa3":3}'
 LOA_TIMES_MAPPER = {
     "user.session.note": "loa-map",
     "claim.name": "loa_map",

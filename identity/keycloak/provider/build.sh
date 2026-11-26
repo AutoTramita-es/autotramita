@@ -31,6 +31,7 @@ jar --list --file "$out" | while read -r entry; do
         META-INF/services/org.keycloak.authentication.RequiredActionFactory) ;;
         META-INF/services/org.keycloak.authentication.AuthenticatorFactory) ;;
         META-INF/services/org.keycloak.connections.jpa.entityprovider.JpaEntityProviderFactory) ;;
+        META-INF/services/org.keycloak.services.resource.RealmResourceProviderFactory) ;;
         es/ | es/autotramita/ | es/autotramita/keycloak/ | es/autotramita/keycloak/security/) ;;
         es/autotramita/keycloak/security/*.class) ;;
         theme-resources/ | theme-resources/templates/ | theme-resources/messages/) ;;

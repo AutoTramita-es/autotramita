@@ -33,7 +33,11 @@ final class Guard {
     /** Realm attribute: the account must never fall back to the password alone. */
     static final String OBLIGATION = "at_mfa_required";
 
-    /** Realm attribute: a policy forbids switching the second factor off (set by T10). */
+    /**
+     * Realm attribute: a policy forbids switching the second factor off (set by T10 under this
+     * lock, {@link SecurityResource}). It binds like {@link #OBLIGATION} (T10-REC OD-5): an account
+     * carrying either never falls back to the password alone.
+     */
     static final String MANDATORY = "at_mfa_mandatory";
 
     /** Authentication-session note: when the interactive sign-in of this session started. */
@@ -80,6 +84,23 @@ final class Guard {
         if (authenticated == null) {
             throw new IllegalStateException("no authenticated user");
         }
+        GuardEntity row = lockRow(session, realm, authenticated);
+        UserModel user = fresh(session, realm, authenticated);
+        return new Guard(session, realm, authSession, user, row);
+    }
+
+    /**
+     * The same lock for a change the application asks for through the admin endpoint (T10-REC),
+     * without a sign-in of the person: no proof exists, so only {@link #markMandatory()} and
+     * {@link #removeSecondFactor(String)} may follow.
+     */
+    static Guard lockForAdministration(KeycloakSession session, RealmModel realm, UserModel person) {
+        GuardEntity row = lockRow(session, realm, person);
+        UserModel user = fresh(session, realm, person);
+        return new Guard(session, realm, null, user, row);
+    }
+
+    private static GuardEntity lockRow(KeycloakSession session, RealmModel realm, UserModel authenticated) {
         EntityManager em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
         GuardEntity row =
                 em.find(GuardEntity.class, authenticated.getId(), LockModeType.PESSIMISTIC_WRITE, LOCK_TIMEOUT);
@@ -89,8 +110,7 @@ final class Guard {
             em.persist(row);
             em.flush();
         }
-        UserModel user = fresh(session, realm, authenticated);
-        return new Guard(session, realm, authSession, user, row);
+        return row;
     }
 
     private static UserModel fresh(KeycloakSession session, RealmModel realm, UserModel user) {
@@ -122,12 +142,17 @@ final class Guard {
                 .map(CredentialModel::getType)
                 .collect(Collectors.toSet());
         boolean permanent = types.stream().anyMatch(Policy.PERMANENT::contains);
-        boolean obliged = "true".equals(user.getFirstAttribute(OBLIGATION));
         boolean mandatory = "true".equals(user.getFirstAttribute(MANDATORY));
+        // The mark of platform grants binds like the obligation (OD-5): an account that lost the
+        // obligation in a race, but carries the mark, still never falls back to the password alone.
+        boolean obliged = mandatory || "true".equals(user.getFirstAttribute(OBLIGATION));
         return new Policy.Account(permanent, types.contains(Policy.RECOVERY_CODES), obliged, mandatory);
     }
 
     Policy.Proof proof() {
+        if (authSession == null) {
+            throw new IllegalStateException("no sign-in to take a proof from");
+        }
         List<String> used = AuthenticatorUtil.getAuthnCredentials(authSession);
         boolean permanent = used.stream().anyMatch(Policy.PERMANENT::contains);
         boolean code = used.contains(Policy.RECOVERY_CODES);
@@ -191,6 +216,62 @@ final class Guard {
         }
         user.removeAttribute(OBLIGATION);
         row.recordChange();
+    }
+
+    /**
+     * Under the lock, in one transaction (T10-REC OD-5): mark the account mandatory and obliged, but
+     * only while it holds a permanent factor. Returns whether it was marked. Serialised with the
+     * switch-off and every guarded credential change, on every node sharing the database.
+     */
+    boolean markMandatory() {
+        if (row == null) {
+            throw new IllegalStateException("change recorded without the lock");
+        }
+        if (!account().permanent()) {
+            return false;
+        }
+        user.setSingleAttribute(MANDATORY, "true");
+        if (!"true".equals(user.getFirstAttribute(OBLIGATION))) {
+            user.setSingleAttribute(OBLIGATION, "true");
+        }
+        row.recordChange();
+        return true;
+    }
+
+    /** What removing one second factor came to. */
+    enum Removal { REMOVED, NOT_FOUND, LAST_PERMANENT_FACTOR }
+
+    /**
+     * Under the lock, in one transaction (T10-REC OD-5): remove one second factor of the person,
+     * unless what remains would be no permanent factor while recovery codes remain (for a permanent
+     * factor) or while the account is obliged or mandatory. The password is never removed here.
+     */
+    Removal removeSecondFactor(String credentialId) {
+        if (row == null) {
+            throw new IllegalStateException("change recorded without the lock");
+        }
+        List<CredentialModel> stored = user.credentialManager().getStoredCredentialsStream().toList();
+        CredentialModel target = stored.stream().filter(c -> c.getId().equals(credentialId)).findFirst().orElse(null);
+        if (target == null
+                || !(Policy.PERMANENT.contains(target.getType()) || Policy.RECOVERY_CODES.equals(target.getType()))) {
+            return Removal.NOT_FOUND;
+        }
+        Set<String> left = stored.stream()
+                .filter(c -> !c.getId().equals(credentialId))
+                .map(CredentialModel::getType)
+                .collect(Collectors.toSet());
+        boolean permanentLeft = left.stream().anyMatch(Policy.PERMANENT::contains);
+        if (!permanentLeft) {
+            boolean codesOrphaned = Policy.PERMANENT.contains(target.getType()) && left.contains(Policy.RECOVERY_CODES);
+            if (codesOrphaned || account().obliged()) {
+                return Removal.LAST_PERMANENT_FACTOR;
+            }
+        }
+        if (!user.credentialManager().removeStoredCredentialById(credentialId)) {
+            throw new IllegalStateException("a credential could not be removed");
+        }
+        row.recordChange();
+        return Removal.REMOVED;
     }
 
     String userId() {

@@ -1,6 +1,6 @@
 # autotramita-keycloak-security-provider
 
-A minimal Keycloak provider that enforces the AutoTramita MFA policy **at the moment a credential changes**. Authorized by the owner on 2026-11-25 (F2-T09-REC, Keycloak Security Provider Authorization). Version `1.1.1`, built against Keycloak **26.8.2** only. 1.1.0 (2026-11-25, owner decision): a recovery code never authorizes a permanent factor, also not on an account that holds codes only. 1.1.1 (2026-11-25, Keycloak Security Upgrade, D45): compatibility with Keycloak 26.8.2 only, the policy is unchanged.
+A minimal Keycloak provider that enforces the AutoTramita MFA policy **at the moment a credential changes**. Authorized by the owner on 2026-11-25 (F2-T09-REC, Keycloak Security Provider Authorization). Version `1.2.0`, built against Keycloak **26.8.2** only. 1.1.0 (2026-11-25, owner decision): a recovery code never authorizes a permanent factor, also not on an account that holds codes only. 1.1.1 (2026-11-25, Keycloak Security Upgrade, D45): compatibility with Keycloak 26.8.2 only, the policy is unchanged. 1.2.0 adds locked, role-authorized platform operations for marking MFA mandatory and removing a second factor.
 
 ## Why it exists
 
@@ -34,6 +34,7 @@ Checked for every combination by `PolicyCheck` (2,048 cases) on every build, and
 | `required-action` | `GuardedActionFactory.{Totp,Passkey,PasswordlessPasskey,RecoveryCodes,Password}` replace `CONFIGURE_TOTP`, `webauthn-register`, `webauthn-register-passwordless`, `CONFIGURE_RECOVERY_AUTHN_CODES` and `UPDATE_PASSWORD` under the same IDs; `DisableSecondFactor` adds `at-disable-mfa` | internal |
 | `authenticator` | `at-security-guard`, first step of `browser-loa-forms` | internal |
 | `jpa-entity-provider` | table `AT_MFA_GUARD` (Liquibase changelog in the jar) | internal |
+| `realm-resource` | `at-security`, locked platform operations | internal |
 | theme resources | `at-disable-mfa.ftl` and its messages | — |
 
 At start-up Keycloak warns that each of these SPIs "is internal and may change without notice". These are the documented extension points of the Server Developer Guide (Authentication SPI, Required actions, JPA entity providers). However, Keycloak gives **no compatibility promise** for them between versions. That is why the provider is compiled against the exact jars of the pinned image, and the whole regression suite is mandatory for every upgrade (below).
@@ -48,7 +49,7 @@ At start-up Keycloak warns that each of these SPIs "is internal and may change w
 | `WebAuthnRegisterFactory`, `WebAuthnPasswordlessRegisterFactory` (extended) | trust verifier built lazily | none | none | passkey tests (68) |
 | `WebAuthnRegister` (wrapped) | challenge consumed atomically across nodes, duplicate credential becomes an error page, AAGUID policy needs attestation, attachment checked | stricter; an error leaves the status at challenge, so the provider records nothing | none | `test_first_activations_on_two_nodes_at_once_leave_exactly_one_factor`, passkey tests |
 | Casts of the set-up factories (`OTPFormAuthenticator`, `WebAuthnAuthenticator`, `WebAuthnPasswordlessAuthenticator`) | same casts | the factories must still extend the built-ins | none | `test_the_provider_replaces_every_credential_action_and_guards_the_sign_in` |
-| `ProviderManager.compareFactories` | no | none | none | same test (operational info 1.1.1 on every action, also the CI import step) |
+| `ProviderManager.compareFactories` | no | none | none | same test (operational info 1.2.0 on every action, also the CI import step) |
 | `LoginActionsService.processRequireAction` (`processAction` inside the request transaction) | no | none | none | `test_a_held_form_is_refused_and_the_refusal_is_recorded` |
 | `AuthenticatorUtil.getAuthnCredentials` | no | none | none | KC-SP-02/03 tests |
 | `AuthenticatorUtil.logoutOtherSessions` (switch-off) | also removes other authentication sessions and, by default, offline sessions | stricter | none | `test_a_person_switches_the_second_factor_off_with_the_factor_and_a_confirmation` |
@@ -87,11 +88,12 @@ No change needed a new mechanism, a fork or the removal of a protection.
 
 ## Trust boundaries
 
-- **Trusted:** the Keycloak server and its database; the admin REST API (operators, and the application's `at-admin-svc` account with `manage-users`). Admin API changes do not pass through the guard.
+- **Trusted:** the Keycloak server and its database; the admin REST API (operators, and the application's `at-admin-svc` account with `manage-users`). The application's MFA marking and second-factor removal use the guarded routes below; other direct admin REST changes remain outside this guard.
 - **Not trusted:** the browser, every form field and parameter, single sign-on state, and the application's status parameters (the application reads the credentials back).
 - **`at_mfa_required` and `at_mfa_mandatory`:** user-profile attributes that only administrators can see or change. Writers:
   - `at_mfa_required`: the provider (set) and the switch-off (lift).
   - `at_mfa_mandatory`: T10 (platform grants), before a grant takes effect; T10 never lifts it (T11 operator interface).
+- **Platform operations (`/realms/{realm}/at-security`):** only a bearer token with the realm's `realm-management/manage-users` role is accepted, before looking up the target user. `POST users/{id}/mandatory` atomically sets both attributes only if a permanent factor exists (otherwise 409). `DELETE users/{id}/credentials/{credentialId}` removes only a second factor and refuses to orphan recovery codes or leave an obliged account without a permanent factor (409); unknown users or credentials return 404. Both operations share the per-user database lock with guarded credential changes.
 
 ## Fail-closed behaviour
 
@@ -119,7 +121,7 @@ No change needed a new mechanism, a fork or the removal of a protection.
   - Its entries are checked against an allow-list.
   - `PolicyCheck` runs before packaging.
 - **Runtime stage:** the pinned Keycloak image plus `providers/autotramita-keycloak-security-provider.jar` (0444, owner 1000), user 1000. No build tool and no secret.
-- **Identity:** the jar's SHA-256 is printed by every build. Version 1.1.1 (on 26.8.2): `d61ac28e362008f530b3ab6b5642fbbb892eda5f0137669d5be96b935b7c574a` (1.1.0 on 26.4.7 was `12cfbc66…`, 1.0.0 `7e9e297e…`).
+- **Identity:** the jar's SHA-256 is printed by every build. Version 1.2.0 (on 26.8.2): `3032d40d2be776393bef7a439f05be56fe5800f581e3906d2bee7ceb6849a592`; version 1.1.1 (on 26.8.2): `d61ac28e362008f530b3ab6b5642fbbb892eda5f0137669d5be96b935b7c574a` (1.1.0 on 26.4.7 was `12cfbc66…`, 1.0.0 `7e9e297e…`).
 - **Integrity of the classpath:** the Keycloak jars in the pinned image are byte-identical to the Maven Central artifacts of 26.8.2. The SHA-1 of `keycloak-services`, `-server-spi`, `-server-spi-private`, `-model-jpa`, `-core`, `-common`, `-model-storage`, `-model-storage-private`, `-model-storage-services` and `-model-infinispan` was compared (and the same for 26.4.7).
 - **Same build everywhere:** CI builds `autotramita-keycloak:ci` on GitHub and in Local CI from the same Dockerfile and digests. The developer compose file builds the same image. The image is not pushed to any registry.
 - **Image vulnerabilities (KC-SP-12):** the CI job `image-scan` builds the image, has the pinned scanner `aquasec/trivy:0.76.2@sha256:8f6bb947…` download its vulnerability database (schema 2) and Java database (schema 1), saves the image, scans it **without network** for operating-system packages and Java components (JSON report), and runs `scripts/identity/scan_gate.py`. The gate fails on a database older than 48 hours (Java: 7 days) or missing, on a report of another image or scanner or without OS and Java coverage, and on every CRITICAL or HIGH finding without a time-limited acceptance by the owner (`identity/keycloak/vulnerability-acceptances.json`). There is no automatic exception. **State on 2026-11-25, after the upgrade to 26.8.2:** 0 CRITICAL and 6 HIGH (Guava, the JDK's eMudhra distrust, four in `sqlite-libs`), all carried over from 26.4.7, none new. Reviewed one by one in [`vulnerability-review-26.8.2.json`](../vulnerability-review-26.8.2.json) and accepted by the owner for a limited time (commit `cfbc8f7`: Guava until 2026-12-31, the others until 2027-02-22); the gate passes. Red Hat rates CVE-2026-91403 Critical where Trivy reports HIGH (IR-04); the gate counts Trivy's severity and the acceptance rests on the installed vendor mitigation. A test keeps the committed acceptances equal to the authorized ones. Before the upgrade, with the same databases: 9 CRITICAL and 93 HIGH (90 distinct, [`vulnerability-review-26.4.7.json`](../vulnerability-review-26.4.7.json), kept for comparison).

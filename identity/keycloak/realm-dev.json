@@ -59,7 +59,7 @@
   "browserFlow": "browser-loa",
   "directGrantFlow": "direct-grant-denied",
   "attributes": {
-    "acr.loa.map": "{\"loa1\":1,\"loa2\":2}"
+    "acr.loa.map": "{\"loa1\":1,\"loa2\":2,\"loa3\":3}"
   },
   "smtpServer": {},
   "clients": [
@@ -87,7 +87,7 @@
         "backchannel.logout.url": "https://dev.autotramita.es/api/v1/auth/oidc/backchannel-logout",
         "backchannel.logout.session.required": "true",
         "backchannel.logout.revoke.offline.tokens": "false",
-        "acr.loa.map": "{\"loa1\":1,\"loa2\":2}"
+        "acr.loa.map": "{\"loa1\":1,\"loa2\":2,\"loa3\":3}"
       },
       "protocolMappers": [
         {
@@ -142,7 +142,7 @@
       "webOrigins": [],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "acr.loa.map": "{\"loa1\":1,\"loa2\":2}",
+        "acr.loa.map": "{\"loa1\":1,\"loa2\":2,\"loa3\":3}",
         "backchannel.logout.url": "https://dev.autotramita.es/api/v1/auth/oidc/backchannel-logout",
         "backchannel.logout.session.required": "true",
         "backchannel.logout.revoke.offline.tokens": "false"
@@ -345,6 +345,13 @@
         },
         {
           "requirement": "CONDITIONAL",
+          "priority": 65,
+          "authenticatorFlow": true,
+          "userSetupAllowed": false,
+          "flowAlias": "browser-deny-mandatory-without-factor"
+        },
+        {
+          "requirement": "CONDITIONAL",
           "priority": 70,
           "authenticatorFlow": true,
           "userSetupAllowed": false,
@@ -509,6 +516,14 @@
           "userSetupAllowed": false,
           "authenticator": "conditional-user-attribute",
           "authenticatorConfig": "mfa-unmarked"
+        },
+        {
+          "requirement": "REQUIRED",
+          "priority": 45,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false,
+          "authenticator": "conditional-user-attribute",
+          "authenticatorConfig": "mfa-not-mandatory"
         },
         {
           "requirement": "REQUIRED",
@@ -734,6 +749,46 @@
           "userSetupAllowed": false,
           "authenticator": "conditional-user-attribute",
           "authenticatorConfig": "mfa-marked"
+        },
+        {
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false,
+          "authenticator": "conditional-sub-flow-executed",
+          "authenticatorConfig": "permanent-none"
+        },
+        {
+          "requirement": "REQUIRED",
+          "priority": 30,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false,
+          "authenticator": "conditional-sub-flow-executed",
+          "authenticatorConfig": "codes-none"
+        },
+        {
+          "requirement": "REQUIRED",
+          "priority": 40,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false,
+          "authenticator": "deny-access-authenticator"
+        }
+      ]
+    },
+    {
+      "alias": "browser-deny-mandatory-without-factor",
+      "description": "An account whose second factor is mandatory (platform grants) without any factor stays locked until a controlled recovery",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false,
+          "authenticator": "conditional-user-attribute",
+          "authenticatorConfig": "mfa-mandatory"
         },
         {
           "requirement": "REQUIRED",
@@ -1007,6 +1062,14 @@
         },
         {
           "requirement": "REQUIRED",
+          "priority": 35,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false,
+          "authenticator": "conditional-user-attribute",
+          "authenticatorConfig": "mfa-not-mandatory"
+        },
+        {
+          "requirement": "REQUIRED",
           "priority": 40,
           "authenticatorFlow": false,
           "userSetupAllowed": false,
@@ -1256,6 +1319,26 @@
         "attribute_name": "at_mfa_required",
         "attribute_expected_value": "true",
         "not": "false",
+        "include_group_attributes": "false",
+        "regex": "false"
+      }
+    },
+    {
+      "alias": "mfa-mandatory",
+      "config": {
+        "attribute_name": "at_mfa_mandatory",
+        "attribute_expected_value": "true",
+        "not": "false",
+        "include_group_attributes": "false",
+        "regex": "false"
+      }
+    },
+    {
+      "alias": "mfa-not-mandatory",
+      "config": {
+        "attribute_name": "at_mfa_mandatory",
+        "attribute_expected_value": "true",
+        "not": "true",
         "include_group_attributes": "false",
         "regex": "false"
       }

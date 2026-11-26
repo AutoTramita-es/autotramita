@@ -142,7 +142,7 @@ def test_the_provider_replaces_every_credential_action_and_guards_the_sign_in(ad
     providers = admin.server("GET", "/serverinfo").json()["providers"]
     actions = providers["required-action"]["providers"]
     for action in GUARDED:
-        assert actions[action]["operationalInfo"]["autotramita-guard"] == "1.1.1", action
+        assert actions[action]["operationalInfo"]["autotramita-guard"] == "1.2.0", action
     assert "at-security-guard" in providers["authenticator"]["providers"]
     executions = admin.master("GET", "/authentication/flows/browser-loa-forms/executions").json()
     assert executions[0]["providerId"] == "at-security-guard"
