@@ -13,8 +13,7 @@
 | [ADR-009](ADR-009-tenant-organization-membership-verification.md) | Tenant organization, memberships and verification | Accepted | 2026-11-23 |
 | [ADR-010](ADR-010-identity-provider-keycloak.md) | Keycloak as identity provider | Accepted | 2026-11-24 |
 | [ADR-011](ADR-011-documents-on-shared-nextcloud.md) | Document content on the shared Nextcloud | Accepted | 2026-11-24 |
-
-| [ADR-013](ADR-013-vehicle-intelligence-engine.md) | Vehicle Intelligence Engine and verified learning | Proposed | 2026-11-27 |
+| [ADR-013](ADR-013-vehicle-intelligence-engine.md) | Vehicle Intelligence Engine and verified learning | Accepted | 2026-11-27 |
 
 ## Conventions
 - `Accepted` means the documented core decision has been approved. Items explicitly marked **Open decisions** remain unresolved and must not be treated as implementation instructions.
