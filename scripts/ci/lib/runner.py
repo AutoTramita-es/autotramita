@@ -59,6 +59,10 @@ NEEDS_EGRESS = re.compile(r"\buv sync\b|check-clients\.sh|\buvx\b")
 # used by that scanner container only (the broker), never by the step container itself.
 SCANNER_DOWNLOAD = re.compile(r"--download-(?:java-)?db-only\b")
 NEEDS_DOCKER = re.compile(r"\bdocker\b|check-clients\.sh")
+# Docker's answer when none of its default subnets is free, and how long a job waits for one.
+NO_FREE_SUBNET = "predefined address pools have been fully subnetted"
+NETWORK_WAIT_SECONDS = 600
+NETWORK_RETRY_SECONDS = 5
 IMAGE_REF = re.compile(r"[a-z0-9./_-]+:[A-Za-z0-9._-]+@sha256:[0-9a-f]{64}")
 
 cancelled = threading.Event()
@@ -81,6 +85,27 @@ def docker(*args: str, check: bool = True, **kwargs: Any) -> subprocess.Complete
     if check and done.returncode:
         raise RuntimeError(f"docker {' '.join(args[:3])} failed: {done.stderr.strip()[-2000:]}")
     return done
+
+
+def create_network(name: str, labels: list[str], job: str, wait: float) -> None:
+    """Creates the egress network of a job. Docker has a fixed number of subnets, shared with
+    the other stacks of the host and with simultaneous runs, so wait for one to be released. A
+    job asks for one network, once, before it starts any step: waiting jobs cannot block each
+    other. Any other failure, and a wait that ends without a subnet, fails the job."""
+    deadline = time.monotonic() + wait
+    announced = False
+    while True:
+        done = docker("network", "create", *labels, name, check=False)
+        if not done.returncode:
+            return
+        if NO_FREE_SUBNET not in done.stderr or time.monotonic() >= deadline:
+            break
+        if not announced:
+            say(f"[{job}] no free Docker subnet, waiting up to {wait:.0f} s")
+            announced = True
+        if cancelled.wait(NETWORK_RETRY_SECONDS):
+            break
+    raise RuntimeError(f"docker network create failed: {done.stderr.strip()[-2000:]}")
 
 
 def owned(run_id: str | None = None) -> list[str]:
@@ -328,7 +353,8 @@ class JobRun:
         self.start_services()
         if any(NEEDS_EGRESS.search(s.run) or SCANNER_DOWNLOAD.search(s.run) for s in steps):
             self.egress = f"{self.project}-egress"
-            docker("network", "create", *self.label_args(), self.egress)
+            wait = min(NETWORK_WAIT_SECONDS, self.deadline - time.monotonic())
+            create_network(self.egress, self.label_args(), self.job.key, wait)
         if any(NEEDS_DOCKER.search(step.run) for step in steps):
             policy = Policy(
                 prefix=self.project,

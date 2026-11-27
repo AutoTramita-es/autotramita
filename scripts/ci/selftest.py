@@ -13,6 +13,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 CI_DIR = Path(__file__).resolve().parent
 REPO = CI_DIR.parents[1]
@@ -356,6 +357,41 @@ class WorkerBudget(unittest.TestCase):
         self.assertEqual(runner.worker_budget(0, 32, 100 * self.GIB, load=8.0), min(limit, 20))
         self.assertEqual(runner.worker_budget(0, 32, 100 * self.GIB, load=22.0), 6)
         self.assertEqual(runner.worker_budget(0, 32, 100 * self.GIB, load=90.0), 4)
+
+
+class EgressNetwork(unittest.TestCase):
+    FULL = "Error response from daemon: all predefined address pools have been fully subnetted"
+
+    def create(self, answers: list[str], wait: float) -> int:
+        """Runs create_network against a Docker that answers with these errors ('' = created)."""
+        import runner
+
+        calls = []
+
+        def docker(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+            error = answers[min(len(calls), len(answers) - 1)]
+            calls.append(args)
+            return subprocess.CompletedProcess(args, 1 if error else 0, "", error)
+
+        with (
+            mock.patch.object(runner, "docker", docker),
+            mock.patch.object(runner, "NETWORK_RETRY_SECONDS", 0.01),
+            mock.patch.object(runner, "say", lambda message: None),
+        ):
+            runner.create_network("atci-x-egress", ["--label", "a=1"], "job", wait)
+        self.assertEqual(calls[-1], ("network", "create", "--label", "a=1", "atci-x-egress"))
+        return len(calls)
+
+    def test_a_job_waits_for_a_free_subnet(self) -> None:
+        self.assertEqual(self.create([self.FULL, self.FULL, ""], 30), 3)
+
+    def test_the_wait_ends_in_a_failure(self) -> None:
+        with self.assertRaises(RuntimeError):
+            self.create([self.FULL], 0.05)
+
+    def test_another_error_fails_at_once(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "permission denied"):
+            self.create(["permission denied", ""], 30)
 
 
 class Workspaces(unittest.TestCase):
