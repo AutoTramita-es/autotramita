@@ -77,3 +77,11 @@ Potentially fewer manual interventions and repeated API calls, improved BOE cand
 ## Scope
 
 Accepted architecture decision only. No code, migration, dependency, storage provisioning, deployment, live persistence or changes to CALC-AI-01/AT-02 are authorized. Existing accepted ADRs prevail until an explicit amendment is approved.
+
+## Owner amendment — 2026-11-27: hosting and retention responsibility
+
+The owner confirms that AutoTramita assumes responsibility for its data retention policy and that persistent application data, including VINs, structured OCR results, interpretations, corrections and authorized original documents, is to be hosted on its Hetzner server in Finland, using the existing PostgreSQL and ADR-011 Nextcloud architecture. The owner reports having GDPR-related hosting arrangements in place; their scope has not been independently verified. Hosting arrangements alone do not establish compliance of application processing or external AI providers.
+
+Persistent storage is approved as a design requirement for the authenticated VIE. Do not impose blanket anonymization of authorized tenant-local operational records, synthetic-only development, a new storage service, or repeated owner approvals for routine fields within approved scope. Preserve existing RLS, authorization, audit, secure storage and tenant isolation. Shared technical knowledge remains non-personal and curated. Implement configurable retention and deletion capabilities within the existing architecture; the owner remains responsible for determining applicable retention periods, lawful purposes and provider arrangements. These policy details may be developed alongside technical design rather than blocking routine development. No indefinite retention period is inferred. Production processing must satisfy applicable obligations.
+
+This amendment does not authorize code changes, migrations or deployment, nor persistent personal-data storage behind shared demo/demo credentials. The separate implementation package must establish authenticated access before enabling persistence. External AI processing remains subject to applicable provider terms and data protection requirements. No new compliance service or infrastructure is mandated.
