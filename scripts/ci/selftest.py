@@ -401,6 +401,36 @@ class EgressNetwork(unittest.TestCase):
             self.create(["permission denied", ""], 30)
 
 
+class ShardComparison(unittest.TestCase):
+    MARK = "== all shards: tests=5 failures=0 errors=0 skipped=0 ==\n"
+
+    def summary(self, *lines: str, mark: bool = True) -> list[str]:
+        import compare
+
+        text = "".join(f"{line} in 1.50s\n" for line in lines) + (self.MARK if mark else "")
+        return compare.evidence(text)["pytest summary"]
+
+    def test_another_split_of_the_same_tests_is_equal(self) -> None:
+        two = self.summary("2 passed, 9 deselected", "3 passed")
+        three = self.summary("1 passed, 9 deselected", "3 passed", "1 passed")
+        self.assertEqual(two, three)
+
+    def test_a_missing_or_failed_test_is_a_difference(self) -> None:
+        base = self.summary("2 passed, 9 deselected", "3 passed")
+        for other in (
+            ("2 passed, 9 deselected", "2 passed"),
+            ("2 passed, 9 deselected", "2 passed", "1 failed"),
+            ("2 passed, 8 deselected", "3 passed"),
+            ("2 passed, 9 deselected", "3 passed, 1 skipped"),
+        ):
+            self.assertNotEqual(base, self.summary(*other), other)
+
+    def test_a_job_without_shards_is_compared_run_by_run(self) -> None:
+        self.assertEqual(
+            self.summary("2 passed", "3 passed", mark=False), ["2 passed", "3 passed"]
+        )
+
+
 class Workspaces(unittest.TestCase):
     def test_cleanup_looks_at_every_place_a_workspace_can_be(self) -> None:
         import runner

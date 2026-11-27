@@ -12,6 +12,7 @@ import json
 import re
 import subprocess
 import sys
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -36,11 +37,25 @@ EVIDENCE = (
     ("client generation", re.compile(r"(Client generation check passed)")),
 )
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
+# Printed by keycloak_shards.py. GitHub's runner has fewer CPUs and runs fewer shards, so the
+# summaries of the shards are compared as their sum: the same number of tests of every outcome.
+SHARDED = "== all shards:"
+
+
+def total(summaries: list[str]) -> str:
+    counts: Counter[str] = Counter()
+    for summary in summaries:
+        for number, outcome in re.findall(r"(\d+) ([a-z]+)", summary):
+            counts[outcome] += int(number)
+    return ", ".join(f"{counts[outcome]} {outcome}" for outcome in sorted(counts))
 
 
 def evidence(text: str) -> dict[str, list[str]]:
     clean = ANSI.sub("", text)
-    return {name: pattern.findall(clean) for name, pattern in EVIDENCE}
+    found = {name: pattern.findall(clean) for name, pattern in EVIDENCE}
+    if SHARDED in clean and found["pytest summary"]:
+        found["pytest summary"] = [total(found["pytest summary"])]
+    return found
 
 
 def gh(path: str, *, raw: bool = False) -> Any:
