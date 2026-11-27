@@ -1,7 +1,7 @@
 # INFRA-CI-02 — CI performance optimization
 
 Date: 2026-11-27
-Status: PROPOSED / DOCUMENTED ONLY. INFRA-CI-02 was deferred in INFRA-CI-01 acceptance; this document does not lift that deferral or authorize implementation, workflow changes, deployment or other packages.
+Status: IMPLEMENTED, AWAITING INDEPENDENT REVIEW AND OWNER ACCEPTANCE. Implemented under the owner's separate implementation order of 2026-11-27, which lifted the deferral of INFRA-CI-01 for this package; see [implementation](INFRA-CI-02-IMPLEMENTATION.md), [benchmark](INFRA-CI-02-BENCHMARK.md) and [acceptance report](INFRA-CI-02-ACCEPTANCE.md). Sections 1–8 are the specification as written before the implementation. This document itself authorizes no trigger change, deployment or other package.
 
 ## 1. Scope and evidence
 
@@ -54,6 +54,16 @@ FAST 10–60 s; TARGETED 1–3 min; main pytest 1–2 min; identity job 3–5 mi
 
 Fresh host benchmarks, fixture-level profiling, safe worker count, automatic selection design, branch protection/current ruleset verification and any trigger change remain open. Existing local CI documentation remains authoritative for current commands. This is a proposal, not an execution order.
 
+State after the implementation (2026-11-27):
+
+| Item | State |
+|---|---|
+| Host benchmarks, safe worker count | done: [benchmark](INFRA-CI-02-BENCHMARK.md); at most 16 workers |
+| Fixture-level profiling | not done; the slowest files and tests were identified from JUnit timing |
+| Automatic selection of tests | not implemented (decision D6 in [implementation](INFRA-CI-02-IMPLEMENTATION.md)) |
+| Branch protection and ruleset verification, trigger changes | open, need the owner |
+| Full local run in 2–3 minutes | not reached; see the targets in the benchmark |
+
 
 ## 7. Owner direction — dedicated development host (2026-11-27)
 
@@ -81,3 +91,17 @@ Deliverables in English:
 - Update LOCAL-CI.md and this specification; create or update root CLAUDE.md and AGENTS.md with consistent CI rules within authorized scope.
 
 Stage only task-specific paths; do not commit raw logs, secrets or .ci-results. Push completed authorized changes to dev at the checkpoint, verify independent GitHub CI on the exact final SHA, no merge or deployment. Report READY FOR INDEPENDENT REVIEW or BLOCKED, not self-acceptance. Owner report in Croatian with links, actual savings, test evidence and decisions. Independent review and owner acceptance remain mandatory.
+
+## 9. Owner authorization — development server resource utilization (2026-11-27, additional)
+
+Given by the owner to the implementing session, in addition to section 7. All previous scope restrictions and the independent GitHub CI requirements remain unchanged.
+
+- The Hetzner server is dedicated to development: AMD Ryzen 9 5950X (16 cores, 32 threads), 128 GB DDR4 ECC, 2 × 3.84 TB enterprise U.2 NVMe SSD, 1 Gbit/s NIC, Ubuntu.
+- Prioritize maximum development and CI performance over conservative resource consumption.
+- Benchmark Python parallelization with 1, 4, 8, 12, 16, 24 and 32 workers (section 7 also names 2). Measure concurrent Python, PostgreSQL, Redis, Keycloak, security and contract workloads.
+- Determine worker counts dynamically from the actual host resources, concurrent workloads and measured performance.
+- Use isolated tmpfs-backed test databases, safe caching and parallel execution wherever beneficial.
+- Keep sufficient resources for the operating system, development agents and other active development sessions.
+- Do not weaken security controls, test assertions, isolation or reproducibility.
+- Target: full local CI in 2–3 minutes if technically achievable.
+- Record all benchmark results in [INFRA-CI-02-BENCHMARK.md](INFRA-CI-02-BENCHMARK.md).

@@ -1,13 +1,14 @@
-# Local CI (INFRA-CI-01)
+# Local CI (INFRA-CI-01, performance: INFRA-CI-02)
 
 Runs every check of the GitHub Actions workflow on the development server, on uncommitted work, with no commit or push. **A local PASS is development feedback. It does not replace the GitHub CI evidence** required at the control points listed in [Agent rules](#rules-for-claude-code-codex-and-other-agents).
 
 ## Quick start
 
 ```sh
-./scripts/ci/run-fast.sh                 # while working, about 75 s
-./scripts/ci/run-all.sh                  # before finishing a T package, about 5 min
+./scripts/ci/run-fast.sh                 # while working, about 40 s
+./scripts/ci/run-all.sh                  # at the defined checkpoint, about 4.5 minutes
 ./scripts/ci/status.sh                   # what ran, what is running
+cat .ci-results/latest/brief.txt         # last result in a few lines
 cat .ci-results/latest/report.txt        # last report
 ```
 
@@ -23,24 +24,25 @@ Run from any directory; the scripts locate the repository themselves. No `uv syn
 | User `root` or uid 1001 | root | workspaces are handed to uid 1001, the user inside the containers |
 | `gh`, logged in | 2.4.0 | only for `compare-github.sh` |
 | Disk | see below | the run stops if less than 10 GiB is free |
+| `/dev/shm` with 16 GiB free | 63 GiB | job workspaces and worker databases; with less room they go to disk |
 | Internet | | dependency install, `npm ci`, `pip-audit`, first image pulls |
 
 Nothing else is installed on the host and no GitHub self-hosted runner is involved. The first run builds the runner image (`atci-runner:<hash>`) and pulls the pinned service images.
 
-Optional: `ATCI_STATE_DIR` moves the workspaces and locks (default `/var/tmp/autotramita-ci`, mode 0700).
+Locks live in `/var/tmp/autotramita-ci`, job workspaces in `/dev/shm/autotramita-ci-work` (both mode 0700; the runner refuses a directory another user created). Optional: `ATCI_STATE_DIR` moves both below one directory, on disk.
 
 ### Resources (measured)
 
-| Quantity | Full run, four jobs in parallel |
-|---|---|
-| Peak memory of CI containers | 3.3–3.8 GiB |
-| Peak CPU | 8–13 cores |
-| Containers at the same time | 10 |
-| Workspaces during the run (removed afterwards) | about 0.4 GiB |
-| Caches kept between runs | about 210 MiB (`atci-uv-cache`, `atci-npm-cache`), runner image 643 MB, service images |
-| Results per full run | under 1 MiB |
+| Run | Peak memory | Peak CPU (threads of 32) | Workspaces |
+|---|---|---|---|
+| fast, unit | 2.4 GiB | 16 | |
+| integration | 3.8 GiB | 17 | |
+| keycloak | 8.6 GiB | 25 | |
+| full | about 11 GiB | about 25 | about 5 GB, in memory |
 
-Recommended: 8 free cores, 8 GiB free memory, 20 GiB free disk. The measuring host has 32 threads and 125 GiB and runs other services. Use `--serial` on a smaller or busy machine.
+Measured on 2026-11-27; conditions and all figures: [INFRA-CI-02 benchmark](INFRA-CI-02-BENCHMARK.md). Result directories stay small; caches keep about 250 MB in two Docker volumes.
+
+Local CI shares the host with other services and agent sessions. A run whose workflow says `auto` takes fewer test workers when other runs are active, when the CPUs are already busy or when memory is short, and four at most when it is targeted (see [Parallel tests](#parallel-tests)). A run sees only the runs that were already active when it started. Use `--serial` (one job at a time) on a busy machine; `--workers 1` runs the main suite in a single process.
 
 ## Architecture
 
@@ -54,7 +56,8 @@ scripts/ci/run-*.sh ─► lib/runner.py ─┬─ lib/workflow.py   parses ci.y
                                       └─ lib/report.py     redaction, JUnit, verdict, reports
 
 one job = one GitHub job
-  netns (no network, loopback only) ── PostgreSQL ── Redis ── Keycloak ── step containers
+  netns (no network, loopback only) ── PostgreSQL ── Redis ── Keycloak instances ── step containers
+                                       one more PostgreSQL per extra test worker, one more Redis
   egress network (only for steps that run `uv sync`, `npm ci` or `uvx`)
 ```
 
@@ -70,14 +73,14 @@ Untracked files named like secrets (`.env*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`,
 
 | Command | Runs | Services | Measured |
 |---|---|---|---|
-| `run-fast.sh` | Ruff lint and format, mypy, tests that need no PostgreSQL or Redis, test counts, runner self-test | none | 77 s |
-| `run-unit.sh` | the same tests and counts only | none | 69 s |
-| `run-integration.sh` | tests that depend on the PostgreSQL or Redis fixtures (RLS, privileges, sessions, authentication, recovery, notifications, rate limiting), test counts, isolation check | PG, Redis | 174 s |
-| `run-keycloak.sh` | the whole `identity` job: builds the AutoTramita Keycloak image, Keycloak tests on one node and on two nodes sharing one PostgreSQL database, DEV and PROD realm import, a realm without the provider | PG, Redis, Keycloak ×4 | ~370 s |
-| `run-migrations.sh` | the workflow's upgrade/downgrade/upgrade step, exactly one migration head, the complete role and migration test files | PG, Redis | 25 s |
-| `run-security.sh` | the `secrets`, `dependencies` and `image-scan` jobs (gitleaks, pip-audit, Trivy scan of the AutoTramita Keycloak image with its gate), gitleaks on uncommitted files | none | ~60 s |
+| `run-fast.sh` | Ruff lint and format, mypy, tests that need no PostgreSQL or Redis, test counts, runner self-test | none | 40 s |
+| `run-unit.sh` | the same tests and counts only | none | 30 s |
+| `run-integration.sh` | tests that depend on the PostgreSQL or Redis fixtures (RLS, privileges, sessions, authentication, recovery, notifications, rate limiting), test counts, isolation check | PG, Redis, per worker | 95 s |
+| `run-keycloak.sh` | the whole `identity` job: builds the AutoTramita Keycloak image, Keycloak tests in parallel shards (one instance each) and on two nodes sharing one PostgreSQL database, DEV and PROD realm import, a realm without the provider | PG, Redis, Keycloak ×5 | 3 min 40 s |
+| `run-migrations.sh` | the workflow's upgrade/downgrade/upgrade step, exactly one migration head, the complete role and migration test files | PG, Redis | 27 s |
+| `run-security.sh` | the `secrets`, `dependencies` and `image-scan` jobs (gitleaks, pip-audit, Trivy scan of the AutoTramita Keycloak image with its gate), gitleaks on uncommitted files | none | 55 s |
 | `run-contracts.sh` | OpenAPI 3.1 validation, contract is current, TypeScript and Dart generation | none | 14 s |
-| `run-all.sh` | **every job and every run step of `ci.yml`**, plus the local checks | all | 303–316 s |
+| `run-all.sh` | **every job and every run step of `ci.yml`**, plus the local checks | all | 4 min 20 s |
 | `compare-github.sh [dir] [--run id]` | compares a clean full run with the GitHub run of the same commit | | seconds |
 | `status.sh [--limit n]` | active runs, CI containers, recent results | | |
 | `cleanup.sh [--dry-run] [--caches] [--results-older-than DAYS]` | removes leftovers | | |
@@ -90,6 +93,7 @@ Options of every `run-*.sh`:
 | `--serial` | one job at a time |
 | `--keep-workspace` | keep the job directories for debugging (remove with `cleanup.sh`) |
 | `--source <dir>` | test another checkout |
+| `--workers <n>` | override `PYTEST_WORKERS` (benchmarks); the run is not acceptance evidence |
 | `-- <pytest args>` | targeted run: passed to the main test step |
 
 Targeted tests of the component you changed:
@@ -99,9 +103,28 @@ Targeted tests of the component you changed:
 ./scripts/ci/run-unit.sh -- tests/test_config.py -k url
 ```
 
-The report of such a run is marked `TARGETED: not acceptance evidence`. If the selected paths contain no test of the profile's kind, the run fails.
+A targeted run uses four test workers at most. For a handful of tests `--workers 1` (one process, no extra servers) is several seconds faster. The report of such a run is marked `TARGETED: not acceptance evidence`. If the selected paths contain no test of the profile's kind, the run fails.
 
 **Unit and integration split.** A test counts as integration when it depends, directly or through another fixture, on `pg_admin_url` or `redis_url`. The split is made by a pytest plugin at collection time; no test is modified or marked. Deselected tests are reported as deselected, never as skipped. Unit plus integration equals the main suite of GitHub.
+
+## Parallel tests
+
+Introduced by INFRA-CI-02. The workflow says what runs in parallel, the same way on GitHub and locally.
+
+| Part | How | Isolation |
+|---|---|---|
+| Main suite | [pytest_phases.py](../../scripts/ci/pytest_phases.py) runs the workflow's pytest command twice: all tests not marked `serial` in `PYTEST_WORKERS` pytest-xdist workers, then the `serial` tests alone. One JUnit file holds both | per worker: a PostgreSQL server (roles are global to a server, and migrations inspect all of them) and a Redis logical database; per test, as before: its own databases and roles |
+| Keycloak suite | [keycloak_shards.py](../../scripts/ci/keycloak_shards.py) runs `KEYCLOAK_SHARDS` pytest processes at once; afterwards the executed tests must equal the collected ones | per shard: a Keycloak container with its own in-memory database and realm, its own SMTP and back-channel ports and Redis database |
+| Rate-limit regression, migrations, contracts, scans | unchanged | |
+
+| Setting (`ci.yml`) | Value | Meaning |
+|---|---|---|
+| `PYTEST_WORKERS` | `auto` | one worker per CPU, at most 16 (GitHub's 4-CPU runner: 4). Local CI shares this number between simultaneous runs and lowers it on a busy host, never below 2; a targeted run takes 4 at most. `1`: one process, serial |
+| `KEYCLOAK_SHARDS` | `auto` | 3 on a host with 16 or more CPUs, otherwise 2. `1`: one process |
+
+**Writing tests.** A test that races threads, sleeps, uses a lease, expiry or fixed port, or measures time is listed in [tests/serial_tests.py](../../tests/serial_tests.py); [tests/test_ci_parallel.py](../../tests/test_ci_parallel.py) fails when such a test is missing there or an entry no longer exists. A worker takes a whole test file, except for the slow files listed in `SPLIT_FILES`, whose tests are handed out one by one and therefore must not share a module fixture.
+
+**Without Local CI**, plain `uv run pytest` is unchanged: one process, one server. `-n` additionally needs `TEST_PG_WORKER_PORT_BASE` and `TEST_REDIS_WORKERS_URL`; without them the run fails instead of sharing a server.
 
 **Local-only checks** are marked `[local]` in reports. They can turn a run into FAIL although GitHub would pass: migration head count, network isolation, gitleaks on uncommitted files, runner self-test.
 
@@ -116,6 +139,7 @@ The report of such a run is marked `TARGETED: not acceptance evidence`. If the s
 | No route anywhere from tests | the namespace is created with `network_mode: none`; every full, integration, migration and Keycloak run verifies it |
 | No production data or secrets | only the throwaway values written in `ci.yml`; no host environment, `.env` or `.secrets` reaches a container; `docker compose` runs with `--env-file /dev/null` |
 | No real mail | tests run their own SMTP sink on `127.0.0.1:18025`; there is no Mailpit |
+| Worker databases in memory | the extra PostgreSQL servers run as uid 1001 with their data in the job workspace on `/dev/shm`; they disappear with the job |
 | No Docker socket | steps that call `docker` talk to a broker on the host that allows only `run`, `logs` and `rm -f` of the job's own containers, only the images named in the repository, only mounts inside the job workspace, and only the job's namespace or no network; in addition exactly the operations below (Keycloak image and its scan) |
 | Unprivileged steps | uid 1001, all capabilities dropped, `no-new-privileges` |
 | Parallel runs | every run has its own names, namespace and workspace; several runs may execute at once. Caches are shared and safe for concurrent use |
@@ -146,6 +170,7 @@ Local CI shares the Docker daemon, CPU, memory and disk with the other services 
 .ci-results/
   latest  latest-all  latest-fast ...       links to the newest run (per profile)
   <run id>/
+    brief.txt             verdict, identity, durations, counts, failed tests and log paths
     report.txt            readable report, ends with RESULT: PASS or FAIL
     summary.json          the same data for tools
     junit/<job>-<step>-<n>.xml    one file per pytest invocation
@@ -176,7 +201,7 @@ Logs and JUnit files are redacted: values of password, secret and token variable
 
 ## Cleanup
 
-Every run removes its own containers, networks and workspaces, also after failure, `Ctrl-C` or `SIGTERM`. After a kill that gives no chance to react (`SIGKILL`, reboot):
+Every run removes its own containers, networks and workspaces (in `/dev/shm` and, if used, on disk), also after failure, `Ctrl-C` or `SIGTERM`. After a kill that gives no chance to react (`SIGKILL`, reboot):
 
 ```sh
 ./scripts/ci/cleanup.sh --dry-run     # shows what would be removed
@@ -198,8 +223,13 @@ It removes a container or network only if it carries the label `com.autotramita.
 | A test fails locally only, with `Network is unreachable` or a name resolution error | the test needs external network, which test steps do not have. GitHub would allow it; fix the dependency rather than the isolation |
 | `uv … offline` error in a test step | the step needs a download; steps get network only if their command contains `uv sync`, `uvx` or `check-clients.sh` |
 | `services did not become healthy` | see `logs/<job>/00-services.log` |
+| `no free Docker subnet, waiting` | the host has few free Docker networks; the job continues when another run releases one and fails after 10 minutes. `status.sh` shows the active runs; do not remove networks of other stacks |
 | `pip-audit` fails without a code change | a new advisory was published, or PyPI is unreachable |
 | Rate-limit timing tests fail on a loaded host | check `uptime`; rerun with `--serial`. Do not loosen the assertions |
+| A test of sign-in, recovery or sessions fails while the host is heavily loaded | the application gives Redis 500 ms and some paths only log the error. Check `uptime`, rerun when the host is quieter, and report the failed run; seen once, beside a second full run |
+| A test fails only in parallel | rerun it with `--workers 1`; if it then passes, it depends on timing (add it to `tests/serial_tests.py`) or on shared state (fix the test) |
+| `parallel workers need … of their own` | `-n` without the worker settings; use Local CI or run without `-n` |
+| `pytest_phases:` or `keycloak_shards:` message, exit 2 | the script refused the command, or a file named in `LAYOUTS`/`SPLIT_FILES` was renamed |
 | gitleaks scans an unexpected number of commits | refresh branches with `git fetch origin`; this clone fetches only `main` by default |
 | `[local] gitleaks on the files under test` fails | a secret-like string is in a file you have not committed yet: remove it before committing |
 | Disk filling up | `cleanup.sh --results-older-than 14`, `cleanup.sh --caches` |
@@ -211,9 +241,9 @@ Proposed workflow (to be confirmed by the owner):
 
 1. Implement the change.
 2. `run-fast.sh`.
-3. Targeted tests of the changed components (`run-integration.sh -- <paths>`, `run-keycloak.sh` for identity changes, `run-migrations.sh` for migrations).
-4. Fix and repeat.
-5. `run-all.sh` before finishing a T package.
+3. Targeted tests of the changed components (`run-unit.sh -- <paths>`, `run-integration.sh -- <paths>`, `run-keycloak.sh` for identity changes, `run-migrations.sh` for migrations).
+4. Fix and repeat. Do not push each intermediate correction.
+5. `run-all.sh` before finishing a T package (the defined checkpoint).
 6. Commit and push to `dev`.
 7. GitHub Actions final check; optionally `compare-github.sh`.
 8. Acceptance report.
@@ -226,6 +256,8 @@ Agents must:
 - report the run id, tested SHA and tree, and whether the tree was dirty;
 - never describe a targeted, partial or dirty-tree run as acceptance evidence;
 - never report PASS for exit code other than 0;
+- add a concurrent or timing-dependent test to `tests/serial_tests.py`, and never move a test out of that list to gain time without proof that it still tests the same thing in parallel;
+- change workflow triggers, branch protection, the broker policy, host firewall rules or production infrastructure only with the owner's separate approval;
 - not weaken, skip or deselect tests, edit `images.lock.json` digests or widen the broker policy to make a run pass;
 - not run test containers by hand on fixed ports when a profile covers the need;
 - clean up only with `cleanup.sh`, never with `docker … prune`;
@@ -237,10 +269,13 @@ Same: workflow steps and order, commands, shell, job separation, timeouts, `if: 
 
 | Difference | GitHub | Local | Effect |
 |---|---|---|---|
+| Parallelism | 4 test workers, 2 Keycloak shards (4 CPUs) | up to 16 workers, 3 shards | same tests and assertions; other interleaving |
+| Worker databases | runner disk, `fsync=off` | `/dev/shm`, `fsync=off` | the primary services are configured as before |
 | Machine | `ubuntu-24.04` VM image, updated by GitHub | `ubuntu:24.04` container; apt packages (curl, git, jq, python3) not version pinned; host kernel 5.15 | tools outside the lockfiles may differ |
 | CPU and load | small dedicated VM | 32 threads shared with other services | timing-sensitive tests can differ in either direction |
 | Network in test steps | open | loopback only | stricter locally |
 | Services | service containers, disk | same images, tmpfs, shared namespace | no persistence either way |
+| Host | dedicated VM per job | shared development server | see the resource budget above |
 | Docker in steps | direct | broker, namespace instead of host network | new Docker usage must be added to the broker |
 | Node in `identity` | whatever the VM provides | 20.20.0 | not used by those tests |
 | Platform variables | `GITHUB_*` set | only `RUNNER_TEMP`, `GITHUB_STEP_SUMMARY`, and the workflow's `env` | a step relying on others fails locally |
