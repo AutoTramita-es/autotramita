@@ -51,7 +51,8 @@ After the tests, the shard and node containers are removed and the DEV, PROD and
 | Suites that ran in parts are counted as one in "Primary suite" | `lib/report.py` |
 | `brief.txt`: short summary with failed tests and log paths | `lib/report.py` |
 | The integration profile includes the step that starts the worker servers | `lib/profiles.py` |
-| Self-test: 22 → 31 tests | `selftest.py` |
+| `compare-github.sh` compares the pytest summaries of a sharded job as their sum (GitHub runs 2 shards, Local CI 3) | `lib/compare.py` |
+| Self-test: 22 → 34 tests | `selftest.py` |
 
 ### 1.6 Agent instructions
 
@@ -92,6 +93,7 @@ Taken without explicit owner guidance; each can be reversed.
 | D10 | Wait for a Docker subnet (no host setting changed, no network of another stack removed) | two simultaneous full runs exhausted the default address pools and one failed |
 | D11 | Targeted runs: at most 4 workers | measured on four selections; small selections remain a few seconds slower than the former serial run (`--workers 1` avoids it), larger ones are faster |
 | D12 | The load-sensitive failure (limitation 9) was **not** worked around: no test moved, retried or changed | moving one test would hide one case of a general dependency; the decision belongs to review and the owner |
+| D13 | The comparison tool sums the summaries of a sharded job | the first comparison reported DIFFERENT only because the shard counts differ; totals of every outcome must still be equal |
 
 ## 4. Limitations
 

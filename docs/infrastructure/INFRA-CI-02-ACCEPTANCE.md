@@ -1,6 +1,6 @@
 # INFRA-CI-02 — Acceptance report
 
-Date: 2026-11-27. **Status: evidence collection in progress; not accepted.** The implementing session does not accept its own work: an independent read-only review in a separate session and the owner's acceptance are required. Nothing here accepts a checkpoint, authorizes a merge into `main` or a deployment.
+Date: 2026-11-27. **Status: READY FOR INDEPENDENT REVIEW — not accepted.** Open: findings F1 and F4. The implementing session does not accept its own work: an independent read-only review in a separate session and the owner's acceptance are required. Nothing here accepts a checkpoint, authorizes a merge into `main` or a deployment.
 
 [Specification](INFRA-CI-02.md) · [Implementation](INFRA-CI-02-IMPLEMENTATION.md) · [Benchmark](INFRA-CI-02-BENCHMARK.md) · [Local CI guide](LOCAL-CI.md)
 
@@ -12,10 +12,12 @@ Date: 2026-11-27. **Status: evidence collection in progress; not accepted.** The
 | Fix of the stale provider version in `ci.yml` (precondition, see IMPLEMENTATION 1.7) | `6d4cb64` |
 | Parallel test execution and runner changes | `2781c10540f31ae66cee5beb31b476ead3cded70` |
 | Runner: wait for a free Docker subnet | `6d6307d46449e1cae3e218fe1596bfe56fb3db80` |
-| Runner: targeted runs take at most four workers (**last code change**) | `3103631a94dc245cf40b63e5ebeb05ab0fbfe1b9` |
+| Runner: targeted runs take at most four workers | `3103631a94dc245cf40b63e5ebeb05ab0fbfe1b9` |
+| Benchmark, implementation and first version of this report (first push) | `2f387c63807004a9f220d8a0b2af3ac70ddb8ce9` |
+| Comparison tool: sharded summaries compared as their sum (**last code change**, pushed) | `f1a6e56a01411f332e5587a9f2690b2feaa4bebf` |
 | Baseline used for comparisons | `852d28a` (the first commit as measured before a rebase; same change as `6d4cb64`) |
 
-Between `19908d7` and `3103631` nothing changed under `app/`, `migrations/`, `identity/`, `openapi/`, `scripts/identity/`, in the Docker broker, the workflow parser, `compose.ci.yml`, `images.lock.json`, the compose files, `tests/test_ci_workflow.py` or `tests/identity/test_identity_environment.py` (`git diff --stat` empty). Workflow triggers, permissions, concurrency and job names are unchanged.
+Between `19908d7` and `f1a6e56` nothing changed under `app/`, `migrations/`, `identity/`, `openapi/`, `scripts/identity/`, in the Docker broker, the workflow parser, `compose.ci.yml`, `images.lock.json`, the compose files, `tests/test_ci_workflow.py` or `tests/identity/test_identity_environment.py` (`git diff --stat` empty). Workflow triggers, permissions, concurrency and job names are unchanged.
 
 ## 2. Acceptance matrix
 
@@ -30,7 +32,7 @@ State is the implementer's assessment for the reviewer to confirm.
 | A4b | Repeatability | **partly** | six of six single full runs passed (`2781c10`, `6d6307d`); under two simultaneous full runs one test failed once (finding F1) |
 | A4c | Fail-closed behaviour | met | guard tests for failing, empty and interrupted parts and for a missing Keycloak test; both observed failures were reported FAIL |
 | A4d | Isolated workers, safe cleanup, no prune | met | guard tests refuse shared servers; after the measurements no CI container, network or workspace remained; no `docker … prune` |
-| A5 | Local and GitHub parity on the same clean SHA, independent GitHub success | see section 4 | |
+| A5 | Local and GitHub parity on the same clean SHA, independent GitHub success | met after a fix of the comparison tool | section 4 |
 | A6 | Benchmark, limitations, deferred findings, rollback | met | BENCHMARK, IMPLEMENTATION 4 and 5, section 5 |
 | A7 | No application feature, F2 decision, production or deployment change | met | section 1 |
 | O1 | Benchmark of 1/2/4/8/12/16/24/32 workers, isolated and beside full CI, with resources | met | BENCHMARK 6; cold caches not measured; per-test timing from JUnit instead of `--durations` |
@@ -50,7 +52,7 @@ All runs: clean committed content (`--ref`), not targeted, no worker override.
 | `2781c10` | `a3e8c2d266021a64b61560a6fcbd0a06c35af674` | `20261127-122038-875a1f`, `20261127-123249-36d37e`, `20261127-124517-8cb786` | PASS × 3 | 2062, no failed, errored or skipped | 247–265 s |
 | `6d6307d` | `0324a4b3384dbeea080cb20bf5652697e3e62055` | `20261127-133509-80f335`, `20261127-133925-a46e09`, `20261127-134341-a9e21f` | PASS × 3 | 2062, same | 256–263 s |
 
-Per full run: main suite 1614, Keycloak 265, migration step 6, rate-limit regression 3 × 59. Other profiles passed three times each on `2781c10` (run IDs: BENCHMARK 8.1). The runner self-test has 31 tests.
+Per full run: main suite 1614, Keycloak 265, migration step 6, rate-limit regression 3 × 59. Other profiles passed three times each on `2781c10` (run IDs: BENCHMARK 8.1). The runner self-test has 34 tests.
 
 Failed runs, all reported FAIL:
 
@@ -61,9 +63,26 @@ Failed runs, all reported FAIL:
 | `20261127-132311-7e4359` | `6d6307d` | one test beside a second full run | open (F1) |
 | `20261127-141107-be863d` | scratch copy with an injected Redis pause | the same test, on purpose | reproduction of F1 |
 
-## 4. Evidence on the pushed commit
+## 4. Evidence on the pushed commits
 
-To be recorded after the push: full local run on the pushed SHA, GitHub run ID, URL and job results, and the comparison.
+| Commit / tree | Local full run | GitHub run | GitHub jobs | `compare-github.sh` |
+|---|---|---|---|---|
+| `2f387c63807004a9f220d8a0b2af3ac70ddb8ce9` / `0f354b48acc07a8424468f7d8f83971f55515af6` | `20261127-142739-e5b9a6` PASS, 249.7 s | [46016787516](https://github.com/AutoTramita-es/autotramita/actions/runs/46016787516) success, 356 s | 5 of 5 success | first **DIFFERENT**, with the fixed tool EQUIVALENT |
+| `f1a6e56a01411f332e5587a9f2690b2feaa4bebf` / `df8e3487a1072bdea70bae96e952f04c250b3437` | `20261127-143904-1b7060` PASS, 247.9 s | [46018469751](https://github.com/AutoTramita-es/autotramita/actions/runs/46018469751) success, 387 s | 5 of 5 success | **EQUIVALENT** |
+
+| Job on `f1a6e56` | GitHub | Local |
+|---|---|---|
+| Lint, types, tests | success, 365 s | PASS, 204 s |
+| Keycloak 26.8.2 integration | success, 383 s | PASS, 245 s |
+| Keycloak image vulnerability scan | success, 70 s | PASS, 75 s |
+| Dependency audit | success, 10 s | PASS, 5 s |
+| Secret scan | success, 12 s | PASS, 6 s |
+
+Both sides: main suite 1513 + 101 passed, migration step 6, rate-limit regression 3 × 59, Keycloak 265 passed (99 deselected); no failed, errored or skipped test. GitHub used 4 workers and 2 shards, Local CI up to 16 and 3.
+
+**The first comparison reported `DIFFERENT`** for one line: the pytest summaries of the Keycloak job, `112 + 153` on GitHub (two shards) against `58 + 139 + 68` locally (three). Totals were equal. The tool did not know about shards, an omission of this implementation. Commit `f1a6e56` makes it compare the sum of the summaries of a sharded job; a missing, failed, deselected or skipped test remains a difference (three self-tests). The reviewer should confirm that this does not weaken the comparison.
+
+The commit that records this section changes documentation only; its own GitHub run cannot be listed in itself.
 
 ## 5. Findings
 
@@ -75,8 +94,9 @@ To be recorded after the push: full local run on the pushed SHA, GitHub run ID, 
 | F4 | Full local run about 4.3 minutes, target 2–3 | goal not met | options and their price in BENCHMARK 10; a separate job for the rate-limit regression needs an owner decision |
 | F5 | **Host, outside this task:** two containers of another project restart in a loop and write about 400 MiB/s to each SSD while CI is idle | **high for the hardware** | not changed; reported to the owner with the details, for the owner's action |
 | F6 | Identity job failing on `dev` since 2026-11-26 (stale expected provider version) | pre-existing | fixed in `6d4cb64` |
-| F7 | GitHub runs 4 workers and 2 shards, Local CI 16 and 3 | by design | both must pass; see section 4 |
+| F7 | GitHub runs 4 workers and 2 shards, Local CI 16 and 3 | by design | both passed on both pushed commits |
+| F8 | GitHub durations vary widely between two runs of the same test code (main tests step 159 s and 242 s) | information | only two runs; see BENCHMARK 11 |
 
 ## 6. Recommendation
 
-To be completed with section 4.
+**READY FOR INDEPENDENT REVIEW.** Suggested focus of the review: the serial list and its guard (what it cannot detect), isolation of the workers and shards, equivalence of the changed identity job (instance starts and order), the comparison-tool change, and finding F1. The owner decides on F1, F4 and F5 and whether the duration goals that were missed require further work. No self-acceptance, merge or deployment.

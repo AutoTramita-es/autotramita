@@ -296,7 +296,7 @@ Targets of the specification are goals, not acceptance thresholds. Medians of se
 | Python suite (main tests step) | 30–90 s | 1–2 min | 90 s in a full run [90–107] | at the median only, with no margin |
 | Keycloak | 1–3 min | identity job 3–5 min | 3 min 41 s (profile); identity job in a full run 4 min 20 s | no |
 | Full local | 2–3 min | 2–3 min | 4 min 22 s (4 min 16 s after the network fix) | **no** |
-| GitHub full | – | 4–6 min | see ACCEPTANCE | |
+| GitHub full | – | 4–6 min | 5 min 56 s and 6 min 27 s (section 11) | one of two runs |
 
 **Why the full run is still above 3 minutes.** Jobs run in parallel, so the longest job decides: `identity` (about 260 s), then `test` (about 217 s).
 
@@ -305,9 +305,22 @@ Targets of the specification are goals, not acceptance thresholds. Medians of se
 
 Options **not implemented**, each with its price: split the longest Keycloak file between two instances (needs proof that its tests are independent); start the Keycloak instances while earlier steps run (measured once: small gain, slower node start); start the worker servers concurrently (about 8 s of the `test` job); move the rate-limit regression into its own job (changes the job set of the workflow and its guard test, and runs a timing test beside more load; owner decision). Even together, reaching 3 minutes is not assured.
 
-## 11. Not measured
+## 11. GitHub
+
+Two runs of the new workflow (4 workers, 2 shards on the 4-CPU runner), against the baseline of section 4.3. **Too few runs for a median that means much, and the baseline of the green runs has a smaller test inventory.**
+
+| Measure | Baseline | `2f387c6`, run 46016787516 | `f1a6e56`, run 46018469751 |
+|---|---|---|---|
+| Run duration | 553 [461–683], five green runs | 356 | 387 |
+| Main tests step | 362, five green runs; 495 on `81fa391` (current inventory) | 159 | 242 |
+| Job "Lint, types, tests" | about 610–700, four runs with the current inventory | 272 | 365 |
+| Identity job | 434, five green runs | 351 | 383 |
+
+Against the green-run median the run was 36 % and 30 % shorter. The goal of 4–6 minutes was met by one of the two runs (5 min 56 s) and missed by the other (6 min 27 s).
+
+## 12. Not measured
 
 - Cold caches (first run on an empty Docker and uv cache).
 - Behaviour with more than two simultaneous CI runs, or beside a heavy unrelated job.
 - The separate effect of tmpfs, and of each individual change on the final result.
-- GitHub durations of the new workflow before the push; they are recorded in ACCEPTANCE.
+- More than two GitHub runs of the new workflow.
