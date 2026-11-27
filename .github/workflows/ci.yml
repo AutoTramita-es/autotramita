@@ -302,7 +302,7 @@ jobs:
           guarded = providers["required-action"]["providers"]
           for action in ("CONFIGURE_TOTP", "CONFIGURE_RECOVERY_AUTHN_CODES", "UPDATE_PASSWORD",
                          "webauthn-register", "webauthn-register-passwordless", "at-disable-mfa"):
-              assert guarded[action]["operationalInfo"]["autotramita-guard"] == "1.1.1", action
+              assert guarded[action]["operationalInfo"]["autotramita-guard"] == "1.2.0", action
           assert "at-security-guard" in providers["authenticator"]["providers"]
           password = httpx.get(base + "/admin/realms/" + realm
                                + "/authentication/required-actions/UPDATE_PASSWORD/config",
