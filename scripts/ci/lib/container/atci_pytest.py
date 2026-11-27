@@ -9,6 +9,11 @@ commands of ci.yml stay unchanged, and it does two things in the outermost pytes
 The outer process removes the variables that load the plugin from its environment once they
 have been read, so nested pytest processes started by tests (the token mutation test) are
 exactly as untouched as on GitHub.
+
+With pytest-xdist the outer process is a controller that runs no test and starts workers: it
+leaves the variables for them. A worker applies the split, removes the variables before its
+first test, records nothing itself and reports its deselected count to the controller, which
+writes the one record of the run.
 """
 
 import json
@@ -34,11 +39,30 @@ def _forget_plugin() -> None:
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config: Any) -> None:
     config._atci_deselected = 0
-    config._atci_infra = os.environ.pop("ATCI_INFRA", None)
-    directory = config._atci_junit = os.environ.pop("ATCI_JUNIT_DIR", None)
-    _forget_plugin()
-    if directory and not config.option.xmlpath:
+    worker = hasattr(config, "workerinput")
+    controller = not worker and bool(getattr(config.option, "numprocesses", None))
+    read = os.environ.get if controller else os.environ.pop
+    config._atci_infra = read("ATCI_INFRA", None)
+    directory = read("ATCI_JUNIT_DIR", None)
+    config._atci_junit = None if worker else directory
+    if not controller:
+        _forget_plugin()
+    if directory and not worker and not config.option.xmlpath:
         config.option.xmlpath = os.path.join(directory, f"pytest-{uuid.uuid4().hex[:12]}.xml")
+
+
+def pytest_sessionfinish(session: Any) -> None:
+    output = getattr(session.config, "workeroutput", None)
+    if output is not None:
+        output["atci_deselected"] = session.config._atci_deselected
+
+
+@pytest.hookimpl(optionalhook=True)
+def pytest_testnodedown(node: Any) -> None:
+    # Every worker collects the same tests, so each reports the same count.
+    count = getattr(node, "workeroutput", {}).get("atci_deselected")
+    if count is not None:
+        node.config._atci_deselected = count
 
 
 @pytest.hookimpl(trylast=True)

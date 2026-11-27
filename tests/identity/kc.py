@@ -25,8 +25,9 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 
 REALM = "autotramita-test"
-SMTP_PORT = 18025
-BACKCHANNEL_PORT = 18090
+# A second Keycloak instance (parallel test shard) has sinks of its own; its realm names them.
+SMTP_PORT = int(os.environ.get("TEST_KEYCLOAK_SMTP_PORT", "18025"))
+BACKCHANNEL_PORT = int(os.environ.get("TEST_KEYCLOAK_BACKCHANNEL_PORT", "18090"))
 WEB_REDIRECT = "http://127.0.0.1:18080/api/v1/auth/callback"
 MOBILE_REDIRECT = "http://127.0.0.1:18080/app/auth/callback"
 GOOD_PASSWORD = "Correct-horse-battery-7"

@@ -44,6 +44,13 @@ jobs:
       # databases and roles. Missing variables fail the run instead of skipping tests.
       TEST_PG_ADMIN_URL: postgresql://postgres:ci-throwaway-password@127.0.0.1:5432/postgres
       TEST_REDIS_URL: redis://127.0.0.1:6379/15
+      # pytest-xdist processes of the main suite (INFRA-CI-02): "auto" is one per CPU, at most 12
+      # (scripts/ci/pytest_phases.py); "1" runs the suite serially in one process.
+      PYTEST_WORKERS: "auto"
+      # Workers share no state: gw0 uses the services above, gwN the PostgreSQL server on port
+      # 5440+N and logical database N of a second Redis.
+      TEST_PG_WORKER_PORT_BASE: "5440"
+      TEST_REDIS_WORKERS_URL: redis://127.0.0.1:6440/0
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -86,6 +93,60 @@ jobs:
               sys.exit("Not ready: " + ", ".join(sorted(pending)))
           print("PostgreSQL and Redis answer.")
           PY
+      - name: Start the servers of the additional test workers
+        # Roles are global to a PostgreSQL server and migrations inspect all of them, so workers
+        # sharing one would see each other's roles appear and vanish: one server each. Same images
+        # as the services, loopback only, throwaway data; the servers vanish with the job.
+        run: |
+          set -eu
+          workers="$(uv run --locked python scripts/ci/pytest_phases.py --workers "$PYTEST_WORKERS" --print-workers)"
+          echo "test workers: $workers"
+          if [ "$workers" -le 1 ]; then exit 0; fi
+          docker run -d --name redis-workers --network host \
+            redis:7@sha256:6b645a37f49b0546582468706b32e71a8b7fbb5ba4583d0f9e27a8004716b738 \
+            redis-server --bind 127.0.0.1 --port 6440 --databases 64 --save ""
+          for worker in $(seq 1 $((workers - 1))); do
+            # The data lives in the job's temporary directory (memory-backed in Local CI) and
+            # the server runs as the unprivileged user that owns it.
+            data="$RUNNER_TEMP/postgres-worker$worker"
+            mkdir -p "$data"
+            docker run -d --name "postgres-worker$worker" --network host --user 1001:1001 \
+              -v "$data:/var/lib/postgresql/data" \
+              -e POSTGRES_PASSWORD=ci-throwaway-password -e POSTGRES_INITDB_ARGS=--no-sync \
+              -e PGPORT=$((TEST_PG_WORKER_PORT_BASE + worker)) \
+              postgres:16@sha256:07abc3f43c9395b0bdbbab36bc25ddb0e8d83cd4fcafb5fb7d6abe14ff156dd8 \
+              -c listen_addresses=127.0.0.1 -c fsync=off
+          done
+          WORKERS="$workers" uv run --locked python - <<'PY'
+          import os, sys, time
+          import psycopg
+          import redis
+
+          deadline = time.monotonic() + 90
+          base = int(os.environ["TEST_PG_WORKER_PORT_BASE"])
+          pending = {base + n for n in range(1, int(os.environ["WORKERS"]))}
+          cache = redis.Redis.from_url(os.environ["TEST_REDIS_WORKERS_URL"], socket_timeout=3)
+          cache_ready = False
+          while (pending or not cache_ready) and time.monotonic() < deadline:
+              try:
+                  cache_ready = bool(cache.ping())
+              except redis.RedisError:
+                  pass
+              for port in sorted(pending):
+                  try:
+                      with psycopg.connect(os.environ["TEST_PG_ADMIN_URL"], port=port,
+                                           connect_timeout=3) as c:
+                          c.execute("SELECT 1")
+                      pending.discard(port)
+                  except psycopg.Error:
+                      pass
+              time.sleep(0.5)
+          if pending:
+              sys.exit("PostgreSQL not ready on ports " + ", ".join(map(str, sorted(pending))))
+          if not cache_ready:
+              sys.exit("The Redis of the additional workers is not ready.")
+          print("Every test worker has its PostgreSQL server and Redis database.")
+          PY
       - name: Ruff lint
         run: uv run --locked ruff check .
       - name: Ruff format
@@ -95,8 +156,11 @@ jobs:
       - name: Tests (real PostgreSQL 16 and Redis 7; RLS, API conventions, rate limiting)
         # Warnings are errors, except the one known upstream deprecation (R15): Starlette's
         # TestClient asks for httpx2. Any other warning fails the run instead of being hidden.
+        # The script runs this pytest command in two parts (INFRA-CI-02): parallel workers, then
+        # the tests of tests/serial_tests.py alone; one JUnit file holds both.
         run: >-
-          uv run --locked pytest -q -ra --junitxml="$RUNNER_TEMP/junit.xml"
+          uv run --locked python scripts/ci/pytest_phases.py --workers "$PYTEST_WORKERS" --
+          pytest -q -ra --junitxml="$RUNNER_TEMP/junit.xml"
           -W error
           -W 'ignore:Using `httpx` with `starlette.testclient` is deprecated:Warning'
       - name: Test counts (no skipped tests allowed)
@@ -167,6 +231,10 @@ jobs:
       TEST_KEYCLOAK_URL: http://127.0.0.1:18081
       # Two more nodes on one PostgreSQL database: the provider's lock across instances.
       TEST_KEYCLOAK_NODE_URLS: http://127.0.0.1:18083 http://127.0.0.1:18084
+      # Parallel test shards (INFRA-CI-02), each against an instance with a realm of its own:
+      # "auto" is three shards on a host with 16 or more CPUs, otherwise two; "1" is one process.
+      KEYCLOAK_SHARDS: "auto"
+      TEST_KEYCLOAK_SHARD_URLS: http://127.0.0.1:18086 http://127.0.0.1:18088
       TEST_KEYCLOAK_ADMIN_USER: ci-admin
       TEST_KEYCLOAK_ADMIN_PASSWORD: ci-throwaway-admin-password
       AT_WEB_CLIENT_SECRET: ci-throwaway-web-client-secret
@@ -199,17 +267,32 @@ jobs:
           -v "$PWD/identity/keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro"
           autotramita-keycloak:ci
           start-dev --import-realm --http-host=127.0.0.1 --http-port=18081 --hostname-strict=false
-      - name: Wait for the imported realm
+      - name: Start the Keycloak instances of the additional test shards (own realm and sinks)
         run: |
-          for attempt in $(seq 1 90); do
-            if curl -sf "$TEST_KEYCLOAK_URL/realms/autotramita-test/.well-known/openid-configuration" > /dev/null; then
-              echo "realm ready after ${attempt} attempts"; exit 0
-            fi
-            sleep 2
+          set -eu
+          shards="$(uv run --locked python scripts/ci/keycloak_shards.py --shards "$KEYCLOAK_SHARDS" --print-shards)"
+          echo "test shards: $shards"
+          shard=0
+          for url in $TEST_KEYCLOAK_SHARD_URLS; do
+            shard=$((shard + 1))
+            if [ "$shard" -ge "$shards" ]; then break; fi
+            smtp=$((18025 + shard)); backchannel=$((18090 + shard))
+            realm="$RUNNER_TEMP/realm-shard$shard.json"
+            sed -e "s/\"port\": \"18025\"/\"port\": \"$smtp\"/" \
+              -e "s#127\.0\.0\.1:18090/#127.0.0.1:$backchannel/#g" \
+              identity/keycloak/realm-test.json > "$realm"
+            grep -q "\"port\": \"$smtp\"" "$realm"
+            grep -q "127\.0\.0\.1:$backchannel/" "$realm"
+            if grep -Eq '"port": "18025"|127\.0\.0\.1:18090/' "$realm"; then exit 1; fi
+            docker run -d --name "keycloak-shard$shard" --network host \
+              -e KC_BOOTSTRAP_ADMIN_USERNAME="$TEST_KEYCLOAK_ADMIN_USER" \
+              -e KC_BOOTSTRAP_ADMIN_PASSWORD="$TEST_KEYCLOAK_ADMIN_PASSWORD" \
+              -e AT_WEB_CLIENT_SECRET -e AT_ADMIN_SVC_CLIENT_SECRET \
+              -v "$realm:/opt/keycloak/data/import/realm-test.json:ro" \
+              -v "$PWD/identity/keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro" \
+              autotramita-keycloak:ci \
+              start-dev --import-realm --http-host=127.0.0.1 --http-port="${url##*:}" --hostname-strict=false
           done
-          docker logs keycloak | tail -80
-          echo "Keycloak did not become ready" >&2
-          exit 1
       - name: Start two Keycloak nodes on one PostgreSQL database
         run: |
           set -eu
@@ -238,37 +321,86 @@ jobs:
             if [ "$ready" != 1 ]; then docker logs "keycloak-node$node" | tail -80; exit 1; fi
             echo "node $node ready"
           done
+      - name: Wait for the imported realm
+        run: |
+          shards="$(uv run --locked python scripts/ci/keycloak_shards.py --shards "$KEYCLOAK_SHARDS" --print-shards)"
+          urls="$TEST_KEYCLOAK_URL"
+          shard=0
+          for url in $TEST_KEYCLOAK_SHARD_URLS; do
+            shard=$((shard + 1))
+            if [ "$shard" -ge "$shards" ]; then break; fi
+            urls="$urls $url"
+          done
+          for url in $urls; do
+            ready=0
+            for attempt in $(seq 1 90); do
+              if curl -sf "$url/realms/autotramita-test/.well-known/openid-configuration" > /dev/null; then
+                ready=1; echo "realm at $url ready after ${attempt} attempts"; break
+              fi
+              sleep 2
+            done
+            if [ "$ready" != 1 ]; then
+              docker logs keycloak | tail -80
+              docker logs keycloak-shard1 | tail -80 || true
+              echo "Keycloak at $url did not become ready" >&2
+              exit 1
+            fi
+          done
       - name: Keycloak spike and OIDC tests (no skipped tests allowed)
         run: |
           export SPIKE_RESULTS_PATH="$RUNNER_TEMP/spike-results.json"
-          uv run --locked pytest -q -ra -m keycloak tests/identity --junitxml="$RUNNER_TEMP/junit-identity.xml" -W error -W 'ignore:Using `httpx` with `starlette.testclient` is deprecated:Warning'
-      - name: Import DEV and PROD realms into isolated Keycloak instances
+          # Shards at the same time, one Keycloak instance each (INFRA-CI-02).
+          uv run --locked python scripts/ci/keycloak_shards.py --shards "$KEYCLOAK_SHARDS" -- pytest -q -ra -m keycloak tests/identity --junitxml="$RUNNER_TEMP/junit-identity.xml" -W error -W 'ignore:Using `httpx` with `starlette.testclient` is deprecated:Warning'
+      # The test shards and the nodes are done. DEV, PROD and the providerless instance start
+      # together (INFRA-CI-02) and are verified one after the other, each by the same checks.
+      - name: Start the isolated DEV and PROD import instances
         run: |
           set -eu
+          shards="$(uv run --locked python scripts/ci/keycloak_shards.py --shards "$KEYCLOAK_SHARDS" --print-shards)"
+          for container in $(seq -f 'keycloak-shard%g' 1 $((shards - 1))) keycloak-node1 keycloak-node2; do
+            docker rm -f "$container" > /dev/null
+          done
           for kind in dev prod; do
-            container="keycloak-import-${kind}"
-            trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
-            docker run -d --name "$container" --network host \
+            if [ "$kind" = dev ]; then port=18082; else port=18087; fi
+            docker run -d --name "keycloak-import-${kind}" --network host \
               -e KC_BOOTSTRAP_ADMIN_USERNAME="$TEST_KEYCLOAK_ADMIN_USER" \
               -e KC_BOOTSTRAP_ADMIN_PASSWORD="$TEST_KEYCLOAK_ADMIN_PASSWORD" \
               -e AT_WEB_CLIENT_SECRET -e AT_ADMIN_SVC_CLIENT_SECRET \
               -v "$PWD/identity/keycloak/realm-${kind}.json:/opt/keycloak/data/import/realm.json:ro" \
               -v "$PWD/identity/keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro" \
               autotramita-keycloak:ci \
-              start-dev --import-realm --http-host=127.0.0.1 --http-port=18082 --hostname-strict=false
+              start-dev --import-realm --http-host=127.0.0.1 --http-port="$port" --hostname-strict=false
+          done
+      - name: "Without the security provider: start an upstream instance"
+        run: >-
+          docker run -d --name keycloak-without-provider --network host
+          -e KC_BOOTSTRAP_ADMIN_USERNAME="$TEST_KEYCLOAK_ADMIN_USER"
+          -e KC_BOOTSTRAP_ADMIN_PASSWORD="$TEST_KEYCLOAK_ADMIN_PASSWORD"
+          -e AT_WEB_CLIENT_SECRET -e AT_ADMIN_SVC_CLIENT_SECRET
+          -v "$PWD/identity/keycloak/realm-test.json:/opt/keycloak/data/import/realm-test.json:ro"
+          -v "$PWD/identity/keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro"
+          quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3
+          start-dev --import-realm --http-host=127.0.0.1 --http-port=18085 --hostname-strict=false
+      - name: Import DEV and PROD realms into isolated Keycloak instances
+        run: |
+          set -eu
+          for kind in dev prod; do
+            if [ "$kind" = dev ]; then port=18082; else port=18087; fi
+            container="keycloak-import-${kind}"
+            trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
             ready=0
             for attempt in $(seq 1 90); do
-              if curl -sf http://127.0.0.1:18082/realms/master/.well-known/openid-configuration > /dev/null; then
+              if curl -sf "http://127.0.0.1:$port/realms/master/.well-known/openid-configuration" > /dev/null; then
                 ready=1; break
               fi
               sleep 2
             done
             if [ "$ready" != 1 ]; then docker logs "$container" | tail -80; exit 1; fi
-            REALM_KIND="$kind" uv run --locked python - <<'PYREALM'
+            REALM_KIND="$kind" REALM_PORT="$port" uv run --locked python - <<'PYREALM'
           import os
           import httpx
 
-          base = "http://127.0.0.1:18082"
+          base = "http://127.0.0.1:" + os.environ["REALM_PORT"]
           realm = "autotramita-" + os.environ["REALM_KIND"]
           token = httpx.post(base + "/realms/master/protocol/openid-connect/token", data={
               "grant_type": "password", "client_id": "admin-cli",
@@ -341,14 +473,6 @@ jobs:
       - name: Without the security provider the realm signs nobody in
         run: |
           set -eu
-          docker run -d --name keycloak-without-provider --network host \
-            -e KC_BOOTSTRAP_ADMIN_USERNAME="$TEST_KEYCLOAK_ADMIN_USER" \
-            -e KC_BOOTSTRAP_ADMIN_PASSWORD="$TEST_KEYCLOAK_ADMIN_PASSWORD" \
-            -e AT_WEB_CLIENT_SECRET -e AT_ADMIN_SVC_CLIENT_SECRET \
-            -v "$PWD/identity/keycloak/realm-test.json:/opt/keycloak/data/import/realm-test.json:ro" \
-            -v "$PWD/identity/keycloak/blacklists:/opt/keycloak/data/password-blacklists:ro" \
-            quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3 \
-            start-dev --import-realm --http-host=127.0.0.1 --http-port=18085 --hostname-strict=false
           ready=0
           for attempt in $(seq 1 90); do
             if curl -sf http://127.0.0.1:18085/realms/master/.well-known/openid-configuration > /dev/null; then
@@ -405,7 +529,10 @@ jobs:
           PY
       - name: Keycloak log on failure
         if: failure()
-        run: docker logs keycloak | tail -150
+        run: |
+          docker logs keycloak | tail -150
+          docker logs keycloak-shard1 2>/dev/null | tail -150 || true
+          docker logs keycloak-shard2 2>/dev/null | tail -150 || true
 
   secrets:
     name: Secret scan

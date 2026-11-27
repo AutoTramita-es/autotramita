@@ -36,6 +36,8 @@ from broker import RUNNER_USER, Broker, Policy
 
 LIB = Path(__file__).resolve().parent
 CI_DIR = LIB.parent
+sys.path.append(str(CI_DIR))
+import pytest_phases  # noqa: E402  the workflow's own script: how "auto" workers are counted
 REPO = CI_DIR.parents[1]
 RESULTS = REPO / ".ci-results"
 STATE = Path(os.environ.get("ATCI_STATE_DIR", "/var/tmp/autotramita-ci"))  # noqa: S108
@@ -45,6 +47,13 @@ PREFIX = "atci"
 CACHE_VOLUMES = {"atci-uv-cache": "/cache/uv", "atci-npm-cache": "/cache/npm"}
 RUNNER_UID = 1001
 MIN_FREE_BYTES = 10 * 1024**3
+# Workspaces, and with them the databases of the test workers, live in memory when the shared
+# memory file system has this much room; several runs fit beside each other.
+TMPFS = Path("/dev/shm")  # noqa: S108
+TMPFS_WORK = TMPFS / "autotramita-ci-work"
+MIN_TMPFS_BYTES = 16 * 1024**3
+# Left to the operating system, development agents and other sessions.
+RESERVED_CPUS = 4
 NEEDS_EGRESS = re.compile(r"\buv sync\b|check-clients\.sh|\buvx\b")
 # A step that has the pinned scanner download its databases: the job gets an egress network,
 # used by that scanner container only (the broker), never by the step container itself.
@@ -229,6 +238,49 @@ def volume_mib(name: str) -> int:
     return round(tree_bytes(Path(found.stdout.strip())) / 1024**2) if not found.returncode else 0
 
 
+# Memory a test worker needs with its PostgreSQL server, with a wide margin (benchmark report).
+WORKER_MEMORY = 1024**3
+
+
+def available_memory() -> int:
+    with suppress(OSError):
+        found = re.search(r"^MemAvailable:\s+(\d+) kB", Path("/proc/meminfo").read_text(), re.M)
+        if found:
+            return int(found[1]) * 1024
+    return 0
+
+
+def worker_budget(other_runs: int, cpus: int, memory: int, load: float = 0.0) -> int:
+    """Workers of a run whose workflow says ``auto``: the workflow's own number, shared with the
+    runs already active; fewer (but not below four) while other work keeps the CPUs busy; and no
+    more than half of the free memory allows."""
+    share = pytest_phases.resolve_workers("auto", cpus) // (other_runs + 1)
+    idle = cpus - RESERVED_CPUS - round(load)
+    share = min(share, max(4, idle))
+    if memory:
+        share = min(share, memory // (2 * WORKER_MEMORY))
+    return max(2, share)
+
+
+def work_roots() -> list[Path]:
+    return [STATE / "work", TMPFS_WORK]
+
+
+def work_root() -> Path:
+    """Where this run puts its job workspaces. ``ATCI_STATE_DIR`` keeps everything below it."""
+    if "ATCI_STATE_DIR" not in os.environ and TMPFS.is_dir():
+        if shutil.disk_usage(TMPFS).free >= MIN_TMPFS_BYTES:
+            private_directory(TMPFS_WORK)  # anyone may create entries in /dev/shm: check ours
+            return TMPFS_WORK
+    return STATE / "work"
+
+
+def active_runs(but: str) -> int:
+    locks = STATE / "locks"
+    found = locks.glob("*.lock") if locks.exists() else []
+    return sum(1 for lock in found if lock.stem != but and is_active(lock.stem))
+
+
 # --- one job -------------------------------------------------------------------------------
 
 
@@ -238,7 +290,7 @@ class JobRun:
         self.selection = selection
         self.job = selection.job
         self.project = f"{PREFIX}-{run.run_id}-{self.job.key}"
-        self.workspace = STATE / "work" / run.run_id / self.job.key
+        self.workspace = run.work / run.run_id / self.job.key
         self.logs = run.directory / "logs" / self.job.key
         self.deadline = 0.0
         self.netns = ""
@@ -365,6 +417,11 @@ class JobRun:
             **self.job.env,
             **step.env,
         }
+        if "PYTEST_WORKERS" in env:
+            if self.run.workers is not None:
+                env["PYTEST_WORKERS"] = str(self.run.workers)
+            elif env["PYTEST_WORKERS"] == "auto":
+                env["PYTEST_WORKERS"] = str(self.run.budget["workers"])
         if not NEEDS_EGRESS.search(step.run):
             env["UV_OFFLINE"] = "1"
         if NEEDS_DOCKER.search(step.run):
@@ -577,7 +634,9 @@ class Run:
         self.serial: bool = options.serial
         self.keep: bool = options.keep_workspace
         self.tests: list[str] = options.tests
+        self.workers: int | None = options.workers
         self.directory = RESULTS / self.run_id
+        self.work = STATE / "work"
         self.redact = report.Redactor([])
 
     def execute(self) -> int:
@@ -587,6 +646,7 @@ class Run:
             "run_id": self.run_id,
             "profile": self.profile,
             "targeted": bool(self.tests),
+            "workers_override": self.workers,
             "started": now(),
             "runner_hash": runner_hash(),
             "content": {
@@ -611,7 +671,7 @@ class Run:
                     monitor.done.set()
                     remove_containers(owned(self.run_id))
                     if not self.keep:
-                        shutil.rmtree(STATE / "work" / self.run_id, ignore_errors=True)
+                        shutil.rmtree(self.work / self.run_id, ignore_errors=True)
         except Exception as problem:
             summary["error"] = self.redact(f"{type(problem).__name__}: {problem}")
             say(f"ERROR {summary['error']}")
@@ -620,16 +680,13 @@ class Run:
         summary["interrupted"] = cancelled.is_set()
         suites = [suite for job in summary["jobs"] for suite in job["suites"]]
         summary["totals"] = {key: sum(s[key] for s in suites) for key in report.COUNTS}
-        summary["primary_suites"] = {
-            s["source_name"]: {key: s[key] for key in report.COUNTS}
-            for s in suites
-            if s["source_name"] in ("junit.xml", "junit-identity.xml")
-        }
+        summary["primary_suites"] = report.primary_suites(suites)
         summary["status"], summary["reasons"] = report.verdict(summary)
         report.write(summary, self.directory)
         point_latest(self.directory, self.profile)
         say("\n" + report.text_report(summary))
         say(f"Report: {self.directory / 'report.txt'}")
+        say(f"Short summary: {self.directory / 'brief.txt'}")
         if cancelled.is_set():
             return 130
         if summary.get("error"):
@@ -642,6 +699,7 @@ class Run:
         free = shutil.disk_usage(STATE).free
         if free < MIN_FREE_BYTES:
             raise RuntimeError(f"less than {MIN_FREE_BYTES // 1024**3} GiB free in {STATE}")
+        self.work = work_root()
         self.content = snapshots.take(self.source, self.ref)
         summary["content"] = {
             key: getattr(self.content, key)
@@ -677,6 +735,15 @@ class Run:
         summary["image_preparation_seconds"] = round(time.monotonic() - began, 1)
         summary["versions"] = self.versions(images | services)
         load_before = os.getloadavg()[0]
+        others, memory = active_runs(self.run_id), available_memory()
+        self.budget = {
+            "workers": worker_budget(others, os.cpu_count() or 1, memory, load_before),
+            "other_active_runs": others,
+            "host_load_1m": round(load_before, 2),
+            "memory_available_mib": round(memory / 1024**2),
+        }
+        if self.workers is None:
+            summary["worker_budget"] = self.budget
         monitor.start()
         workers = 1 if self.serial else len(selections)
         with ThreadPoolExecutor(max_workers=workers) as pool:
@@ -693,6 +760,7 @@ class Run:
             **monitor.result(),
             "workspaces_mib": sum(j["workspace_mib"] for j in summary["jobs"]),
             **{f"{name}_mib": volume_mib(name) for name in CACHE_VOLUMES},
+            "workspace_root": str(self.work),
             "host_cpus": os.cpu_count(),
             "host_load_1m_before": round(load_before, 2),
             "host_load_1m_after": round(os.getloadavg()[0], 2),
@@ -876,8 +944,8 @@ def cleanup(options: argparse.Namespace) -> int:
     )  # fmt: skip
     for identifier in [] if dry else built:
         docker("image", "rm", "-f", identifier, check=False)
-    work = STATE / "work"
-    for directory in sorted(work.iterdir()) if work.exists() else []:
+    workspaces = [d for root in work_roots() if root.is_dir() for d in root.iterdir()]
+    for directory in sorted(workspaces):
         if not is_active(directory.name):
             say(f"{verb} workspace {directory}")
             if not dry:
@@ -927,15 +995,20 @@ def cleanup(options: argparse.Namespace) -> int:
 # --- command line --------------------------------------------------------------------------
 
 
+def private_directory(path: Path) -> None:
+    """Only the user running CI may enter; the containers are given their own job directory as a
+    mount, so they do not need to pass through it."""
+    path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if path.is_symlink() or path.stat().st_uid != os.getuid():
+        sys.exit(f"{path} must be a real directory owned by the user running Local CI")
+    path.chmod(0o700)
+
+
 def private_state_directory() -> None:
-    """Workspaces live here. Only the user running CI may enter; the containers are given their
-    own job directory as a mount, so they do not need to pass through it."""
+    """Locks, and the workspaces when memory is short, live here."""
     if os.getuid() not in (0, RUNNER_UID):
         sys.exit(f"Local CI must run as root or uid {RUNNER_UID} (workspace ownership)")
-    STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
-    if STATE.is_symlink() or STATE.stat().st_uid != os.getuid():
-        sys.exit(f"{STATE} must be a real directory owned by the user running Local CI")
-    STATE.chmod(0o700)
+    private_directory(STATE)
 
 
 def stop(signum: int, _frame: Any) -> None:
@@ -953,6 +1026,11 @@ def main(argv: list[str]) -> int:
     run.add_argument("--source", help="test another checkout (used to prove failures fail)")
     run.add_argument("--serial", action="store_true", help="one job at a time")
     run.add_argument("--keep-workspace", action="store_true")
+    run.add_argument(
+        "--workers",
+        type=int,
+        help="override PYTEST_WORKERS of the workflow (benchmarks; not acceptance evidence)",
+    )
     run.add_argument("tests", nargs="*", help="after --: pytest arguments for a targeted run")
     state = commands.add_parser("status")
     state.add_argument("--limit", type=int, default=10)

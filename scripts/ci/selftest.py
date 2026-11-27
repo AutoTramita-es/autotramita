@@ -336,6 +336,67 @@ class Verdict(unittest.TestCase):
         self.assertEqual(report.verdict({**summary(), "error": "x"})[0], report.FAIL)
 
 
+class WorkerBudget(unittest.TestCase):
+    GIB = 1024**3
+
+    def test_simultaneous_runs_share_the_workers_and_memory_limits_them(self) -> None:
+        import runner
+
+        alone = runner.worker_budget(0, 32, 100 * self.GIB)
+        self.assertEqual(alone, runner.pytest_phases.AUTO_LIMIT)
+        self.assertEqual(runner.worker_budget(1, 32, 100 * self.GIB), alone // 2)
+        self.assertEqual(runner.worker_budget(20, 32, 100 * self.GIB), 2)
+        self.assertEqual(runner.worker_budget(0, 32, 8 * self.GIB), 4)
+        self.assertEqual(runner.worker_budget(0, 4, 100 * self.GIB), 4)
+
+    def test_a_busy_host_gets_fewer_workers_but_never_fewer_than_four(self) -> None:
+        import runner
+
+        limit = runner.pytest_phases.AUTO_LIMIT
+        self.assertEqual(runner.worker_budget(0, 32, 100 * self.GIB, load=8.0), min(limit, 20))
+        self.assertEqual(runner.worker_budget(0, 32, 100 * self.GIB, load=22.0), 6)
+        self.assertEqual(runner.worker_budget(0, 32, 100 * self.GIB, load=90.0), 4)
+
+
+class Workspaces(unittest.TestCase):
+    def test_cleanup_looks_at_every_place_a_workspace_can_be(self) -> None:
+        import runner
+
+        roots = runner.work_roots()
+        self.assertIn(runner.TMPFS_WORK, roots)
+        self.assertIn(runner.STATE / "work", roots)
+
+    def test_a_directory_of_another_user_is_refused(self) -> None:
+        import runner
+
+        with tempfile.TemporaryDirectory() as temporary:
+            link = Path(temporary) / "work"
+            link.symlink_to("/")
+            with self.assertRaises((SystemExit, OSError)):
+                runner.private_directory(link)
+
+
+class RunReport(unittest.TestCase):
+    @staticmethod
+    def suite(source: str, tests: int, deselected: int) -> dict[str, Any]:
+        zero = {"failed": 0, "errors": 0, "skipped": 0}
+        return {"source_name": source, "tests": tests, "passed": tests,
+                "deselected": deselected, **zero}  # fmt: skip
+
+    def test_the_parts_of_a_suite_are_counted_as_one(self) -> None:
+        found = report.primary_suites(
+            [
+                self.suite("junit-parallel.xml", 90, 30),  # 120 collected: 20 are left out
+                self.suite("junit-serial.xml", 10, 110),
+                self.suite("junit-identity-primary.xml", 50, 0),
+                self.suite("junit-identity-shard1.xml", 40, 7),
+            ]
+        )
+        main, identity = found["junit.xml"], found["junit-identity.xml"]
+        self.assertEqual((main["tests"], main["deselected"]), (100, 20))
+        self.assertEqual((identity["tests"], identity["deselected"]), (90, 7))
+
+
 class Redaction(unittest.TestCase):
     def test_credentials_and_tokens_are_removed(self) -> None:
         redact = report.Redactor(

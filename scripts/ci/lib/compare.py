@@ -75,6 +75,8 @@ def compare(directory: Path, run_id: str | None) -> tuple[bool, list[str]]:
     commit = local["content"]["commit"]
     if local["profile"] != "all" or local["targeted"]:
         raise RuntimeError("only a full, untargeted run ('all') can be compared")
+    if local.get("workers_override") is not None:
+        raise RuntimeError("the local run overrode PYTEST_WORKERS; run without --workers")
     if local["content"]["dirty"]:
         raise RuntimeError("the local run tested uncommitted content; use run-all.sh --ref <sha>")
     repo = repository()

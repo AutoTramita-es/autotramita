@@ -24,6 +24,7 @@ dev = [
     "mypy>=1.13",
     "openapi-spec-validator>=0.9.0",
     "pytest>=8.3",
+    "pytest-xdist>=3.8,<4",
     "ruff>=0.8",
     "types-jsonschema>=4.26.0.20261006",
 ]
@@ -66,4 +67,7 @@ files = ["app", "tests"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-ra --strict-markers --strict-config -m 'not keycloak'"
-markers = ["keycloak: needs the disposable Keycloak container (identity CI job)"]
+markers = [
+    "keycloak: needs the disposable Keycloak container (identity CI job)",
+    "serial: runs alone, after the parallel tests (tests/serial_tests.py)",
+]

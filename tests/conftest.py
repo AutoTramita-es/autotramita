@@ -2,18 +2,83 @@
 
 Local: start disposable containers and export TEST_PG_ADMIN_URL (superuser) and
 TEST_REDIS_URL. In CI (``CI`` set) a missing variable fails the run instead of skipping.
+
+The suite runs in two parts (INFRA-CI-02): most tests in parallel pytest-xdist workers, then the
+tests listed in ``tests/serial_tests.py`` alone. Every test creates its own databases and roles.
+Workers additionally share nothing: each has a PostgreSQL server of its own, because roles are
+global to a server and migrations inspect all of them, and a Redis logical database of its own.
 """
 
 import os
 import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 import psycopg
 import pytest
 from app.core.dbroles import RoleNames, create_roles, harden
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import URL, make_url
+from tests.serial_tests import SPLIT_FILES, is_serial
+from xdist.remote import Producer  # type: ignore[import-untyped]  # xdist ships no types
+from xdist.scheduler import LoadFileScheduling  # type: ignore[import-untyped]
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.hookimpl(tryfirst=True)  # before ``-m`` deselects
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    for item in items:
+        function = getattr(item, "originalname", item.name)
+        if item.path.is_relative_to(ROOT) and is_serial(
+            item.path.relative_to(ROOT).as_posix(), function
+        ):
+            item.add_marker(pytest.mark.serial)
+
+
+class FileScheduling(LoadFileScheduling):  # type: ignore[misc]
+    """``--dist loadfile``, except that the tests of ``SPLIT_FILES`` are separate work units."""
+
+    def _split_scope(self, nodeid: str) -> str:
+        file = str(super()._split_scope(nodeid))
+        return nodeid if file in SPLIT_FILES else file
+
+
+@pytest.hookimpl(optionalhook=True)
+def pytest_xdist_make_scheduler(config: pytest.Config, log: Producer) -> FileScheduling | None:
+    return FileScheduling(config, log) if config.getoption("dist") == "loadfile" else None
+
+
+def worker_redis_url(url: str, worker: str | None, workers_url: str | None) -> str:
+    """The Redis URL of one xdist worker. The first worker and serial runs use the configured
+    database; worker ``gwN`` uses logical database N of the server of the additional workers."""
+    if worker is None or worker == "gw0":
+        return url
+    if not workers_url:
+        raise ValueError(
+            "parallel workers need Redis databases of their own: set TEST_REDIS_WORKERS_URL "
+            "(a server with enough logical databases) or run pytest without -n"
+        )
+    return urlunsplit(urlsplit(workers_url)._replace(path=f"/{int(worker.removeprefix('gw'))}"))
+
+
+def worker_pg_url(url: str, worker: str | None, port_base: str | None) -> str:
+    """The PostgreSQL URL of one xdist worker. The first worker and serial runs use the
+    configured server; worker ``gwN`` uses the one on port ``port_base + N``. Sharing a server is
+    refused: it fails at random, when one worker drops a role another one is looking at."""
+    if worker is None or worker == "gw0":
+        return url
+    if not port_base:
+        raise ValueError(
+            "parallel workers need a PostgreSQL server each: set TEST_PG_WORKER_PORT_BASE "
+            "(worker gwN connects to that port + N) or run pytest without -n"
+        )
+    parts = urlsplit(url)
+    credentials, at, _ = parts.netloc.rpartition("@")
+    port = int(port_base) + int(worker.removeprefix("gw"))
+    return urlunsplit(parts._replace(netloc=f"{credentials}{at}{parts.hostname}:{port}"))
 
 
 def _require(name: str) -> str:
@@ -27,12 +92,20 @@ def _require(name: str) -> str:
 
 @pytest.fixture(scope="session")
 def pg_admin_url() -> str:
-    return _require("TEST_PG_ADMIN_URL")
+    return worker_pg_url(
+        _require("TEST_PG_ADMIN_URL"),
+        os.environ.get("PYTEST_XDIST_WORKER"),
+        os.environ.get("TEST_PG_WORKER_PORT_BASE"),
+    )
 
 
 @pytest.fixture(scope="session")
 def redis_url() -> str:
-    return _require("TEST_REDIS_URL")
+    return worker_redis_url(
+        _require("TEST_REDIS_URL"),
+        os.environ.get("PYTEST_XDIST_WORKER"),
+        os.environ.get("TEST_REDIS_WORKERS_URL"),
+    )
 
 
 @pytest.fixture

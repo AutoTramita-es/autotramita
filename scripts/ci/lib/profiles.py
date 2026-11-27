@@ -10,6 +10,7 @@ from workflow import Job, Step, Unsupported, Workflow
 
 INSTALL = "Install locked dependencies"
 WAIT = "Wait for PostgreSQL and Redis"
+WORKERS = "Start the servers of the additional test workers"
 TESTS = "Tests ("
 COUNTS = "Test counts"
 
@@ -99,7 +100,7 @@ def select(profile: str, workflow: Workflow) -> list[Selection]:
         return [Selection(job, steps, services=False, infra="exclude")]
     if profile == "integration":
         job = _job(workflow, "test")
-        steps = _pick(job, INSTALL, WAIT, TESTS, COUNTS)
+        steps = _pick(job, INSTALL, WAIT, WORKERS, TESTS, COUNTS)
         return [Selection(job, steps, infra="only", local=[LOCAL_ISOLATION])]
     if profile == "migrations":
         job = _job(workflow, "test")
