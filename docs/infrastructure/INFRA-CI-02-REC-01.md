@@ -128,9 +128,38 @@ The number of dangling anonymous Docker volumes of the host was the same before 
 
 Inventory against the reviewed baseline, case by case (main suite of `20261127-145105-141d26` against the fast and integration runs `20261127-185743-7c4501` and `185610-8abe76`): 1614 → 1733, **no baseline case missing**, 119 added (`test_ci_inventory` 69, `test_ci_parallel` 39, `test_redis_namespaces` 11), none twice. The serial list is unchanged.
 
-### 4.2 Final checkpoint
+### 4.2 Final checkpoint: the tested implementation
 
-The full local run with `--ref`, the GitHub run and their comparison on the committed implementation are recorded by the documentation commit that follows it.
+**Tested implementation SHA: `3bbdf820f8791ebb06fb29005ae515ab29277917`, tree `389b063f12f9f68a3b96608180c09e93f2726dd1`.** The commit that records this section changes documentation only; it is a different SHA (see below).
+
+| Evidence | Result |
+|---|---|
+| Local full run `20261127-190000-b13df1` (`run-all.sh --ref`, clean content, not targeted, no worker override; 16 workers, 3 shards, no other CI run) | **PASS, 235.5 s**; 2181 test executions, none failed, errored or skipped |
+| GitHub run [46054031586](https://github.com/AutoTramita-es/autotramita/actions/runs/46054031586) (attempt 1; 4 workers, 2 shards) | **success, 344 s; 5 of 5 jobs successful** |
+| `compare-github.sh` | **EQUIVALENT** |
+
+| Suite | Tests | Inventory digest, identical local and GitHub |
+|---|---|---|
+| Main suite | 1733 passed (1632 parallel, 101 serial), 265 deselected | `2a1dd35609e1ccaf0e716ae6cd8e852ceaedfecc8223eccee9306c3fe02ec856` |
+| Keycloak suite | 265 passed, 99 deselected | `2e8de5d04c988d7d0896a50d00eed5196d228f2217855c579b13cc393a6144b1` |
+| Migration step | 6 passed | counts only |
+| Rate-limit regression | 59 passed, three times | counts only |
+
+Also equal on both sides: step list and outcomes of all jobs, 575 commits scanned without a leak, the dependency audit, both imported realms and client generation. The runner self-test (49 tests) runs locally only and passed in the full run.
+
+| Job (s) | Local | GitHub |
+|---|---|---|
+| Lint, types, tests | 211 | 254 |
+| Keycloak 26.8.2 integration | 233 | 341 |
+| Keycloak image vulnerability scan | 64 | 72 |
+| Dependency audit | 5 | 18 |
+| Secret scan | 5 | 13 |
+
+These are single runs: they show that the corrections did not make this checkpoint slower, not what a run will take.
+
+### 4.3 The documentation commit
+
+The final commit of this package adds sections 4.2 and 4.3 and nothing else. Its own full local run, GitHub run and comparison cannot be written into itself; they are reported to the owner with its SHA. `git diff 3bbdf82 <documentation commit> --stat` must list only files below `docs/`.
 
 ## 5. Deferred findings
 
