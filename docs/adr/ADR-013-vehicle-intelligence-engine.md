@@ -1,6 +1,6 @@
 # ADR-013: Vehicle Intelligence Engine (VIE)
 
-- **Status:** Proposed — owner review required
+- **Status:** Accepted — owner confirmed 2026-11-27
 - **Date:** 2026-11-27
 - **Project:** AutoTramita.es
 - **Depends on:** ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-008, ADR-011
@@ -8,9 +8,9 @@
 
 ## Context
 
-Repeated document analysis currently starts without durable vehicle knowledge. The owner wants to retain scanned information and VINs on AutoTramita-controlled EU infrastructure and improve recognition for both returning vehicles and future vehicles. The calculator preview currently has a non-persistence constraint; this proposal does not lift it. The existing Gemini-to-OpenAI workflow and authoritative BOE valuation engine should be reused, not duplicated.
+Repeated document analysis currently starts without durable vehicle knowledge. The owner wants to retain scanned information and VINs on AutoTramita-controlled EU infrastructure and improve recognition for both returning vehicles and future vehicles. The calculator preview currently has a non-persistence constraint; this decision does not lift it. The existing Gemini-to-OpenAI workflow and authoritative BOE valuation engine should be reused, not duplicated.
 
-## Proposed decision
+## Decision
 
 Create a shared logical Vehicle Intelligence Engine within the existing modular monolith and PostgreSQL architecture. No separate service or database is required by this decision. Provide authorized internal contracts to the calculator, vehicle registry, registration cases, Ficha Reducida and other business modules. Gemini reads and classifies documents; OpenAI interprets structured evidence, reconciles fields and ranks authoritative BOE candidates. Tax calculations remain deterministic.
 
@@ -56,7 +56,7 @@ Potentially fewer manual interventions and repeated API calls, improved BOE cand
 
 ## Open decisions and implementation gates
 
-- Owner acceptance of this ADR and explicit amendment of the calculator non-persistence constraint.
+- Owner acceptance recorded on 2026-11-27. Explicit amendment of the calculator non-persistence constraint remains pending.
 - Approved retention matrix, lawful bases, provider terms, EU infrastructure and security/privacy review.
 - Exact schema, API contracts, VIN normalization/indexing, promotion authority and evidence thresholds.
 - Whether raw OCR and original files are necessary for each purpose; default to minimization.
@@ -76,4 +76,4 @@ Potentially fewer manual interventions and repeated API calls, improved BOE cand
 
 ## Scope
 
-Architecture proposal only. No code, migration, dependency, storage provisioning, deployment, live persistence or changes to CALC-AI-01/AT-02 are authorized. Existing accepted ADRs prevail until an explicit amendment is approved.
+Accepted architecture decision only. No code, migration, dependency, storage provisioning, deployment, live persistence or changes to CALC-AI-01/AT-02 are authorized. Existing accepted ADRs prevail until an explicit amendment is approved.
