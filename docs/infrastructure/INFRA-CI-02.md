@@ -29,7 +29,7 @@ Use focused tests during corrections; do not push each experimental change. Run 
 ## 3. Proposed optimization order
 
 1. Benchmark current local and GitHub jobs; collect pytest --durations and JUnit timing, CPU, memory and disk; distinguish cold/warm cache and host contention. Use at least three comparable runs per configuration.
-2. Evaluate pytest-xdist (not currently declared) with 2/4/8 workers. Isolate PostgreSQL databases/roles, Redis state, files and ports per worker; keep shared-state, concurrency and timing-sensitive tests serial unless equivalence is proven. Preserve all three rate-limit regression repetitions and assertions. Verify test IDs/counts and outcomes against serial baseline.
+2. Evaluate pytest-xdist (not currently declared) with 1/2/4/8/12/16/24/32 workers (1 is the serial reference). Isolate PostgreSQL databases/roles, Redis state, files and ports per worker; keep shared-state, concurrency and timing-sensitive tests serial unless equivalence is proven. Preserve all three rate-limit regression repetitions and assertions. Verify test IDs/counts and outcomes against serial baseline.
 3. Profile Keycloak fixtures and OIDC tests. Split independent groups only with isolated realms, users, databases and containers. Preserve multi-node locking, MFA, DEV/PROD import and missing-provider fail-closed tests. Do not reuse mutable state across tests to save time.
 4. Add conservative automatic targeted selection to existing runner if beneficial. Map changed paths and transitive dependencies to profiles; include untracked changes and renames; unknown/shared/config/lockfile changes fall back to full CI. Never use selection to bypass acceptance checks. Existing explicit targeted commands remain available.
 5. Evaluate cache improvements only after measurement. uv caching and local npm/uv volumes already exist. Preserve pinned images, lockfiles, scanner freshness and broker restrictions; local Docker build currently deliberately uses --no-cache. Any change to broker or network boundary requires separate security review and authorization. Do not introduce a privileged or production-connected self-hosted GitHub runner.
@@ -38,7 +38,7 @@ Use focused tests during corrections; do not push each experimental change. Run 
 
 ## 4. Targets (not guarantees)
 
-FAST 10–60 s; TARGETED 1–3 min; main pytest 1–2 min; identity job 3–5 min; GitHub full 4–6 min; local full target to be set after baseline. Report median and range, resource costs and any regressions. Prioritize reduced development waiting over artificial benchmark targets.
+FAST 10–60 s; TARGETED 1–3 min; main pytest 1–2 min; identity job 3–5 min; GitHub full 4–6 min; local full target 2–3 min, subject to baseline and safety. Report median and range, resource costs and any regressions. Prioritize reduced development waiting over artificial benchmark targets.
 
 ## 5. Security and acceptance criteria
 
@@ -53,3 +53,31 @@ FAST 10–60 s; TARGETED 1–3 min; main pytest 1–2 min; identity job 3–5 mi
 ## 6. Open items
 
 Fresh host benchmarks, fixture-level profiling, safe worker count, automatic selection design, branch protection/current ruleset verification and any trigger change remain open. Existing local CI documentation remains authoritative for current commands. This is a proposal, not an execution order.
+
+
+## 7. Owner direction — dedicated development host (2026-11-27)
+
+The owner confirms the Ubuntu Hetzner server is dedicated to development and authorizes aggressive resource utilization to accelerate development and CI.
+
+- AMD Ryzen 9 5950X: 16 physical cores, 32 logical CPUs.
+- 128 GB DDR4 ECC (4 × 32 GB; historical OS-visible memory 125 GiB).
+- 2 × 3.84 TB enterprise U.2 NVMe SSD (7.68 TB raw; usable capacity and RAID layout unverified).
+- Intel I210 1 Gbit/s NIC.
+
+Benchmark all worker configurations above under isolated and concurrent full-CI workloads. Measure CPU, RAM, I/O, contention and elapsed time. Select the fastest repeatable safe configuration, not necessarily the largest worker count. Prefer adaptive resource budgets. Illustrative starting budgets: Python/PG/Redis 16 logical CPUs and 64 GB; Keycloak 8 and 32 GB; other checks/build/cache 4 and 16 GB; OS/agents reserve 4 and 16 GB. These are hypotheses, not hard limits. Coordinate simultaneous runs, avoid swapping/OOM and starvation of other development sessions. Use existing isolated tmpfs databases and safe caches. Preserve all isolation, assertions, timing regressions and independent GitHub evidence.
+
+Stretch local targets: FAST 10–30 s; TARGETED 15–60 s; Python suite 30–90 s; Keycloak 1–3 min; FULL LOCAL 2–3 min. These supersede earlier local targets as optimization goals only, not guaranteed acceptance thresholds. GitHub-hosted resource constraints differ.
+
+## 8. Execution and reporting handoff
+
+Recommended agent: Claude Code, Sonnet 5.5 Medium, implementation role, new SESSION-C initially; continue the identified INFRA-CI-02 implementation session without /clear for subsequent work. Independent review requires a separate session.
+
+Working directory: /opt/stacks/autotramita.es; branch dev. Read this document, LOCAL-CI.md, INFRA-CI-01-ACCEPTANCE.md and current ci.yml. Verify HEAD and concurrent work. Follow the owner's separately issued implementation authorization; this documentation update alone is not a new authorization to change triggers, broker boundaries, firewall, branch protection or deploy.
+
+Deliverables in English:
+- INFRA-CI-02-BENCHMARK.md: baseline, methodology, per-worker and concurrent measurements, median/range, resources and percentage savings.
+- INFRA-CI-02-IMPLEMENTATION.md: changes, decisions, affected files, limitations and rollback.
+- INFRA-CI-02-ACCEPTANCE.md: acceptance matrix, exact SHA/tree, local run IDs, test counts, GitHub run IDs/URLs, findings and recommendation.
+- Update LOCAL-CI.md and this specification; create or update root CLAUDE.md and AGENTS.md with consistent CI rules within authorized scope.
+
+Stage only task-specific paths; do not commit raw logs, secrets or .ci-results. Push completed authorized changes to dev at the checkpoint, verify independent GitHub CI on the exact final SHA, no merge or deployment. Report READY FOR INDEPENDENT REVIEW or BLOCKED, not self-acceptance. Owner report in Croatian with links, actual savings, test evidence and decisions. Independent review and owner acceptance remain mandatory.
