@@ -350,6 +350,13 @@ class WorkerBudget(unittest.TestCase):
         self.assertEqual(runner.worker_budget(0, 32, 8 * self.GIB), 4)
         self.assertEqual(runner.worker_budget(0, 4, 100 * self.GIB), 4)
 
+    def test_a_targeted_run_takes_few_workers(self) -> None:
+        import runner
+
+        alone = runner.worker_budget(0, 32, 100 * self.GIB, targeted=True)
+        self.assertEqual(alone, runner.TARGETED_WORKERS)
+        self.assertEqual(runner.worker_budget(20, 32, 100 * self.GIB, targeted=True), 2)
+
     def test_a_busy_host_gets_fewer_workers_but_never_fewer_than_four(self) -> None:
         import runner
 

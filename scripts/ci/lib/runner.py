@@ -54,6 +54,8 @@ TMPFS_WORK = TMPFS / "autotramita-ci-work"
 MIN_TMPFS_BYTES = 16 * 1024**3
 # Left to the operating system, development agents and other sessions.
 RESERVED_CPUS = 4
+# A targeted run has few tests: more workers, each with its own server, cost more than they save.
+TARGETED_WORKERS = 4
 NEEDS_EGRESS = re.compile(r"\buv sync\b|check-clients\.sh|\buvx\b")
 # A step that has the pinned scanner download its databases: the job gets an egress network,
 # used by that scanner container only (the broker), never by the step container itself.
@@ -275,16 +277,20 @@ def available_memory() -> int:
     return 0
 
 
-def worker_budget(other_runs: int, cpus: int, memory: int, load: float = 0.0) -> int:
+def worker_budget(
+    other_runs: int, cpus: int, memory: int, load: float = 0.0, targeted: bool = False
+) -> int:
     """Workers of a run whose workflow says ``auto``: the workflow's own number, shared with the
     runs already active; fewer (but not below four) while other work keeps the CPUs busy; and no
-    more than half of the free memory allows."""
+    more than half of the free memory allows. A targeted run takes ``TARGETED_WORKERS`` at
+    most."""
     share = pytest_phases.resolve_workers("auto", cpus) // (other_runs + 1)
     idle = cpus - RESERVED_CPUS - round(load)
     share = min(share, max(4, idle))
     if memory:
         share = min(share, memory // (2 * WORKER_MEMORY))
-    return max(2, share)
+    share = max(2, share)
+    return min(share, TARGETED_WORKERS) if targeted else share
 
 
 def work_roots() -> list[Path]:
@@ -763,7 +769,9 @@ class Run:
         load_before = os.getloadavg()[0]
         others, memory = active_runs(self.run_id), available_memory()
         self.budget = {
-            "workers": worker_budget(others, os.cpu_count() or 1, memory, load_before),
+            "workers": worker_budget(
+                others, os.cpu_count() or 1, memory, load_before, targeted=bool(self.tests)
+            ),
             "other_active_runs": others,
             "host_load_1m": round(load_before, 2),
             "memory_available_mib": round(memory / 1024**2),
