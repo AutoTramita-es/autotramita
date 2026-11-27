@@ -15,6 +15,12 @@ unchanged: the serial behaviour before INFRA-CI-02.
 A part that selects no test fails the run, except in a targeted run (``PYTEST_ADDOPTS`` set),
 where an empty part is left out as long as the other part runs something.
 
+Identities, not totals (scripts/ci/inventory.py, INFRA-CI-02-REC-01): before the run the unsplit
+command and both parts are collected; the two selections must be disjoint and together equal the
+unsplit one. After the run every part must report exactly the tests it selected. A targeted run
+with several workers takes ``not keycloak`` as the unsplit selection, because the parts replace
+any ``-m`` of its own.
+
 Usage: python scripts/ci/pytest_phases.py --workers N|auto -- pytest <args> --junitxml=<file>
 """
 
@@ -25,10 +31,13 @@ import os
 import subprocess
 import sys
 from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import inventory
 from junit_merge import merge
 
+Collect = Callable[[Sequence[str], Mapping[str, str]], list[str]]
 PARTS = {"parallel": "not keycloak and not serial", "serial": "serial and not keycloak"}
 NO_TESTS = 5  # pytest exit code
 MAX_WORKERS = 32  # the logical CPUs of the development server
@@ -81,19 +90,37 @@ def part_command(arguments: Sequence[str], part: str, workers: int, junit: Path)
     return [*command, f"--junitxml={junit}"]
 
 
-def selects_tests(command: Sequence[str], environment: Mapping[str, str]) -> bool:
-    """Collection only, for targeted runs. It must leave no result file behind."""
-    quiet = {k: v for k, v in environment.items() if k != "ATCI_JUNIT_DIR"}
-    probe = [a for a in command if not a.startswith("--junitxml=")]
-    for flag in ("-n", "--dist"):
-        if flag in probe:
-            del probe[probe.index(flag) : probe.index(flag) + 2]
-    done = subprocess.run(  # noqa: S603
-        [*probe, "--collect-only", "-q"], env=quiet, capture_output=True, text=True
-    )
-    if done.returncode not in (0, NO_TESTS):
-        return True  # let the real run report the error
-    return done.returncode == 0
+def selections(
+    reference: list[str], planned: Mapping[str, list[str]], env: Mapping[str, str], collect: Collect
+) -> tuple[list[str], dict[str, list[str]]]:
+    """The identities of the unsplit selection and of every part, collected at the same time."""
+    with ThreadPoolExecutor(max_workers=1 + len(planned)) as pool:
+        whole = pool.submit(collect, reference, env)
+        parts = {name: pool.submit(collect, command, env) for name, command in planned.items()}
+        return inventory.identities(whole.result()), {
+            name: inventory.identities(future.result()) for name, future in parts.items()
+        }
+
+
+def partition_problems(whole: Sequence[str], parts: Mapping[str, Sequence[str]]) -> list[str]:
+    """The parts must be complementary: no test in two of them, together the unsplit selection."""
+    problems = []
+    chosen = [name for part in parts.values() for name in part]
+    for title, names in (
+        ("in both parts", sorted({name for name in chosen if chosen.count(name) > 1})),
+        ("in no part", sorted(set(whole) - set(chosen))),
+        ("only in a part", sorted(set(chosen) - set(whole))),
+    ):
+        if names:
+            problems.append(f"{len(names)} tests {title}: {', '.join(names[: inventory.LISTED])}")
+    if not whole:
+        problems.append("the selection holds no test")
+    return problems
+
+
+def report(problems: Sequence[str]) -> None:
+    for problem in problems:
+        print(f"pytest_phases: inventory: {problem}", file=sys.stderr)
 
 
 def run(
@@ -101,36 +128,61 @@ def run(
     workers: int,
     environment: Mapping[str, str],
     call: Callable[[list[str]], int] = lambda c: subprocess.call(c),  # noqa: S603
-    probe: Callable[[Sequence[str], Mapping[str, str]], bool] = selects_tests,
+    collect: Collect = inventory.collect,
 ) -> int:
     if not 0 <= workers <= MAX_WORKERS:
         raise Usage(f"--workers must be between 0 and {MAX_WORKERS}")
     arguments, target = split_command(command)
     target.unlink(missing_ok=True)
+    unsplit = [sys.executable, "-m", "pytest", *arguments]
     if workers <= 1:
-        return call([sys.executable, "-m", "pytest", *arguments, f"--junitxml={target}"])
+        expected = inventory.identities(collect(unsplit, environment))
+        code = call([*unsplit, f"--junitxml={target}"])
+        if code not in (0, 1):  # no test, interrupted or unusable: nothing to compare
+            return code
+        problems = inventory.differences(expected, [target])
+        report(problems)
+        if not problems:
+            print(inventory.statement(expected))
+        return code or int(bool(problems))
     targeted = bool(environment.get("PYTEST_ADDOPTS", "").strip())
-    planned = []
+    planned = {}
+    junits = {}
     for part in PARTS:
-        junit = target.with_name(f"{target.stem}-{part}.xml")
-        junit.unlink(missing_ok=True)
-        planned.append((part, junit, part_command(arguments, part, workers, junit)))
+        junits[part] = target.with_name(f"{target.stem}-{part}.xml")
+        junits[part].unlink(missing_ok=True)
+        planned[part] = part_command(arguments, part, workers, junits[part])
+    reference = [*unsplit, "-m", "not keycloak"] if targeted else unsplit
+    whole, parts = selections(reference, planned, environment, collect)
     if targeted:
-        planned = [entry for entry in planned if probe(entry[2], environment)]
-        if not planned:
+        if not any(parts.values()):
             print("pytest_phases: the targeted selection holds no test", file=sys.stderr)
             return NO_TESTS
+        planned = {name: full for name, full in planned.items() if parts[name]}
+    problems = partition_problems(whole, parts)
+    if problems:
+        report(problems)
+        return 1
     result = 0
-    for part, _, full in planned:
+    for part, full in planned.items():
         how = f"{workers} workers" if part == "parallel" else "one at a time"
         print(f"== {part} part ({how}): -m '{PARTS[part]}' ==", flush=True)
         code = call(full)
         result = result or code
         if code not in (0, 1, NO_TESTS):  # interrupted or unusable: do not go on
             return code
-    totals = merge([junit for _, junit, _ in planned], target)
+    totals = merge([junits[part] for part in planned], target)
     print("== both parts: " + " ".join(f"{k}={v}" for k, v in totals.items()) + " ==")
-    return result
+    for part in planned:
+        if not parts[part]:
+            problems.append(f"the {part} part selects no test")
+            continue
+        found = inventory.differences(parts[part], [junits[part]])
+        problems += [f"{part} part: {problem}" for problem in found]
+    report(problems)
+    if not problems:
+        print(inventory.statement(whole))
+    return result or int(bool(problems))
 
 
 def main(argv: list[str]) -> int:
@@ -146,6 +198,9 @@ def main(argv: list[str]) -> int:
             print(workers)
             return 0
         return run(command, workers, os.environ)
+    except inventory.InventoryError as problem:
+        print(f"pytest_phases: inventory: {problem}", file=sys.stderr)
+        return problem.code
     except (Usage, OSError, ValueError, SyntaxError) as problem:
         print(f"pytest_phases: {problem}", file=sys.stderr)
         return 2

@@ -14,7 +14,6 @@ import httpx
 import pytest
 from app.auth.idp import IdpCredential
 from app.auth.security import recovery as recovery_module
-from app.auth.security.markers import RecoveryMarkers
 from app.auth.security.notify import NoticeKind
 from app.auth.web.csrf import csrf_token
 from app.core.ratelimit import create_redis
@@ -22,7 +21,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from tests.auth.fake_admin import FakeAdmin, RecordingNotifier
 from tests.auth.fake_idp import NOW
-from tests.auth.web_harness import ORIGIN_WEB, SESSION_COOKIE, Web, build_web
+from tests.auth.web_harness import (
+    ORIGIN_WEB,
+    SESSION_COOKIE,
+    Web,
+    build_web,
+    private_markers,
+)
 from tests.conftest import RoleEnv
 from tests.test_roles_and_migrations import migrate
 
@@ -67,16 +72,20 @@ def problem(response: httpx.Response, status: int, code: str) -> None:
     assert response.json()["code"] == code
 
 
-@pytest.fixture
-def rig(role_env: RoleEnv, redis_url: str) -> Iterator[Rig]:
+def security_rig(role_env: RoleEnv, redis_url: str) -> Iterator[Rig]:
     migrate(role_env.engine("owner"), "upgrade", "head")
     web = build_web(role_env, redis_url, AUTH_SECURITY_HMAC_KEY="k" * 32)
     admin, notifier = FakeAdmin(), RecordingNotifier()
     web.runtime.admin, web.runtime.notifier = admin, notifier
-    web.runtime.markers = RecoveryMarkers(create_redis(redis_url), namespace=f"m{id(web)}")
+    web.runtime.markers = private_markers(redis_url, "m")
     admin.add(EMAIL, SUB)
     yield Rig(web, admin, notifier)
     web.close()
+
+
+@pytest.fixture
+def rig(role_env: RoleEnv, redis_url: str) -> Iterator[Rig]:
+    yield from security_rig(role_env, redis_url)
 
 
 def anonymous(rig: Rig) -> TestClient:

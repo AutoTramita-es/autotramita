@@ -2,13 +2,15 @@
 
 Date: 2026-11-27. Specification and owner authorizations: [INFRA-CI-02.md](INFRA-CI-02.md) (sections 1–9). Measurements: [INFRA-CI-02-BENCHMARK.md](INFRA-CI-02-BENCHMARK.md). Verdict and evidence: [INFRA-CI-02-ACCEPTANCE.md](INFRA-CI-02-ACCEPTANCE.md). How to use Local CI: [LOCAL-CI.md](LOCAL-CI.md).
 
+**Corrected after the independent review** by [INFRA-CI-02-REC-01](INFRA-CI-02-REC-01.md) (2026-11-27): a PostgreSQL server per additional Keycloak shard, random test namespaces, suites checked by test identity, ownership-scoped cleanup. Text below that it changes is marked.
+
 The existing Local CI runner was extended. `ci.yml` remains the single definition of what runs, locally and on GitHub. Triggers, concurrency, permissions, job names, the Docker broker policy, host firewall and production infrastructure are unchanged.
 
 ## 1. What changed
 
 ### 1.1 Main test suite in parallel
 
-- `scripts/ci/pytest_phases.py` (new) takes the workflow's pytest command and runs it as two complementary selections: `-m "not keycloak and not serial"` in pytest-xdist workers (`--dist loadfile`), then `-m "serial and not keycloak"` alone. Both always run; the first failure is the exit code; the two JUnit files are joined into the one the unchanged "Test counts" step reads. A part that selects nothing fails the run (except in a targeted run). One worker runs the original single command.
+- `scripts/ci/pytest_phases.py` (new) takes the workflow's pytest command and runs it as two complementary selections: `-m "not keycloak and not serial"` in pytest-xdist workers (`--dist loadfile`), then `-m "serial and not keycloak"` alone. Both always run; the first failure is the exit code; the two JUnit files are joined into the one the unchanged "Test counts" step reads. A part that selects nothing fails the run (except in a targeted run). One worker runs the original single command. (REC-01: the parts must be complementary and report exactly the test identities they selected.)
 - `PYTEST_WORKERS: "auto"`: one worker per usable CPU, at most `AUTO_LIMIT` (16, from the benchmark matrix).
 - `tests/serial_tests.py` (new) lists the tests that run alone: the whole rate-limit file and every test that races threads, sleeps, uses leases or expiry, a fixed port or measured time. `tests/conftest.py` gives them the `serial` marker. A guard test derives the same set statically and fails when a test is missing from the list or a listed name no longer exists.
 - Slow files whose tests each build their own state are handed to workers test by test (`SPLIT_FILES`; a small subclass of xdist's file scheduler in `tests/conftest.py`).
@@ -30,8 +32,8 @@ A guard checks that the worker servers use the digest of the service image.
 
 ### 1.3 Keycloak tests in shards
 
-- `scripts/ci/keycloak_shards.py` (new) runs the identity tests as `KEYCLOAK_SHARDS` simultaneous pytest processes (`auto`: 3 with 16 or more CPUs, otherwise 2). Each additional shard has its own Keycloak container (own in-memory database), a realm generated from `realm-test.json` with other SMTP and back-channel ports (the step verifies the substitution), and its own Redis logical database. The first shard keeps the two cluster nodes and takes every file no other shard names, so a new test file is never lost.
-- Before the shards start, the suite is collected as a whole; afterwards the number of distinct executed tests must equal it. The JUnit files are joined into `junit-identity.xml`; spike observations are merged.
+- `scripts/ci/keycloak_shards.py` (new) runs the identity tests as `KEYCLOAK_SHARDS` simultaneous pytest processes (`auto`: 3 with 16 or more CPUs, otherwise 2). Each additional shard has its own Keycloak container (own in-memory database), a realm generated from `realm-test.json` with other SMTP and back-channel ports (the step verifies the substitution), and its own Redis logical database. As first delivered all shards shared the job's PostgreSQL server (review finding P1-1); since REC-01 each additional shard also has a PostgreSQL server of its own. The first shard keeps the two cluster nodes and takes every file no other shard names, so a new test file is never lost.
+- Before the shards start, the suite is collected as a whole; afterwards the shard results must report exactly those test identities (as first delivered only the number of distinct tests was compared, review finding P3-1, corrected by REC-01). The JUnit files are joined into `junit-identity.xml`; spike observations are merged.
 - `tests/identity/kc.py`: the two sink ports can be set by environment variables (defaults unchanged).
 
 ### 1.4 Verification instances
@@ -83,7 +85,7 @@ Taken without explicit owner guidance; each can be reversed.
 |---|---|---|
 | D1 | Fix the stale provider version in `ci.yml` (separate commit) | section 1.7 |
 | D2 | A PostgreSQL server per worker instead of one shared server | section 1.2 |
-| D3 | Serial list in one file with a static guard, not decorators in the test files | one place to review; no edits in test files other sessions work on |
+| D3 | Serial list in one file with a static text guard (limits: LOCAL-CI.md), not decorators in the test files | one place to review; no edits in test files other sessions work on |
 | D4 | Wrapper scripts called by the workflow, not logic in the runner | GitHub and Local CI run exactly the same thing |
 | D5 | Workspaces on `/dev/shm` instead of a new broker flag (`--tmpfs`) | tmpfs without widening the Docker broker |
 | D6 | Automatic selection of tests by changed paths **not implemented** (optimization 4, "if beneficial") | with FAST at about 40 s and targeted runs available, a path-to-test mapping saves little and can silently miss a dependency |
@@ -92,12 +94,12 @@ Taken without explicit owner guidance; each can be reversed.
 | D9 | Benchmark matrix also with 2 workers; serial reference measured beside load once | specification section 3 names 2; see BENCHMARK for repetitions |
 | D10 | Wait for a Docker subnet (no host setting changed, no network of another stack removed) | two simultaneous full runs exhausted the default address pools and one failed |
 | D11 | Targeted runs: at most 4 workers | measured on four selections; small selections remain a few seconds slower than the former serial run (`--workers 1` avoids it), larger ones are faster |
-| D12 | The load-sensitive failure (limitation 9) was **not** worked around: no test moved, retried or changed | moving one test would hide one case of a general dependency; the decision belongs to review and the owner |
+| D12 | The single failed test of limitation 9 was **not** worked around: no test moved, retried or changed | its cause was not established; the decision belonged to review and the owner. The review reproduced another cause, corrected by REC-01 |
 | D13 | The comparison tool sums the summaries of a sharded job | the first comparison reported DIFFERENT only because the shard counts differ; totals of every outcome must still be equal |
 
 ## 4. Limitations
 
-1. Parallel tests change which tests run next to each other. The serial list is the safeguard; its static guard recognises threads, sleeps, timers and monotonic or performance clocks, not every possible timing dependency (for example one hidden behind database time).
+1. Parallel tests change which tests run next to each other. The serial list is the safeguard, and it is kept by test authors. Its guard is a text search for a few constructs and does not detect leases, expiry, most `conftest.py` fixtures or other indirect timing dependencies; the exact list is in LOCAL-CI.md, "Writing tests".
 2. The guard for split files rejects module, class, package and session fixtures; it cannot see state shared through module variables.
 3. One scheduler hook uses a private method of pytest-xdist; the version is locked and a test covers the grouping.
 4. The shard layout is a fixed list balanced by today's durations. It stays correct when files are added (they go to the first shard) but can become unbalanced.
@@ -105,7 +107,7 @@ Taken without explicit owner guidance; each can be reversed.
 6. Local CI uses more memory and CPU than before and shares the host with other services. The budget counts active CI runs, load and free memory; it does not reserve resources, and cannot see a run that starts later.
 7. Worker data on `/dev/shm` uses RAM until the run ends; after a `SIGKILL` or reboot-free crash `cleanup.sh` removes it.
 8. GitHub runs 4 workers and 2 shards, Local CI more: the same tests and assertions, a different interleaving.
-9. **Load sensitivity.** The application gives a Redis operation 500 ms, and some paths (password recovery, change detection) only log a failure. On a heavily loaded host a test of such a path can fail although the code is correct: one failure of `test_a_sign_in_that_saw_the_change_first_leaves_the_check_nothing_to_do` was seen beside a second full run; an injected stall reproduces its exact assertion. The run fails (never a false pass). More parallel work makes such load more likely.
+9. **One unexplained failure.** `test_a_sign_in_that_saw_the_change_first_leaves_the_check_nothing_to_do` failed once beside a second full run. Its cause is **not proven**. Reproduced by the independent review: a Redis namespace shared by two test rigs (built from `id()`) fails the same assertion silently, as the original log is silent; corrected by REC-01. Separate hypothesis, never observed in a real run: the application gives a Redis operation 500 ms and some paths only log the failure; an injected pause fails the same assertion but leaves a warning that the original log does not hold. Inherited state could in principle also let a test that expects nothing to happen pass wrongly, so "never a false pass" cannot be claimed for the shared namespaces.
 10. The worker budget counts only runs already active when a run starts.
 11. The limitations of INFRA-CI-01 remain (LCI-04/05: network-enabled steps reach host services published on all interfaces).
 

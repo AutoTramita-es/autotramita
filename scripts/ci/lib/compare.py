@@ -2,6 +2,10 @@
 steps with the same outcome, and the same observable results (test counts, commits scanned,
 audit verdict, imported realms, generated clients). Needs an authenticated `gh`; read only.
 
+Counts are compared as counts. For the main suite and the Keycloak suite each side also prints a
+digest of the identities of its tests, after checking its own results against its own collection;
+an unequal digest is a difference. Other pytest steps are compared by their counts only.
+
 Exit codes: 0 equivalent, 1 different, 2 cannot compare.
 """
 
@@ -35,6 +39,14 @@ EVIDENCE = (
     ("dependency audit", re.compile(r"(No known vulnerabilities found|Found \d+ known vuln.*)")),
     ("realm import", re.compile(r"(autotramita-[a-z]+ imported and verified)")),
     ("client generation", re.compile(r"(Client generation check passed)")),
+    # Printed by scripts/ci/inventory.py: the number of tests of a suite and a digest of their
+    # identities. The only evidence here that names which tests ran, not how many.
+    (
+        "test inventory",
+        re.compile(
+            r"== inventory: all (\d+ selected tests have exactly one result, sha256=[0-9a-f]{64})"
+        ),
+    ),
 )
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 # Printed by keycloak_shards.py. GitHub's runner has fewer CPUs and runs fewer shards, so the

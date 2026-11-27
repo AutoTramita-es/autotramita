@@ -15,6 +15,7 @@ name: ${ATCI_PROJECT:?run this through scripts/ci}
 x-labels: &labels
   com.autotramita.ci: "1"
   com.autotramita.ci.run: ${ATCI_RUN_ID:?run this through scripts/ci}
+  com.autotramita.ci.state: ${ATCI_STATE:?run this through scripts/ci}
 
 services:
   netns:

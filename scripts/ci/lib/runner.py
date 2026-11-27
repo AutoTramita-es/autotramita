@@ -15,6 +15,7 @@ import re
 import shlex
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -40,9 +41,20 @@ sys.path.append(str(CI_DIR))
 import pytest_phases  # noqa: E402  the workflow's own script: how "auto" workers are counted
 REPO = CI_DIR.parents[1]
 RESULTS = REPO / ".ci-results"
-STATE = Path(os.environ.get("ATCI_STATE_DIR", "/var/tmp/autotramita-ci"))  # noqa: S108
+DEFAULT_STATE = Path("/var/tmp/autotramita-ci")  # noqa: S108
+STATE = Path(os.environ.get("ATCI_STATE_DIR", DEFAULT_STATE))
+# One file for the whole host, whatever ATCI_STATE_DIR says: every run holds it while it lives,
+# so that the shared caches are never removed under a run of another state directory.
+ACTIVITY_LOCK = DEFAULT_STATE / "activity.lock"
+# Who created a workspace or a result directory. Written by the runner outside every directory a
+# job can write to.
+OWNER_FILE = ".atci-owner.json"
+RUN_ID = re.compile(r"\d{8}-\d{6}-[0-9a-f]{6}")
 COMPOSE_FILE = REPO / "compose.ci.yml"
 LABEL = "com.autotramita.ci"
+# The state directory whose run created a container, network or image: only a cleanup of the same
+# state directory can tell whether that run is still active.
+STATE_LABEL = f"{LABEL}.state"
 PREFIX = "atci"
 CACHE_VOLUMES = {"atci-uv-cache": "/cache/uv", "atci-npm-cache": "/cache/npm"}
 RUNNER_UID = 1001
@@ -128,8 +140,14 @@ def run_lock(run_id: str) -> Iterator[None]:
     """Held for the life of a run, so cleanup never removes the resources of a live one."""
     path = STATE / "locks" / f"{run_id}.lock"
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as handle:
-        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    while True:
+        handle = open(path, "a", encoding="utf-8")  # noqa: SIM115  closed below
+        # Only a short look by status or cleanup can hold it: this run's id is new.
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        if same_file(handle.fileno(), path):
+            break
+        handle.close()  # removed between open and lock: a lock nobody could find again
+    with handle:
         handle.write(f"{os.getpid()}\n")
         handle.flush()
         try:
@@ -138,16 +156,131 @@ def run_lock(run_id: str) -> Iterator[None]:
             path.unlink(missing_ok=True)
 
 
+def same_file(descriptor: int, path: Path) -> bool:
+    try:
+        there = os.stat(path, follow_symlinks=False)
+    except FileNotFoundError:
+        return False
+    return os.path.samestat(os.fstat(descriptor), there)
+
+
 def is_active(run_id: str) -> bool:
     path = STATE / "locks" / f"{run_id}.lock"
-    if not path.exists():
+    try:
+        handle = open(path, encoding="utf-8")  # noqa: SIM115  closed below
+    except FileNotFoundError:
         return False
-    with open(path, encoding="utf-8") as handle:
+    with handle:
         try:
             fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
         except OSError:
             return True
     return False
+
+
+def remove_stale_lock(path: Path) -> None:
+    """Removes the lock file of a finished run, holding it, so a run starting under that name at
+    this moment keeps a lock that can be found."""
+    try:
+        handle = open(path, encoding="utf-8")  # noqa: SIM115  closed below
+    except FileNotFoundError:
+        return
+    with handle:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            return
+        if same_file(handle.fileno(), path):
+            path.unlink()
+
+
+@contextmanager
+def host_activity(exclusive: bool = False) -> Iterator[bool]:
+    """Runs share this lock; removing the caches needs it alone. ``False``: it was not free."""
+    private_directory(ACTIVITY_LOCK.parent)
+    with open(ACTIVITY_LOCK, "a", encoding="utf-8") as handle:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB if exclusive else fcntl.LOCK_SH)
+        except OSError:
+            yield False
+            return
+        yield True
+
+
+# --- ownership -----------------------------------------------------------------------------
+
+
+def write_owner(directory: Path, run_id: str) -> None:
+    record = {"run": run_id, "state": str(STATE)}
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+    with os.fdopen(os.open(directory / OWNER_FILE, flags, 0o644), "w", encoding="utf-8") as out:
+        json.dump(record, out)
+
+
+def read_owner(directory: Path) -> dict[str, str] | None:
+    """The owner record, only if it is a regular file of the user running Local CI."""
+    try:
+        descriptor = os.open(directory / OWNER_FILE, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError:
+        return None
+    with os.fdopen(descriptor, "rb") as handle:
+        found = os.fstat(handle.fileno())
+        if not stat.S_ISREG(found.st_mode) or found.st_uid != os.getuid():
+            return None
+        try:
+            record = json.loads(handle.read(4096))
+        except ValueError:
+            return None
+    if not isinstance(record, dict) or not all(
+        isinstance(record.get(key), str) for key in ("run", "state")
+    ):
+        return None
+    return record
+
+
+def claim_workspace(root: Path, run_id: str) -> None:
+    """The run's directory below a workspace root, new and marked as this run's."""
+    root.mkdir(parents=True, exist_ok=True)
+    problem = unsafe_directory(root, forbidden=0o022)
+    if problem:
+        raise RuntimeError(f"{root} {problem}")
+    (root / run_id).mkdir()
+    write_owner(root / run_id, run_id)
+
+
+def unsafe_directory(path: Path, forbidden: int) -> str | None:
+    """Why ``path`` is no directory of ours, reached without any symbolic link and closed to
+    others by the permission bits in ``forbidden``; ``None`` when it is."""
+    if os.path.realpath(path) != str(path):
+        return "is reached through a symbolic link or is not a normalised absolute path"
+    try:
+        found = os.lstat(path)
+    except OSError as error:
+        return f"cannot be inspected: {error.strerror}"
+    if not stat.S_ISDIR(found.st_mode):
+        return "is not a directory"
+    if found.st_uid != os.getuid():
+        return "belongs to another user"
+    if found.st_mode & forbidden:
+        return f"is open to other users (mode {stat.S_IMODE(found.st_mode):o})"
+    return None
+
+
+def foreign_workspace(directory: Path) -> str | None:
+    """Why cleanup must keep this entry of a workspace root; ``None`` only for a workspace that
+    a run of this state directory created."""
+    if not RUN_ID.fullmatch(directory.name):
+        return "its name is not a run id"
+    # The runner's umask leaves the directory itself writable by its owner only.
+    problem = unsafe_directory(directory, forbidden=0o022)
+    if problem:
+        return f"it {problem}"
+    owner = read_owner(directory)
+    if owner is None or owner["run"] != directory.name:
+        return "it has no owner record of its run"
+    if owner["state"] != str(STATE):
+        return f"it belongs to state directory {owner['state']}"
+    return None
 
 
 # --- images --------------------------------------------------------------------------------
@@ -375,7 +508,12 @@ class JobRun:
             self.broker.start()
 
     def labels(self) -> dict[str, str]:
-        return {LABEL: "1", f"{LABEL}.run": self.run.run_id, f"{LABEL}.job": self.job.key}
+        return {
+            LABEL: "1",
+            f"{LABEL}.run": self.run.run_id,
+            f"{LABEL}.job": self.job.key,
+            STATE_LABEL: str(STATE),
+        }
 
     def label_args(self) -> list[str]:
         return [word for k, v in self.labels().items() for word in ("--label", f"{k}={v}")]
@@ -399,6 +537,7 @@ class JobRun:
         env |= {
             "ATCI_PROJECT": self.project,
             "ATCI_RUN_ID": self.run.run_id,
+            "ATCI_STATE": str(STATE),
             "ATCI_RUNNER_IMAGE": self.run.image,
         }
         names = ["netns"]
@@ -669,6 +808,7 @@ class Run:
         self.workers: int | None = options.workers
         self.directory = RESULTS / self.run_id
         self.work = STATE / "work"
+        self.claimed = False  # whether this run created its directory below ``work``
         self.redact = report.Redactor([])
 
     def execute(self) -> int:
@@ -696,13 +836,14 @@ class Run:
         monitor = Monitor(self.run_id)
         say(f"Local CI run {self.run_id}, profile '{self.profile}' -> {self.directory}")
         try:
-            with run_lock(self.run_id):
+            with host_activity(), run_lock(self.run_id):
+                write_owner(self.directory, self.run_id)
                 try:
                     self.body(summary, monitor)
                 finally:
                     monitor.done.set()
                     remove_containers(owned(self.run_id))
-                    if not self.keep:
+                    if self.claimed and not self.keep:
                         shutil.rmtree(self.work / self.run_id, ignore_errors=True)
         except Exception as problem:
             summary["error"] = self.redact(f"{type(problem).__name__}: {problem}")
@@ -732,6 +873,8 @@ class Run:
         if free < MIN_FREE_BYTES:
             raise RuntimeError(f"less than {MIN_FREE_BYTES // 1024**3} GiB free in {STATE}")
         self.work = work_root()
+        claim_workspace(self.work, self.run_id)
+        self.claimed = True
         self.content = snapshots.take(self.source, self.ref)
         summary["content"] = {
             key: getattr(self.content, key)
@@ -847,6 +990,8 @@ class Run:
             f"{LABEL}=1",
             "--label",
             f"{LABEL}.run={self.run_id}",
+            "--label",
+            f"{STATE_LABEL}={STATE}",
             self.image,
             "bash",
             "-c",
@@ -928,7 +1073,9 @@ def status(options: argparse.Namespace) -> int:
 
 
 def cleanup(options: argparse.Namespace) -> int:
-    """Removes only what carries the run label AND the name prefix, and only for finished runs."""
+    """Removes only what a finished run of THIS state directory created: containers, networks and
+    images with the run label, the state label and the name prefix, and workspaces with a
+    matching owner record. Everything else is kept and named."""
     dry = options.dry_run
     verb = "would remove" if dry else "removing"
     labelled = f"label={LABEL}=1"
@@ -937,8 +1084,12 @@ def cleanup(options: argparse.Namespace) -> int:
     def stale(kind: str, listing: list[str]) -> list[str]:
         chosen = []
         for line in listing:
-            identifier, name, run = [*line.split("\t"), "", ""][:3]
+            identifier, name, run, state = [*line.split("\t"), "", "", ""][:4]
             if not run or not name.lstrip("/").startswith(f"{PREFIX}-"):
+                continue
+            if state != str(STATE):
+                owner = f"of state directory {state}" if state else "without an owner label"
+                say(f"keeping {kind} {name}: {owner}")
                 continue
             if is_active(run):
                 say(f"keeping {kind} {name}: run {run} is active")
@@ -947,11 +1098,11 @@ def cleanup(options: argparse.Namespace) -> int:
             chosen.append(identifier)
         return chosen
 
-    run_label = f'{{{{.Label "{LABEL}.run"}}}}'
+    columns = f'{{{{.Label "{LABEL}.run"}}}}\t{{{{.Label "{STATE_LABEL}"}}}}'
     containers = stale(
         "container",
         docker(
-            "ps", "-a", "--filter", of_a_run, "--format", "{{.ID}}\t{{.Names}}\t" + run_label
+            "ps", "-a", "--filter", of_a_run, "--format", "{{.ID}}\t{{.Names}}\t" + columns
         ).stdout.splitlines(),
     )
     if not dry:
@@ -964,66 +1115,109 @@ def cleanup(options: argparse.Namespace) -> int:
             "--filter",
             of_a_run,
             "--format",
-            "{{.ID}}\t{{.Name}}\t" + run_label,
+            "{{.ID}}\t{{.Name}}\t" + columns,
         ).stdout.splitlines(),
     )
     for identifier in [] if dry else networks:
         docker("network", "rm", identifier, check=False)
-    built = stale(
-        "image",
-        docker(
-            "image", "ls", "--filter", of_a_run, "--format",
-            "{{.ID}}\t{{.Repository}}\t" + run_label,
-        ).stdout.splitlines(),
-    )  # fmt: skip
+    # `docker image ls` has no label column in its format: ask for each image.
+    listed = docker(
+        "image", "ls", "--filter", of_a_run, "--format", "{{.ID}}\t{{.Repository}}"
+    ).stdout.splitlines()
+    built = stale("image", [f"{line}\t{image_owner(line.split()[0])}" for line in listed])
     for identifier in [] if dry else built:
         docker("image", "rm", "-f", identifier, check=False)
-    workspaces = [d for root in work_roots() if root.is_dir() for d in root.iterdir()]
-    for directory in sorted(workspaces):
-        if not is_active(directory.name):
-            say(f"{verb} workspace {directory}")
-            if not dry:
-                shutil.rmtree(directory, ignore_errors=True)
+    cleanup_workspaces(dry)
     locks = STATE / "locks"
     for lock in locks.glob("*.lock") if locks.exists() else []:
-        if not dry and not is_active(lock.stem):
-            lock.unlink(missing_ok=True)
-    busy = any(is_active(p.stem) for p in locks.glob("*.lock")) if locks.exists() else False
+        if not dry:
+            remove_stale_lock(lock)
     if options.caches:
-        if busy:
-            say("keeping caches and runner images: a run is active")
-        else:
-            volumes = docker(
-                "volume", "ls", "--filter", labelled, "--format", "{{.Name}}"
-            ).stdout.split()
-            for name in (v for v in volumes if v.startswith(f"{PREFIX}-")):
-                say(f"{verb} cache volume {name}")
-                if not dry:
-                    docker("volume", "rm", name, check=False)
-            images = docker(
-                "image",
-                "ls",
-                "--filter",
-                f"label={LABEL}.image=1",
-                "--format",
-                "{{.Repository}}:{{.Tag}}",
-            ).stdout.split()
-            for name in (i for i in images if i.startswith("atci-runner:")):
-                say(f"{verb} image {name}")
-                if not dry:
-                    docker("image", "rm", name, check=False)
+        with host_activity(exclusive=True) as idle:
+            busy = any(is_active(p.stem) for p in locks.glob("*.lock")) if locks.exists() else False
+            if busy or not idle:
+                say("keeping caches and runner images: a run is active")
+            else:
+                remove_caches(dry, labelled)
     if options.results_older_than is not None:
-        limit = time.time() - options.results_older_than * 86400
-        for directory in result_directories():
-            if directory.stat().st_mtime < limit and not is_active(directory.name):
-                say(f"{verb} results {directory}")
-                if not dry:
-                    shutil.rmtree(directory)
-        for link in RESULTS.glob("latest*") if RESULTS.exists() and not dry else []:
-            if not link.exists():
-                link.unlink()
+        cleanup_results(dry, options.results_older_than)
     say("Cleanup finished." if not dry else "Dry run: nothing was removed.")
     return 0
+
+
+def image_owner(identifier: str) -> str:
+    """``run<TAB>state`` labels of an image."""
+    template = (
+        f'{{{{index .Config.Labels "{LABEL}.run"}}}}\t'
+        f'{{{{index .Config.Labels "{STATE_LABEL}"}}}}'
+    )
+    found = docker("image", "inspect", identifier, "--format", template, check=False)
+    return found.stdout.rstrip("\n") if not found.returncode else "\t"
+
+
+def cleanup_workspaces(dry: bool) -> None:
+    verb = "would remove" if dry else "removing"
+    for root in work_roots():
+        if not os.path.lexists(root):
+            continue
+        # /dev/shm accepts entries from anyone: look at the root before looking into it.
+        problem = unsafe_directory(root, forbidden=0o022)
+        if problem:
+            say(f"keeping everything below {root}: it {problem}")
+            continue
+        for directory in sorted(root.iterdir()):
+            reason = foreign_workspace(directory)
+            if reason:
+                say(f"keeping workspace {directory}: {reason}")
+            elif is_active(directory.name):
+                say(f"keeping workspace {directory}: run {directory.name} is active")
+            else:
+                say(f"{verb} workspace {directory}")
+                if not dry:
+                    shutil.rmtree(directory, ignore_errors=True)
+
+
+def remove_caches(dry: bool, labelled: str) -> None:
+    verb = "would remove" if dry else "removing"
+    volumes = docker("volume", "ls", "--filter", labelled, "--format", "{{.Name}}").stdout.split()
+    for name in (v for v in volumes if v.startswith(f"{PREFIX}-")):
+        say(f"{verb} cache volume {name}")
+        if not dry:
+            docker("volume", "rm", name, check=False)
+    images = docker(
+        "image",
+        "ls",
+        "--filter",
+        f"label={LABEL}.image=1",
+        "--format",
+        "{{.Repository}}:{{.Tag}}",
+    ).stdout.split()
+    for name in (i for i in images if i.startswith("atci-runner:")):
+        say(f"{verb} image {name}")
+        if not dry:
+            docker("image", "rm", name, check=False)
+
+
+def cleanup_results(dry: bool, days: int) -> None:
+    """Old result directories of this checkout. One without a summary is removed only if a run
+    of this state directory made it and has ended: another state directory's run may be writing
+    it."""
+    verb = "would remove" if dry else "removing"
+    limit = time.time() - days * 86400
+    for directory in result_directories():
+        if directory.stat().st_mtime >= limit or is_active(directory.name):
+            continue
+        owner = read_owner(directory)
+        ours = owner is not None and owner["state"] == str(STATE)
+        if not ours and not (directory / "summary.json").is_file():
+            say(f"keeping results {directory}: unfinished, and not of this state directory")
+            continue
+        say(f"{verb} results {directory}")
+        if not dry:
+            shutil.rmtree(directory)
+    for link in RESULTS.glob("latest*") if RESULTS.exists() and not dry else []:
+        if not link.exists():
+            link.unlink()
 
 
 # --- command line --------------------------------------------------------------------------
@@ -1031,11 +1225,18 @@ def cleanup(options: argparse.Namespace) -> int:
 
 def private_directory(path: Path) -> None:
     """Only the user running CI may enter; the containers are given their own job directory as a
-    mount, so they do not need to pass through it."""
-    path.mkdir(mode=0o700, parents=True, exist_ok=True)
-    if path.is_symlink() or path.stat().st_uid != os.getuid():
-        sys.exit(f"{path} must be a real directory owned by the user running Local CI")
-    path.chmod(0o700)
+    mount, so they do not need to pass through it. An existing directory is only checked, never
+    changed: a mistaken ``ATCI_STATE_DIR`` such as ``/tmp`` must not lose its permissions."""
+    if not path.is_absolute() or str(path) != os.path.normpath(path) or len(path.parts) < 3:
+        sys.exit(f"{path} must be an absolute, normalised path below a top-level directory")
+    try:
+        path.mkdir(mode=0o700, parents=True)
+        path.chmod(0o700)
+    except FileExistsError:
+        pass
+    problem = unsafe_directory(path, forbidden=0o077)
+    if problem:
+        sys.exit(f"{path} {problem}; Local CI needs a private directory of its user")
 
 
 def private_state_directory() -> None:

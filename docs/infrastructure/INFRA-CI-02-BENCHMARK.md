@@ -1,6 +1,6 @@
 # INFRA-CI-02 — Benchmark
 
-Date: 2026-11-27. Specification: [INFRA-CI-02.md](INFRA-CI-02.md). Changes: [INFRA-CI-02-IMPLEMENTATION.md](INFRA-CI-02-IMPLEMENTATION.md). Verdict and evidence: [INFRA-CI-02-ACCEPTANCE.md](INFRA-CI-02-ACCEPTANCE.md).
+Date: 2026-11-27. Specification: [INFRA-CI-02.md](INFRA-CI-02.md). Changes: [INFRA-CI-02-IMPLEMENTATION.md](INFRA-CI-02-IMPLEMENTATION.md). Verdict and evidence: [INFRA-CI-02-ACCEPTANCE.md](INFRA-CI-02-ACCEPTANCE.md). Corrections after the independent review: [INFRA-CI-02-REC-01.md](INFRA-CI-02-REC-01.md) (final run of the reviewed commit added in 8.6 and 11, attribution in 8.3 corrected). **Every figure is an observation under the stated conditions; none is a guaranteed duration or saving.**
 
 Durations are the runner's own run duration in seconds, shown as **median [minimum–maximum]** over the stated number of runs. All runs reported here passed with no failed, errored or skipped test unless stated otherwise.
 
@@ -244,7 +244,11 @@ Two `run-all.sh` started 3 s apart.
 Two of the six runs in these three pairs failed, for two different reasons; both were reported FAIL.
 
 - `pair-2` (`2781c10`): Docker could not create the network of its identity job (`all predefined address pools have been fully subnetted`). The host had 30 Docker networks and only a few free default subnets; every full run takes one per job that needs the network. The limit and the way the runner takes networks existed before this change. The runner now waits for a released subnet (commit `6d6307d`); the `fixpair` runs are on that commit. Runs that had to wait: fixpair-1-2, fixpair-2-2. That failure did not recur.
-- `fixpair-1-1` (`6d6307d`): one of 1614 main tests failed, `test_password_check::test_a_sign_in_that_saw_the_change_first_leaves_the_check_nothing_to_do`. The application gives Redis 500 ms and password recovery only logs a failure. A copy of the code with a Redis pause of 800 ms injected at that point fails with the identical assertion (run `20261127-141107-be863d`). The stall itself was not recorded in the original run, so the cause is the most probable explanation, not a proven one. Nothing was changed to hide it (IMPLEMENTATION, limitation 9).
+- `fixpair-1-1` (`6d6307d`): one of 1614 main tests failed, `test_password_check::test_a_sign_in_that_saw_the_change_first_leaves_the_check_nothing_to_do`. **The cause of this failure is not proven.** Two things produce its assertion, and they are different findings:
+  - *Reproduced, and consistent with the original log:* two test rigs with the same Redis namespace (built from `id()`, which Python gives out again) fail the same assertion and log nothing. The original run's log holds no captured warning for the test.
+  - *Hypothesis, not supported by the original log:* a Redis operation over the application's 500 ms. An injected pause of 800 ms (run `20261127-141107-be863d`) fails the same assertion, but leaves the warning `password recovery processing failed`, which the original log does not hold.
+
+  An earlier version of this report named the Redis delay as the most probable cause; that attribution was wrong to make. The shared namespaces are corrected in [REC-01](INFRA-CI-02-REC-01.md); no Redis timeout, assertion or retry was changed.
 
 ### 8.4 Full runs after the network fix
 
@@ -272,6 +276,10 @@ Small selections are **slower** than before: starting worker servers and two pyt
 
 The full-run saving at the median is 188 s.
 
+### 8.6 Final commit of INFRA-CI-02 (the reviewed baseline)
+
+Commit `1357d89a699aaf67c83acade180e7a55a8cfc08c`, tree `2418f7e82f0fad0c688829f2ffc8829870826c8e`: local full run `20261127-145105-141d26`, PASS, **247.6 s**, 2062 test executions (main suite 1614, Keycloak 265, migration step 6, rate-limit regression 3 × 59), none failed, errored or skipped. GitHub run [46020259401](https://github.com/AutoTramita-es/autotramita/actions/runs/46020259401) of the same commit: 5 of 5 jobs successful, **479 s**; `compare-github.sh`: **EQUIVALENT**. One local run: it adds no new median.
+
 ## 9. Test inventory equivalence
 
 Compared case by case (test ID and outcome) from the JUnit files of the three baseline full runs and the three final full runs of section 8.
@@ -285,6 +293,8 @@ Compared case by case (test ID and outcome) from the JUnit files of the three ba
 
 No case failed, errored or was skipped in any of these runs. The realm without the security provider is refused with the same message (`400 … Unexpected error when handling authentication request`). Totals per full run: 2007 test executions before, 2062 after (+55).
 
+Two inventories are therefore in play: the **historical baseline** (2007 executions, main suite 1559) and the **INFRA-CI-02 inventory** (2062, main suite 1614). Durations of the two are not like for like. Later packages add tests again (REC-01: its report states the numbers).
+
 ## 10. Targets
 
 Targets of the specification are goals, not acceptance thresholds. Medians of section 8.
@@ -296,7 +306,7 @@ Targets of the specification are goals, not acceptance thresholds. Medians of se
 | Python suite (main tests step) | 30–90 s | 1–2 min | 90 s in a full run [90–107] | at the median only, with no margin |
 | Keycloak | 1–3 min | identity job 3–5 min | 3 min 41 s (profile); identity job in a full run 4 min 20 s | no |
 | Full local | 2–3 min | 2–3 min | 4 min 22 s (4 min 16 s after the network fix) | **no** |
-| GitHub full | – | 4–6 min | 5 min 56 s and 6 min 27 s (section 11) | one of two runs |
+| GitHub full | – | 4–6 min | 5 min 56 s, 6 min 27 s and 7 min 59 s (section 11) | **one of three runs** |
 
 **Why the full run is still above 3 minutes.** Jobs run in parallel, so the longest job decides: `identity` (about 260 s), then `test` (about 217 s).
 
@@ -307,20 +317,22 @@ Options **not implemented**, each with its price: split the longest Keycloak fil
 
 ## 11. GitHub
 
-Two runs of the new workflow (4 workers, 2 shards on the 4-CPU runner), against the baseline of section 4.3. **Too few runs for a median that means much, and the baseline of the green runs has a smaller test inventory.**
+Three runs of the INFRA-CI-02 workflow (4 workers, 2 shards on the 4-CPU runner), against the baseline of section 4.3. **Three runs on shared GitHub infrastructure do not establish a typical duration, and the baseline of the green runs has a smaller test inventory.**
 
-| Measure | Baseline | `2f387c6`, run 46016787516 | `f1a6e56`, run 46018469751 |
-|---|---|---|---|
-| Run duration | 553 [461–683], five green runs | 356 | 387 |
-| Main tests step | 362, five green runs; 495 on `81fa391` (current inventory) | 159 | 242 |
-| Job "Lint, types, tests" | about 610–700, four runs with the current inventory | 272 | 365 |
-| Identity job | 434, five green runs | 351 | 383 |
+| Measure (s) | Historical baseline (median, five green runs) | `2f387c6`, run 46016787516 | `f1a6e56`, run 46018469751 | `1357d89`, run 46020259401 | Median [range] of the three |
+|---|---|---|---|---|---|
+| Run duration | 553 [461–683] | 356 | 387 | **479** | 387 [356–479] |
+| Main tests step | 362 (495 on `81fa391`, current inventory then) | 159 | 242 | 154 | 159 [154–242] |
+| Job "Lint, types, tests" | about 610–700 (four runs with the then current inventory) | 272 | 365 | 267 | 272 [267–365] |
+| Identity job | 434 | 351 | 383 | **477** | 383 [351–477] |
+| Step "Keycloak spike and OIDC tests" | not extracted | 166 | 183 | 225 | 183 [166–225] |
+| Step "Start two Keycloak nodes" | about 40 (review) | 72 | 82 | **113** | 82 [72–113] |
 
-Against the green-run median the run was 36 % and 30 % shorter. The goal of 4–6 minutes was met by one of the two runs (5 min 56 s) and missed by the other (6 min 27 s).
+Against the historical green-run median the three runs were 36 %, 30 % and **13 %** shorter. The goal of 4–6 minutes was met by **one of the three** (5 min 56 s) and missed by two (6 min 27 s, 7 min 59 s). In the third run the identity job was slower than the baseline median (within the baseline's range, 414–550 in the review's figures). A likely reason is contention on the 4-CPU runner between more simultaneous Keycloak instances; this was not isolated or measured. No improvement of GitHub durations is promised.
 
 ## 12. Not measured
 
 - Cold caches (first run on an empty Docker and uv cache).
 - Behaviour with more than two simultaneous CI runs, or beside a heavy unrelated job.
 - The separate effect of tmpfs, and of each individual change on the final result.
-- More than two GitHub runs of the new workflow.
+- More than three GitHub runs of the INFRA-CI-02 workflow.

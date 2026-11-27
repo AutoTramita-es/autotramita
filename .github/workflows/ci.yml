@@ -235,6 +235,11 @@ jobs:
       # "auto" is three shards on a host with 16 or more CPUs, otherwise two; "1" is one process.
       KEYCLOAK_SHARDS: "auto"
       TEST_KEYCLOAK_SHARD_URLS: http://127.0.0.1:18086 http://127.0.0.1:18088
+      # The PostgreSQL server of each additional shard, in the same order (INFRA-CI-02-REC-01). The
+      # first shard keeps the service above, which also holds the database of the two nodes.
+      TEST_PG_SHARD_URLS: >-
+        postgresql://postgres:ci-throwaway-password@127.0.0.1:5451/postgres
+        postgresql://postgres:ci-throwaway-password@127.0.0.1:5452/postgres
       TEST_KEYCLOAK_ADMIN_USER: ci-admin
       TEST_KEYCLOAK_ADMIN_PASSWORD: ci-throwaway-admin-password
       AT_WEB_CLIENT_SECRET: ci-throwaway-web-client-secret
@@ -250,6 +255,49 @@ jobs:
           enable-cache: true
       - name: Install locked dependencies
         run: uv sync --locked
+      - name: Start the PostgreSQL servers of the additional test shards
+        # Roles are global to a PostgreSQL server and migrations inspect all of them, so shards
+        # sharing one would see each other's roles appear and vanish: one server each. Same image
+        # as the service, loopback only, throwaway data; the servers vanish with the job.
+        run: |
+          set -eu
+          shards="$(uv run --locked python scripts/ci/keycloak_shards.py --shards "$KEYCLOAK_SHARDS" --print-shards)"
+          echo "test shards: $shards"
+          shard=0
+          for url in $TEST_PG_SHARD_URLS; do
+            shard=$((shard + 1))
+            if [ "$shard" -ge "$shards" ]; then break; fi
+            port="${url%/*}"; port="${port##*:}"
+            # The data lives in the job's temporary directory (memory-backed in Local CI) and
+            # the server runs as the unprivileged user that owns it.
+            data="$RUNNER_TEMP/postgres-shard$shard"
+            mkdir -p "$data"
+            docker run -d --name "postgres-shard$shard" --network host --user 1001:1001 \
+              -v "$data:/var/lib/postgresql/data" \
+              -e POSTGRES_PASSWORD=ci-throwaway-password -e POSTGRES_INITDB_ARGS=--no-sync \
+              -e PGPORT="$port" \
+              postgres:16@sha256:07abc3f43c9395b0bdbbab36bc25ddb0e8d83cd4fcafb5fb7d6abe14ff156dd8 \
+              -c listen_addresses=127.0.0.1 -c fsync=off
+          done
+          SHARDS="$shards" uv run --locked python - <<'PY'
+          import os, sys, time
+          import psycopg
+
+          deadline = time.monotonic() + 90
+          pending = os.environ["TEST_PG_SHARD_URLS"].split()[: int(os.environ["SHARDS"]) - 1]
+          while pending and time.monotonic() < deadline:
+              for url in list(pending):
+                  try:
+                      with psycopg.connect(url, connect_timeout=3) as c:
+                          c.execute("SELECT 1")
+                      pending.remove(url)
+                  except psycopg.Error:
+                      pass
+              time.sleep(0.5)
+          if pending:
+              sys.exit(f"{len(pending)} PostgreSQL server(s) of the additional shards not ready")
+          print("Every additional test shard has its PostgreSQL server.")
+          PY
       - name: Build the AutoTramita Keycloak image (pinned upstream, provider from source)
         run: >-
           docker build
@@ -533,6 +581,8 @@ jobs:
           docker logs keycloak | tail -150
           docker logs keycloak-shard1 2>/dev/null | tail -150 || true
           docker logs keycloak-shard2 2>/dev/null | tail -150 || true
+          docker logs postgres-shard1 2>/dev/null | tail -50 || true
+          docker logs postgres-shard2 2>/dev/null | tail -50 || true
 
   secrets:
     name: Secret scan

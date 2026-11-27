@@ -3,8 +3,10 @@
 They use threads that must really meet, sleep-ordered races, leases, expiry, fixed ports or
 measured durations. Next to busy workers such a test could fail, or its race could stop racing
 and pass without having tested anything. ``tests/conftest.py`` gives them the ``serial`` marker.
-``tests/test_ci_parallel.py`` fails when a test reaches such a primitive and is not listed here,
-and when an entry names a test that no longer exists.
+``tests/test_ci_parallel.py`` fails when an entry names a test that no longer exists, and when it
+recognises by text a thread, sleep, timer or monotonic clock behind an unlisted test. It does not
+recognise leases, expiry or every indirect dependency (docs/infrastructure/LOCAL-CI.md, "Writing
+tests"): the author of a test lists it.
 """
 
 # Every test of these files, whatever it uses.

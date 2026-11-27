@@ -3,6 +3,7 @@ application on real PostgreSQL and Redis, talking to the disposable Keycloak."""
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Callable
 from typing import Any
 
@@ -41,11 +42,14 @@ class Rig:
         )
         client = create_redis(redis_url)
         engine = role_env.engine("app")
-        runtime = AuthRuntime.build(settings, client, engine, namespace=f"kc{id(self)}")
+        # Random, never id(self): a later rig can get a freed object's id and, with it, the
+        # keys that rig left in Redis.
+        namespace = f"kc{uuid.uuid4().hex}"
+        runtime = AuthRuntime.build(settings, client, engine, namespace=namespace)
         self.notices = RecordingNotifier()
         runtime.notifier = self.notices
         self.runtime = runtime
-        limiter = RateLimiter(client, namespace=f"kc{id(self)}")
+        limiter = RateLimiter(client, namespace=namespace)
         app = create_app(limiter, engine, RateLimitSettings(), runtime)
         self.api = TestClient(app, base_url=ORIGIN, follow_redirects=False)
         self.browser = Browser(env)

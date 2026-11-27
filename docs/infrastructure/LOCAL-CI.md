@@ -1,4 +1,4 @@
-# Local CI (INFRA-CI-01, performance: INFRA-CI-02)
+# Local CI (INFRA-CI-01, performance: INFRA-CI-02, corrections: INFRA-CI-02-REC-01)
 
 Runs every check of the GitHub Actions workflow on the development server, on uncommitted work, with no commit or push. **A local PASS is development feedback. It does not replace the GitHub CI evidence** required at the control points listed in [Agent rules](#rules-for-claude-code-codex-and-other-agents).
 
@@ -29,7 +29,9 @@ Run from any directory; the scripts locate the repository themselves. No `uv syn
 
 Nothing else is installed on the host and no GitHub self-hosted runner is involved. The first run builds the runner image (`atci-runner:<hash>`) and pulls the pinned service images.
 
-Locks live in `/var/tmp/autotramita-ci`, job workspaces in `/dev/shm/autotramita-ci-work` (both mode 0700; the runner refuses a directory another user created). Optional: `ATCI_STATE_DIR` moves both below one directory, on disk.
+Locks live in `/var/tmp/autotramita-ci`, job workspaces in `/dev/shm/autotramita-ci-work` (both mode 0700). Optional: `ATCI_STATE_DIR` moves both below one directory, on disk; `activity.lock` stays in `/var/tmp/autotramita-ci` and is shared by all state directories.
+
+A state or workspace directory must be an absolute path below a top-level directory, reached without any symbolic link, owned by the user running Local CI and closed to everyone else. The runner creates a missing one that way and **refuses** an existing one that is not; it never changes the permissions of an existing directory (so `ATCI_STATE_DIR=/tmp` stops instead of locking the host out of `/tmp`).
 
 ### Resources (measured)
 
@@ -57,7 +59,8 @@ scripts/ci/run-*.sh ─► lib/runner.py ─┬─ lib/workflow.py   parses ci.y
 
 one job = one GitHub job
   netns (no network, loopback only) ── PostgreSQL ── Redis ── Keycloak instances ── step containers
-                                       one more PostgreSQL per extra test worker, one more Redis
+                                       one more PostgreSQL per extra test worker (test job) or
+                                       per extra Keycloak shard (identity job), one more Redis
   egress network (only for steps that run `uv sync`, `npm ci` or `uvx`)
 ```
 
@@ -76,12 +79,12 @@ Untracked files named like secrets (`.env*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`,
 | `run-fast.sh` | Ruff lint and format, mypy, tests that need no PostgreSQL or Redis, test counts, runner self-test | none | 40 s |
 | `run-unit.sh` | the same tests and counts only | none | 30 s |
 | `run-integration.sh` | tests that depend on the PostgreSQL or Redis fixtures (RLS, privileges, sessions, authentication, recovery, notifications, rate limiting), test counts, isolation check | PG, Redis, per worker | 95 s |
-| `run-keycloak.sh` | the whole `identity` job: builds the AutoTramita Keycloak image, Keycloak tests in parallel shards (one instance each) and on two nodes sharing one PostgreSQL database, DEV and PROD realm import, a realm without the provider | PG, Redis, Keycloak ×5 | 3 min 40 s |
+| `run-keycloak.sh` | the whole `identity` job: builds the AutoTramita Keycloak image, Keycloak tests in parallel shards (one Keycloak instance and one PostgreSQL server each) and on two nodes sharing one PostgreSQL database, DEV and PROD realm import, a realm without the provider | PG per shard, Redis, Keycloak ×5 | 3 min 40 s |
 | `run-migrations.sh` | the workflow's upgrade/downgrade/upgrade step, exactly one migration head, the complete role and migration test files | PG, Redis | 27 s |
 | `run-security.sh` | the `secrets`, `dependencies` and `image-scan` jobs (gitleaks, pip-audit, Trivy scan of the AutoTramita Keycloak image with its gate), gitleaks on uncommitted files | none | 55 s |
 | `run-contracts.sh` | OpenAPI 3.1 validation, contract is current, TypeScript and Dart generation | none | 14 s |
 | `run-all.sh` | **every job and every run step of `ci.yml`**, plus the local checks | all | 4 min 20 s |
-| `compare-github.sh [dir] [--run id]` | compares a clean full run with the GitHub run of the same commit | | seconds |
+| `compare-github.sh [dir] [--run id]` | compares a clean full run with the GitHub run of the same commit: jobs, step outcomes, counts and two [inventory digests](#test-inventory) | | seconds |
 | `status.sh [--limit n]` | active runs, CI containers, recent results | | |
 | `cleanup.sh [--dry-run] [--caches] [--results-older-than DAYS]` | removes leftovers | | |
 
@@ -113,8 +116,8 @@ Introduced by INFRA-CI-02. The workflow says what runs in parallel, the same way
 
 | Part | How | Isolation |
 |---|---|---|
-| Main suite | [pytest_phases.py](../../scripts/ci/pytest_phases.py) runs the workflow's pytest command twice: all tests not marked `serial` in `PYTEST_WORKERS` pytest-xdist workers, then the `serial` tests alone. One JUnit file holds both | per worker: a PostgreSQL server (roles are global to a server, and migrations inspect all of them) and a Redis logical database; per test, as before: its own databases and roles |
-| Keycloak suite | [keycloak_shards.py](../../scripts/ci/keycloak_shards.py) runs `KEYCLOAK_SHARDS` pytest processes at once; afterwards the executed tests must equal the collected ones | per shard: a Keycloak container with its own in-memory database and realm, its own SMTP and back-channel ports and Redis database |
+| Main suite | [pytest_phases.py](../../scripts/ci/pytest_phases.py) runs the workflow's pytest command twice: all tests not marked `serial` in `PYTEST_WORKERS` pytest-xdist workers, then the `serial` tests alone. One JUnit file holds both; the [inventory](#test-inventory) is checked | per worker: a PostgreSQL server (roles are global to a server, and migrations inspect all of them) and a Redis logical database; per test, as before: its own databases and roles |
+| Keycloak suite | [keycloak_shards.py](../../scripts/ci/keycloak_shards.py) runs `KEYCLOAK_SHARDS` pytest processes at once; the [inventory](#test-inventory) is checked | per shard: a Keycloak container with its own in-memory database and realm, its own SMTP and back-channel ports, Redis database and PostgreSQL server (the first shard keeps the job's service, which also holds the nodes' database). The script refuses shards that would share one of these, and asks the servers for their identity before any shard starts |
 | Rate-limit regression, migrations, contracts, scans | unchanged | |
 
 | Setting (`ci.yml`) | Value | Meaning |
@@ -122,7 +125,35 @@ Introduced by INFRA-CI-02. The workflow says what runs in parallel, the same way
 | `PYTEST_WORKERS` | `auto` | one worker per CPU, at most 16 (GitHub's 4-CPU runner: 4). Local CI shares this number between simultaneous runs and lowers it on a busy host, never below 2; a targeted run takes 4 at most. `1`: one process, serial |
 | `KEYCLOAK_SHARDS` | `auto` | 3 on a host with 16 or more CPUs, otherwise 2. `1`: one process |
 
-**Writing tests.** A test that races threads, sleeps, uses a lease, expiry or fixed port, or measures time is listed in [tests/serial_tests.py](../../tests/serial_tests.py); [tests/test_ci_parallel.py](../../tests/test_ci_parallel.py) fails when such a test is missing there or an entry no longer exists. A worker takes a whole test file, except for the slow files listed in `SPLIT_FILES`, whose tests are handed out one by one and therefore must not share a module fixture.
+### Writing tests
+
+A test that races threads, sleeps, uses a lease, expiry or fixed port, or measures time belongs in [tests/serial_tests.py](../../tests/serial_tests.py). **The author lists it.** A worker takes a whole test file, except for the slow files listed in `SPLIT_FILES`, whose tests are handed out one by one and therefore must not share a module fixture. Redis keeps its keys between tests: use `uuid4` in namespaces, never the `id()` of an object (a guard in [tests/test_redis_namespaces.py](../../tests/test_redis_namespaces.py) rejects the direct forms).
+
+What the guard in [tests/test_ci_parallel.py](../../tests/test_ci_parallel.py) actually checks:
+
+| | |
+|---|---|
+| Always checked | every entry of the serial list names an existing test file or function |
+| Recognised by text | `Thread(`, `ThreadPoolExecutor(`, `ProcessPoolExecutor(`, `Barrier(`, `Timer(`, `Process(`, `time.sleep(`, `asyncio.sleep(`, `time.monotonic`, `perf_counter`, `asyncio.gather`, `ThreadingTCPServer`, `serve_forever` |
+| Where it looks | top-level `test_*` functions of the main suite, and the functions, classes and fixtures they name that are defined in the same module or imported with `from tests… import name` |
+| **Not seen** | leases and expiry (database or Redis time), `time.time()` or `datetime` measurements, `Event.wait` and other waits not listed, `from time import sleep` or `import time as t`, fixtures taken from a `conftest.py` by argument name, helpers reached as `module.attribute`, tests inside classes, anything application code does, Keycloak test modules (never run in workers) |
+
+A passing guard is therefore no proof that a test is safe in parallel. The examples of both rows are tests (`test_the_guard_sees_these_dependencies`, `test_the_guard_does_not_see_these_dependencies`); whoever changes the guard changes this table.
+
+### Test inventory
+
+A suite that runs in parts is checked by the **identities** of its tests ([inventory.py](../../scripts/ci/inventory.py)): the JUnit class name and test name, parameters included.
+
+| Check | Guarantee |
+|---|---|
+| Within a run, main suite | the parallel and serial selections are disjoint and together equal the unsplit selection; each part reports exactly what it selected: nothing missing, twice or unexpected |
+| Within a run, Keycloak suite | the shard results report exactly the unsplit selection |
+| Fail closed | an unreadable listing or result file, counts that do not match the test cases, a nameless case, an empty selection or two tests that would be reported alike fail the run. The only repeat read as one test is pytest's own pair for a failed test whose teardown also fails (the run fails anyway) |
+| `compare-github.sh` | compares **counts** (pytest summaries, count lines, commits scanned) and, for these two suites only, the printed number and SHA-256 **digest of the identities**, so equal digests mean both machines selected and reported the same set |
+| Not covered by identities | the migration step, the three rate-limit repetitions (separate pytest runs on purpose; each runs every rate-limit test again) and the `[local]` checks: counts only |
+| Reference | the collection of the same commit by the same pytest. A test that pytest no longer collects at all is not noticed by this check; case lists of two commits have to be compared for that |
+
+A targeted run with several workers selects `not keycloak` whatever `-m` it was given, because the two parts replace it.
 
 **Without Local CI**, plain `uv run pytest` is unchanged: one process, one server. `-n` additionally needs `TEST_PG_WORKER_PORT_BASE` and `TEST_REDIS_WORKERS_URL`; without them the run fails instead of sharing a server.
 
@@ -143,6 +174,7 @@ Introduced by INFRA-CI-02. The workflow says what runs in parallel, the same way
 | No Docker socket | steps that call `docker` talk to a broker on the host that allows only `run`, `logs` and `rm -f` of the job's own containers, only the images named in the repository, only mounts inside the job workspace, and only the job's namespace or no network; in addition exactly the operations below (Keycloak image and its scan) |
 | Unprivileged steps | uid 1001, all capabilities dropped, `no-new-privileges` |
 | Parallel runs | every run has its own names, namespace and workspace; several runs may execute at once. Caches are shared and safe for concurrent use |
+| Ownership | containers, networks and images carry the run and its state directory as labels; each workspace and result directory holds an owner record written outside every directory a job can write to |
 
 ### Keycloak image build and scan (F2-T09-REC, owner authorization of 2026-11-25)
 
@@ -201,7 +233,7 @@ Logs and JUnit files are redacted: values of password, secret and token variable
 
 ## Cleanup
 
-Every run removes its own containers, networks and workspaces (in `/dev/shm` and, if used, on disk), also after failure, `Ctrl-C` or `SIGTERM`. After a kill that gives no chance to react (`SIGKILL`, reboot):
+Every run removes its own containers (the extra PostgreSQL servers included), networks and workspaces (in `/dev/shm` and, if used, on disk), also after failure, `Ctrl-C` or `SIGTERM`. After a kill that gives no chance to react (`SIGKILL`, reboot):
 
 ```sh
 ./scripts/ci/cleanup.sh --dry-run     # shows what would be removed
@@ -210,7 +242,16 @@ Every run removes its own containers, networks and workspaces (in `/dev/shm` and
 ./scripts/ci/cleanup.sh --results-older-than 14
 ```
 
-It removes a container or network only if it carries the label `com.autotramita.ci.run` **and** its name starts with `atci-`, and only if that run is no longer active (file lock). It never runs a `prune` command. Pulled service images are left in place.
+`cleanup.sh` removes only what a **finished run of the same state directory** created. Everything else is kept and named in its output.
+
+| Resource | Removed only if |
+|---|---|
+| container, network, image | label `com.autotramita.ci.run`, name starting with `atci-`, label `com.autotramita.ci.state` equal to this state directory, and the run holds no lock |
+| workspace | its root is a real directory of this user that others cannot write to; the entry has a run id as its name, is a real directory of this user, holds an owner record (a regular file of this user) naming this run and this state directory; and the run holds no lock |
+| cache volumes, runner image (`--caches`) | no run of any state directory is alive (host-wide `activity.lock`) |
+| results (`--results-older-than`) | old enough, not active, and either finished (has `summary.json`) or made by a run of this state directory |
+
+Leftovers of a run with `ATCI_STATE_DIR` are removed with the same variable set: `ATCI_STATE_DIR=<dir> ./scripts/ci/cleanup.sh`. Resources created before INFRA-CI-02-REC-01 carry no owner and are kept; inspect and remove them by hand. It never runs a `prune` command. Pulled service images are left in place.
 
 ## Troubleshooting
 
@@ -223,17 +264,20 @@ It removes a container or network only if it carries the label `com.autotramita.
 | A test fails locally only, with `Network is unreachable` or a name resolution error | the test needs external network, which test steps do not have. GitHub would allow it; fix the dependency rather than the isolation |
 | `uv … offline` error in a test step | the step needs a download; steps get network only if their command contains `uv sync`, `uvx` or `check-clients.sh` |
 | `services did not become healthy` | see `logs/<job>/00-services.log` |
+| `Local CI needs a private directory of its user` | the state or workspace directory is a link, belongs to someone else or is open to others. Choose another `ATCI_STATE_DIR`, or inspect the directory; the runner does not repair it |
 | `no free Docker subnet, waiting` | the host has few free Docker networks; the job continues when another run releases one and fails after 10 minutes. `status.sh` shows the active runs; do not remove networks of other stacks |
 | `pip-audit` fails without a code change | a new advisory was published, or PyPI is unreachable |
 | Rate-limit timing tests fail on a loaded host | check `uptime`; rerun with `--serial`. Do not loosen the assertions |
-| A test of sign-in, recovery or sessions fails while the host is heavily loaded | the application gives Redis 500 ms and some paths only log the error. Check `uptime`, rerun when the host is quieter, and report the failed run; seen once, beside a second full run |
+| A test of sign-in, recovery or sessions fails once and passes again | do not assume host load. Report the run, and read the failed test's `Captured log` section: a Redis operation over the application's 500 ms often leaves a warning there (not always: `RecoveryMarkers.get` treats the error as "no marker" without logging). Without a warning, do not assume a timeout; look for shared state first (an inherited Redis namespace reproduces such a failure silently, [INFRA-CI-02-REC-01](INFRA-CI-02-REC-01.md)). A rerun that passes explains nothing |
+| `inventory:` message from `pytest_phases` or `keycloak_shards` | the tests that ran are not the tests that were selected; the message names them. Usual causes: a test id that changes between two collections (random or time-based parameters), a test process that died |
+| `keeping container/workspace …` from `cleanup.sh` | the resource is not provably a finished one of this state directory; the message says why ([Cleanup](#cleanup)) |
 | A test fails only in parallel | rerun it with `--workers 1`; if it then passes, it depends on timing (add it to `tests/serial_tests.py`) or on shared state (fix the test) |
 | `parallel workers need … of their own` | `-n` without the worker settings; use Local CI or run without `-n` |
 | `pytest_phases:` or `keycloak_shards:` message, exit 2 | the script refused the command, or a file named in `LAYOUTS`/`SPLIT_FILES` was renamed |
 | gitleaks scans an unexpected number of commits | refresh branches with `git fetch origin`; this clone fetches only `main` by default |
 | `[local] gitleaks on the files under test` fails | a secret-like string is in a file you have not committed yet: remove it before committing |
 | Disk filling up | `cleanup.sh --results-older-than 14`, `cleanup.sh --caches` |
-| Debugging a job | `--keep-workspace`, inspect `/var/tmp/autotramita-ci/work/<run>/<job>/` |
+| Debugging a job | `--keep-workspace`, inspect `/dev/shm/autotramita-ci-work/<run>/<job>/` (or `<state directory>/work/<run>/<job>/` when workspaces are on disk) |
 
 ## Rules for Claude Code, Codex and other agents
 
@@ -270,7 +314,7 @@ Same: workflow steps and order, commands, shell, job separation, timeouts, `if: 
 | Difference | GitHub | Local | Effect |
 |---|---|---|---|
 | Parallelism | 4 test workers, 2 Keycloak shards (4 CPUs) | up to 16 workers, 3 shards | same tests and assertions; other interleaving |
-| Worker databases | runner disk, `fsync=off` | `/dev/shm`, `fsync=off` | the primary services are configured as before |
+| Worker and shard databases | runner disk, `fsync=off` | `/dev/shm`, `fsync=off` | the primary services are configured as before |
 | Machine | `ubuntu-24.04` VM image, updated by GitHub | `ubuntu:24.04` container; apt packages (curl, git, jq, python3) not version pinned; host kernel 5.15 | tools outside the lockfiles may differ |
 | CPU and load | small dedicated VM | 32 threads shared with other services | timing-sensitive tests can differ in either direction |
 | Network in test steps | open | loopback only | stricter locally |

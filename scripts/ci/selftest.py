@@ -6,6 +6,8 @@ outside its workspace. Run: python3 scripts/ci/selftest.py
 from __future__ import annotations
 
 import copy
+import json
+import os
 import re
 import subprocess
 import sys
@@ -425,6 +427,18 @@ class ShardComparison(unittest.TestCase):
         ):
             self.assertNotEqual(base, self.summary(*other), other)
 
+    def test_other_tests_of_the_same_number_are_a_difference(self) -> None:
+        import compare
+
+        line = "== inventory: all 5 selected tests have exactly one result, sha256={} =="
+        ours = compare.evidence("5 passed in 1.50s\n" + line.format("a" * 64) + "\n")
+        theirs = compare.evidence("5 passed in 1.50s\n" + line.format("b" * 64) + "\n")
+        self.assertEqual(ours["pytest summary"], theirs["pytest summary"])
+        self.assertTrue(ours["test inventory"])
+        self.assertNotEqual(ours["test inventory"], theirs["test inventory"])
+        missing = compare.evidence("5 passed in 1.50s\n")
+        self.assertNotEqual(ours["test inventory"], missing["test inventory"])
+
     def test_a_job_without_shards_is_compared_run_by_run(self) -> None:
         self.assertEqual(
             self.summary("2 passed", "3 passed", mark=False), ["2 passed", "3 passed"]
@@ -447,6 +461,336 @@ class Workspaces(unittest.TestCase):
             link.symlink_to("/")
             with self.assertRaises((SystemExit, OSError)):
                 runner.private_directory(link)
+
+
+class Ownership(unittest.TestCase):
+    """Cleanup and locks (INFRA-CI-02-REC-01). Every path is below a temporary directory and
+    Docker is a stand-in: nothing here can reach a real run or workspace."""
+
+    MINE = "20260101-000000-aaaaaa"
+    OTHER = "20260101-000000-bbbbbb"
+
+    def setUp(self) -> None:
+        import runner
+
+        self.runner = runner
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.base = Path(temporary.name).resolve()
+        self.state = self.base / "state-a"
+        self.other_state = self.base / "state-b"
+        self.shared = self.base / "shm-work"
+        for directory in (self.state, self.other_state, self.shared):
+            directory.mkdir(mode=0o700)
+        self.listings: dict[str, list[str]] = {}
+        self.removed: list[tuple[str, ...]] = []
+        self.said: list[str] = []
+        patches = {
+            "STATE": self.state,
+            "TMPFS_WORK": self.shared,
+            "RESULTS": self.base / "results",
+            "ACTIVITY_LOCK": self.base / "host" / "activity.lock",
+            "docker": self.docker,
+            "say": self.said.append,
+        }
+        for name, value in patches.items():
+            patcher = mock.patch.object(runner, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def docker(self, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+        out = ""
+        if "rm" in args[:2]:
+            self.removed.append(args)
+        elif args[0] == "ps":
+            out = "\n".join(self.listings.get("containers", []))
+        elif args[:2] == ("network", "ls"):
+            out = "\n".join(self.listings.get("networks", []))
+        elif args[:2] == ("image", "ls") and f"label={self.runner.LABEL}.run" in args:
+            out = "\n".join(x.split("|")[0] for x in self.listings.get("images", []))
+        elif args[:2] == ("image", "inspect"):
+            owners = dict(
+                (x.split("\t")[0], x.split("|")[1]) for x in self.listings.get("images", [])
+            )
+            out = owners[args[2]] + "\n"
+        elif args[:2] == ("volume", "ls"):
+            out = "atci-uv-cache"
+        return subprocess.CompletedProcess(args, 0, out, "")
+
+    def clean(self, state: Path | None = None, **options: Any) -> None:
+        import argparse
+
+        values = {"dry_run": False, "caches": False, "results_older_than": None, **options}
+        with mock.patch.object(self.runner, "STATE", state or self.state):
+            self.runner.cleanup(argparse.Namespace(**values))
+
+    def workspace(self, run: str, state: Path | None = None, root: Path | None = None) -> Path:
+        with mock.patch.object(self.runner, "STATE", state or self.state):
+            self.runner.claim_workspace(root or self.shared, run)
+        directory = (root or self.shared) / run
+        (directory / "data").write_text("x")
+        return directory
+
+    def lock(self, run: str, state: Path | None = None) -> Any:
+        """The context of a running run of ``state``."""
+        from contextlib import contextmanager
+
+        @contextmanager
+        def held() -> Any:
+            with mock.patch.object(self.runner, "STATE", state or self.state):
+                lock = self.runner.run_lock(run)
+                lock.__enter__()
+            try:
+                yield
+            finally:
+                lock.__exit__(None, None, None)
+
+        return held()
+
+    def test_a_cleanup_removes_the_finished_workspaces_of_its_own_state_only(self) -> None:
+        mine = self.workspace(self.MINE)
+        theirs = self.workspace(self.OTHER, state=self.other_state)
+        self.clean()
+        self.assertFalse(mine.exists())
+        self.assertTrue((theirs / "data").exists())
+        self.clean(state=self.other_state)
+        self.assertFalse(theirs.exists())
+
+    def test_another_state_directory_never_removes_an_active_workspace(self) -> None:
+        active = self.workspace(self.MINE)
+        with self.lock(self.MINE):
+            self.clean(state=self.other_state)  # cannot see this run's lock
+            self.assertTrue((active / "data").exists())
+            self.clean()  # sees it
+            self.assertTrue((active / "data").exists())
+        self.clean()
+        self.assertFalse(active.exists())
+
+    def test_what_cannot_be_proven_ours_is_kept(self) -> None:
+        run = self.runner
+        outside = self.base / "outside"
+        outside.mkdir()
+        (outside / "precious").write_text("x")
+        record = json.dumps({"run": self.MINE, "state": str(self.state)})
+        (outside / run.OWNER_FILE).write_text(record)
+        cases: dict[str, Path] = {}
+        # a link with a run's name to a directory that even carries a matching record
+        (self.shared / self.MINE).symlink_to(outside)
+        cases["link"] = self.shared / self.MINE
+
+        def directory(name: str, owner: str | None) -> Path:
+            made = self.shared / name
+            made.mkdir()
+            (made / "data").write_text("x")
+            if owner is not None:
+                (made / run.OWNER_FILE).write_text(owner)
+            return made
+
+        def owner(name: str) -> str:
+            return json.dumps({"run": name, "state": str(self.state)})
+
+        names = [f"20260101-000000-{n:06x}" for n in range(1, 8)]
+        cases["no record"] = directory(names[0], None)
+        cases["unreadable record"] = directory(names[1], "{")
+        cases["record of another run"] = directory(names[2], owner(self.OTHER))
+        cases["foreign name"] = directory("keep-me", owner("keep-me"))
+        cases["linked record"] = directory(names[3], None)
+        (outside / "record").write_text(owner(names[3]))
+        (cases["linked record"] / run.OWNER_FILE).symlink_to(outside / "record")
+        cases["writable by others"] = directory(names[4], owner(names[4]))
+        cases["writable by others"].chmod(0o777)
+        cases["incomplete record"] = directory(names[5], json.dumps({"run": names[5]}))
+        cases["file"] = self.shared / names[6]
+        cases["file"].write_text("x")
+        self.clean()
+        for label, path in cases.items():
+            with self.subTest(label):
+                self.assertTrue(os.path.lexists(path))
+        self.assertEqual((outside / "precious").read_text(), "x")
+
+    def test_a_workspace_or_record_of_another_user_is_kept(self) -> None:
+        mine = self.workspace(self.MINE)
+        someone = os.getuid() + 1
+        with mock.patch.object(self.runner.os, "getuid", return_value=someone):
+            self.assertIn("another user", self.runner.foreign_workspace(mine) or "")
+            self.assertIsNone(self.runner.read_owner(mine))
+            self.clean()
+        self.assertTrue(mine.exists())
+
+    def test_an_unsafe_workspace_root_is_not_entered(self) -> None:
+        elsewhere = self.base / "elsewhere"
+        elsewhere.mkdir(mode=0o700)
+        for label in ("link", "open to others"):
+            with self.subTest(label):
+                kept = self.workspace(self.MINE, root=elsewhere)
+                root = elsewhere
+                if label == "link":
+                    self.shared.rmdir()
+                    self.shared.symlink_to(elsewhere)
+                    root = self.shared
+                else:
+                    elsewhere.chmod(0o777)
+                with mock.patch.object(self.runner, "TMPFS_WORK", root):
+                    self.clean()
+                self.assertTrue((kept / "data").exists())
+                self.assertTrue(any("keeping everything below" in line for line in self.said))
+                self.said.clear()
+                elsewhere.chmod(0o700)
+                if label == "link":
+                    self.shared.unlink()
+                    self.shared.mkdir(mode=0o700)
+                self.runner.shutil.rmtree(kept)
+
+    def test_a_run_never_takes_an_existing_directory_as_its_workspace(self) -> None:
+        (self.shared / self.MINE).mkdir()
+        with self.assertRaises(FileExistsError):
+            self.runner.claim_workspace(self.shared, self.MINE)
+        self.shared.chmod(0o777)
+        with self.assertRaises(RuntimeError):
+            self.runner.claim_workspace(self.shared, self.OTHER)
+
+    def test_containers_networks_and_images_of_other_state_directories_are_kept(self) -> None:
+        mine, theirs = str(self.state), str(self.other_state)
+        running = "20260101-000000-cccccc"
+        for kind in ("containers", "networks"):
+            self.listings[kind] = [
+                f"{kind}-mine\tatci-{self.MINE}-x\t{self.MINE}\t{mine}",
+                f"{kind}-theirs\tatci-{self.OTHER}-x\t{self.OTHER}\t{theirs}",
+                f"{kind}-unlabelled\tatci-{self.OTHER}-y\t{self.OTHER}\t",
+                f"{kind}-running\tatci-{running}-x\t{running}\t{mine}",
+                f"{kind}-foreign\tinfra-redis\t{self.MINE}\t{mine}",
+            ]
+        self.listings["images"] = [
+            f"i-mine\tatci-{self.MINE}-k|{self.MINE}\t{mine}",
+            f"i-theirs\tatci-{self.OTHER}-k|{self.OTHER}\t{theirs}",
+        ]
+        with self.lock(running):
+            self.clean()
+        self.assertEqual(
+            self.removed,
+            [
+                ("rm", "-f", "-v", "containers-mine"),
+                ("network", "rm", "networks-mine"),
+                ("image", "rm", "-f", "i-mine"),
+            ],
+        )
+
+    def test_everything_a_run_creates_carries_its_state_directory(self) -> None:
+        job = mock.Mock(key="test")
+        run = mock.Mock(run_id=self.MINE, work=self.shared, directory=self.base / "results")
+        labels = self.runner.JobRun(run, mock.Mock(job=job)).labels()
+        self.assertEqual(labels[self.runner.STATE_LABEL], str(self.state))
+        compose = yaml.safe_load((REPO / "compose.ci.yml").read_text())
+        for name, service in compose["services"].items():
+            with self.subTest(name):
+                self.assertIn(self.runner.STATE_LABEL, service["labels"])
+
+    def test_caches_stay_while_a_run_of_any_state_directory_lives(self) -> None:
+        volume = ("volume", "rm", "atci-uv-cache")
+        with self.runner.host_activity() as running:  # a run of another state directory
+            self.assertTrue(running)
+            self.clean(caches=True)
+        self.assertNotIn(volume, self.removed)
+        self.clean(caches=True)
+        self.assertIn(volume, self.removed)
+
+    def test_a_lock_removed_while_a_run_takes_it_is_taken_again(self) -> None:
+        import fcntl
+
+        real, calls = fcntl.flock, []
+        path = self.state / "locks" / f"{self.MINE}.lock"
+
+        def flock(handle: Any, operation: int) -> None:
+            real(handle, operation)
+            if operation == fcntl.LOCK_EX and not calls:
+                path.unlink()  # a cleanup removed it between open and lock
+            calls.append(operation)
+
+        with mock.patch.object(self.runner.fcntl, "flock", flock):
+            lock = self.runner.run_lock(self.MINE)
+            lock.__enter__()
+        try:
+            self.assertTrue(self.runner.is_active(self.MINE))
+        finally:
+            lock.__exit__(None, None, None)
+        self.assertFalse(path.exists())
+
+    def test_a_held_lock_is_never_removed(self) -> None:
+        path = self.state / "locks" / f"{self.MINE}.lock"
+        with self.lock(self.MINE):
+            self.runner.remove_stale_lock(path)
+            self.assertTrue(self.runner.is_active(self.MINE))
+        path.write_text("stale")
+        self.runner.remove_stale_lock(path)
+        self.assertFalse(path.exists())
+
+    def test_old_results_another_state_directory_may_be_writing_are_kept(self) -> None:
+        results = self.base / "results"
+
+        def result(name: str, state: Path | None, finished: bool) -> Path:
+            directory = results / name
+            directory.mkdir(parents=True)
+            if state:
+                with mock.patch.object(self.runner, "STATE", state):
+                    self.runner.write_owner(directory, name)
+            if finished:
+                (directory / "summary.json").write_text("{}")
+            os.utime(directory, (0, 0))
+            return directory
+
+        running = result(self.MINE, self.other_state, finished=False)
+        unknown = result("20260101-000000-000001", None, finished=False)
+        mine = result("20260101-000000-000002", self.state, finished=False)
+        done = result("20260101-000000-000003", self.other_state, finished=True)
+        self.clean(results_older_than=1)
+        self.assertEqual(
+            [p.exists() for p in (running, unknown, mine, done)], [True, True, False, False]
+        )
+
+
+class StateDirectory(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.base = Path(temporary.name).resolve()
+
+    def test_an_unsafe_state_directory_is_refused_and_left_as_it_is(self) -> None:
+        import runner
+
+        opened = self.base / "open"
+        opened.mkdir()
+        opened.chmod(0o1777)
+        target = self.base / "target"
+        target.mkdir(mode=0o700)
+        (self.base / "link").symlink_to(target)
+        (self.base / "dangling").symlink_to(self.base / "nowhere")
+        (self.base / "file").write_text("x")
+        cases = {
+            "relative": Path("state"),
+            "root": Path("/"),
+            "top level": Path("/tmp"),  # noqa: S108
+            "not normalised": self.base / "target" / ".." / "target",
+            "open to others": opened,
+            "link": self.base / "link",
+            "below a link": self.base / "link" / "state",
+            "dangling link": self.base / "dangling",
+            "file": self.base / "file",
+        }
+        modes = {p: p.stat().st_mode for p in (opened, target, Path("/"), Path("/tmp"))}  # noqa: S108
+        for label, path in cases.items():
+            with self.subTest(label), self.assertRaises(SystemExit):
+                runner.private_directory(path)
+        for path, mode in modes.items():
+            self.assertEqual(path.stat().st_mode, mode, path)
+        self.assertFalse((self.base / "nowhere").exists())
+
+    def test_a_new_state_directory_is_private(self) -> None:
+        import runner
+
+        made = self.base / "a" / "state"
+        runner.private_directory(made)
+        runner.private_directory(made)
+        self.assertEqual(made.stat().st_mode & 0o777, 0o700)
 
 
 class RunReport(unittest.TestCase):

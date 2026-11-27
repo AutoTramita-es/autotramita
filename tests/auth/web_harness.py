@@ -15,6 +15,7 @@ import httpx
 from app.api.app import create_app
 from app.auth.errors import AuthCallbackRejected
 from app.auth.runtime import AuthRuntime
+from app.auth.security.markers import RecoveryMarkers
 from app.auth.sessions.models import SessionPolicy
 from app.auth.settings import AuthLimitSettings, AuthSettings
 from app.auth.tokens import IdTokenValidator, JwksCache, LogoutTokenValidator, TokenValidator
@@ -156,6 +157,13 @@ class Web:
     def close(self) -> None:
         for c in self.clients:
             c.close()
+
+
+def private_markers(redis_url: str, prefix: str) -> RecoveryMarkers:
+    """Recovery markers of one test rig only. The namespace is random: ``id()`` of a freed object
+    is given to a later one, Redis keeps the keys between tests, and a rig that inherits them
+    sees another test's recovery request as already handled."""
+    return RecoveryMarkers(create_redis(redis_url), namespace=f"{prefix}{uuid.uuid4().hex}")
 
 
 def build_web(

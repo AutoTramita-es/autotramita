@@ -1,7 +1,7 @@
 # INFRA-CI-02 — CI performance optimization
 
 Date: 2026-11-27
-Status: IMPLEMENTED, AWAITING INDEPENDENT REVIEW AND OWNER ACCEPTANCE. Implemented under the owner's separate implementation order of 2026-11-27, which lifted the deferral of INFRA-CI-01 for this package; see [implementation](INFRA-CI-02-IMPLEMENTATION.md), [benchmark](INFRA-CI-02-BENCHMARK.md) and [acceptance report](INFRA-CI-02-ACCEPTANCE.md). Sections 1–8 are the specification as written before the implementation. This document itself authorizes no trigger change, deployment or other package.
+Status: IMPLEMENTED, REVIEWED (PASS WITH CONDITIONS), CORRECTIONS ([INFRA-CI-02-REC-01](INFRA-CI-02-REC-01.md)) AWAITING INDEPENDENT VERIFICATION AND OWNER ACCEPTANCE. Implemented under the owner's separate implementation order of 2026-11-27, which lifted the deferral of INFRA-CI-01 for this package; see [implementation](INFRA-CI-02-IMPLEMENTATION.md), [benchmark](INFRA-CI-02-BENCHMARK.md) and [acceptance report](INFRA-CI-02-ACCEPTANCE.md). Sections 1–8 are the specification as written before the implementation. This document itself authorizes no trigger change, deployment or other package.
 
 ## 1. Scope and evidence
 

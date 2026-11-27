@@ -31,6 +31,12 @@ Rules ([full list](docs/infrastructure/LOCAL-CI.md#rules-for-claude-code-codex-a
 ## Writing tests
 
 Most tests run in parallel workers. A test that races threads, sleeps, uses a lease, expiry or a
-fixed port, or measures time belongs in `tests/serial_tests.py`; `tests/test_ci_parallel.py`
-fails if it is missing there. Every test creates its own database and roles; do not depend on
-state left by another test.
+fixed port, or measures time belongs in `tests/serial_tests.py`. **Adding it is your job.** The
+guard in `tests/test_ci_parallel.py` is a text search that catches only some of these cases
+(threads, `time.sleep`, `asyncio.sleep`, monotonic and performance clocks and a few others); it
+does not catch leases, expiry, most fixtures from a `conftest.py` or other indirect timing
+([limits](docs/infrastructure/LOCAL-CI.md#writing-tests)).
+
+Every test creates its own database and roles; do not depend on state left by another test. Redis
+keeps its keys between tests: name a namespace or key with `uuid4`, never with `id()` or
+`hash()` of an object.

@@ -6,14 +6,12 @@ import uuid
 import pytest
 from app.audit.models import ActorType, AuditEvent, Outcome, Scope
 from app.audit.record import record
-from app.auth.security.markers import RecoveryMarkers
 from app.core.db import RequestContext, create_session_factory, session_scope
-from app.core.ratelimit import create_redis
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 from tests.auth.fake_admin import FakeAdmin
 from tests.auth.sessions.test_sessions_db import make_user, open_session, rows
-from tests.auth.web_harness import SUBJECT, build_web
+from tests.auth.web_harness import SUBJECT, build_web, private_markers
 from tests.conftest import RoleEnv
 from tests.test_roles_and_migrations import migrate
 
@@ -287,7 +285,7 @@ def test_a_full_client_address_is_stored_nowhere(
     admin = FakeAdmin()
     admin.add("person@example.test", SUBJECT)
     web.runtime.admin = admin
-    web.runtime.markers = RecoveryMarkers(create_redis(redis_url), namespace=f"ip{id(web)}")
+    web.runtime.markers = private_markers(redis_url, "ip")
     try:
         client = web.client(client=(address, 5000))
         assert web.sign_in(client).status_code == 302
