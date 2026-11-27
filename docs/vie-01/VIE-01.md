@@ -1,5 +1,5 @@
 # VIE-01 — Vehicle Intelligence Engine & Calculator Persistence
-Version 1.0 | 2026-11-27 | Specification for owner review; implementation not yet authorized
+Version 1.1 | 2026-11-27 | Specification for owner review; implementation not yet authorized
 Authority: ADR-013 including all three owner amendments (latest takes precedence), ADR-002, ADR-004, ADR-005, ADR-008, ADR-011. ADR-012 is reported local and Proposed; reconcile its actual text before implementation.
 
 ## Objective and baseline
@@ -63,3 +63,33 @@ CP05 controlled DEV preview: only with separate deployment authorization, backup
 
 ## Reporting and scope
 Maintain docs/vie-01/VIE-01-REPORT.md during implementation: baseline SHA, changes, migrations, API, tests/commands/results, metrics, blockers, unilateral decisions, AC matrix, image/rollback and CI evidence. No code, migration, dependency installation, deployment, Git merge or AT-02 work authorized by this specification. No pgvector, new storage, model training or tax formula change. Owner approval of implementation scope required. ADR-012 actual text must be reconciled locally before publishing; do not fabricate a replacement.
+
+## Mandatory amendment — persistent AI cache and cost-efficient testing (owner approved 2026-11-27)
+
+This is a mandatory VIE-01 requirement, not an optional optimization. Implement in CP02/CP03 before repeated paid live regression runs.
+
+### OCR cache
+- Compute SHA-256 of exact uploaded bytes before provider invocation; include effective preprocessing/rendering version, page selection, document category, provider/model version, prompt and extraction schema version in the cache key. Hash actual provider input where preprocessing changes it. Filename alone is not a key.
+- Persist successful validated extraction results in existing DEV PostgreSQL; cache survives restart and deployment. Use scoped unique keys and single-flight concurrency control to prevent duplicate paid calls. Never cache provider errors as successful results. Partial or uncertain results remain explicitly labeled and cannot become verified facts.
+- Authorize before lookup. Private cache is tenant/operator scoped; no cross-tenant document hash existence oracle. Shared demo may persist/reuse only allowlisted technical evidence and non-personal metrics, not historical personal-bearing OCR. A sanitized cache hit must not pretend to supply missing commercial/private fields; process those separately or require fresh extraction when needed. Private full OCR caching requires the restricted archive path defined above. No cross-environment reuse.
+- Invalidate on relevant model/prompt/schema/preprocessing changes, revocation, retention/deletion or incompatible evidence. Preserve corrections separately from immutable extraction snapshots. Cache is not proof of correctness.
+- Provide explicit DEV operator Force OCR bypass for intentional OCR evaluation, with cost visibility and audit; do not expose unrestricted paid bypass to shared demo. Failed refresh must not destroy last valid result.
+
+### Interpretation cache
+- Reuse OpenAI output only for identical canonical authorized evidence and relevant configuration: model, prompt/schema, reconciliation policy, knowledge revisions, tool inputs/results and BOE dataset edition. Revalidate authoritative BOE references and never reuse stale tax results. If dependencies cannot be reliably fingerprinted, rerun interpretation rather than return stale output.
+- Apply the same privacy scope, retention, concurrency and invalidation rules. Cache hits incur zero new calls to the cached provider, not necessarily zero total workflow cost.
+
+### Test policy and cost observability
+- Default automated tests, UI/i18n, tax, BOE and reconciliation regression to deterministic sanitized recorded fixtures or mocks; no paid provider calls in ordinary local/full CI. Keep fixture provenance/version and distinguish replay from live evidence. Never commit personal documents or raw personal OCR.
+- Live OCR only for explicit provider/model/prompt/preprocessing evaluation, fresh-document holdout or required live smoke/checkpoint; use bounded sample sizes and existing configurable budgets. Force OCR for genuinely independent OCR accuracy trials, not replay. Live interpretation tests may reuse OCR fixtures. Do not retry HTTP 402 automatically; report billing blocker, preserve available cache and manual workflow. Bound retries for transient errors.
+- Record per-provider calls, cache hits/misses/bypasses, token/page usage where available, estimated cost, actual billed cost when available, latency and retry counts; never log document contents or secrets. Report savings against comparable uncached baseline, not assumed prices. The reported $10 depletion is not independently verified.
+- Keep existing safeguards; no new paid infrastructure or provider subscription required.
+
+### Additional mandatory acceptance criteria
+- AC15 identical authorized document and compatible configuration after restart yields same validated OCR result with zero new Gemini calls; concurrent identical requests trigger at most one successful paid extraction under normal operation.
+- AC16 changed bytes or relevant extraction configuration causes cache miss; explicit authorized Force OCR triggers fresh call; failed refresh preserves prior valid result.
+- AC17 private cache cannot leak across tenants/demo/DEV-PROD, including hash probing, raw OCR, metadata and deletion paths; demo technical-only cache never fabricates missing private fields.
+- AC18 identical authorized interpretation dependencies yield zero new OpenAI calls; changed evidence, knowledge or BOE edition invalidates affected cache; tax outputs remain deterministic.
+- AC19 ordinary CI and replay regression make zero paid provider calls; live tests explicitly identified and bounded; 402 does not trigger retry storm; report measured call counts and cost estimates separately from actual billing.
+
+Update VIE-01-REPORT.md with cache schema/key design, invalidation, concurrency, privacy tests, provider call counts and measured savings. This amendment changes documentation and acceptance requirements only; implementation authorization remains separate.
