@@ -135,7 +135,7 @@ New tests: 72 in `tests/platform/` (33 database, 28 API, 8 bootstrap and authori
 
 ## 9. Production blockers
 
-Unchanged and still mandatory: IR-07; the six time-limited image acceptances (renewal needs a severity recheck; zero CRITICAL confirmed manually before production until INFRA-CI-02 binds severity, D47); production Keycloak upgrade; persistent migration state (F1 R05); existing realms (provider image, user-profile attributes, reconciliation); O15 mail; R11, R12/O20, trusted proxy networks, O06–O17, D13, D43, password blacklist, AT-20/D42; R10. New with T10:
+Unchanged and still mandatory: IR-07; the six time-limited image acceptances (renewal needs a severity recheck; zero CRITICAL confirmed manually before production until INFRA-CI-02 binds severity, D47; since 2026-11-27, D48: IR-05 must be resolved and independently verified before production and the manual check stays until [PROD-SEC-01](../infrastructure/PROD-SEC-01.md) is formally closed); production Keycloak upgrade; persistent migration state (F1 R05); existing realms (provider image, user-profile attributes, reconciliation); O15 mail; R11, R12/O20, trusted proxy networks, O06–O17, D13, D43, password blacklist, AT-20/D42; R10. New with T10:
 - **Platform database role** credentials and provisioning (`APP_DB_PLATFORM_USER/PASSWORD`, R11) and **`CURSOR_SIGNING_KEY`**: without them the platform routes answer 503.
 - **Production bootstrap** of the first grant administrators: refused by design; needs its own owner approval (D30).
 - Existing realms need the `at_mfa_mandatory` user-profile attribute (admin view/edit only) before a grant can take effect there; `at-admin-svc` must be able to write it.

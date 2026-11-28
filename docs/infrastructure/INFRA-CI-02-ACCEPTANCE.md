@@ -1,6 +1,6 @@
 # INFRA-CI-02 — Acceptance report
 
-Date: 2026-11-27. **Status: independently reviewed at `1357d89` — PASS WITH CONDITIONS; corrections delivered by [INFRA-CI-02-REC-01](INFRA-CI-02-REC-01.md), which awaits independent verification — not accepted.** Open: findings F1 (cause unproven) and F4. The implementing session does not accept its own work or its corrections: independent verification in a separate session and the owner's acceptance are required. Nothing here accepts a checkpoint, authorizes a merge into `main` or a deployment.
+Date: 2026-11-27. **Status: ACCEPTED by the owner on 2026-11-27, together with [INFRA-CI-02-REC-01](INFRA-CI-02-REC-01.md), after its independent verification ([section 7](#7-independent-verification-and-owner-acceptance)).** Reviewed at `1357d89` (PASS WITH CONDITIONS); corrections verified at `285e638`. Closure confirmed the same day. Still open: findings F1 (cause unproven) and F4 and the deferred findings. The F2 obligations IR-05 and IR-06 were transferred to [PROD-SEC-01](PROD-SEC-01.md) ([section 7.4](#74-open-obligation-from-f2-ir-05-and-ir-06)). The acceptance concerns the CI infrastructure only: nothing here accepts a checkpoint, certifies the application as ready for production, or authorizes a merge into `main` or a deployment.
 
 [Specification](INFRA-CI-02.md) · [Implementation](INFRA-CI-02-IMPLEMENTATION.md) · [Benchmark](INFRA-CI-02-BENCHMARK.md) · [Local CI guide](LOCAL-CI.md)
 
@@ -32,7 +32,7 @@ State is the implementer's assessment for the reviewer to confirm.
 | A4a | Equivalent serial and parallel inventories and results | met | BENCHMARK 9: no case missing, 55 guard tests added, all passed. The automatic check compared a count only (review P3-1; REC-01) |
 | A4b | Repeatability | **partly** | six of six single full runs passed (`2781c10`, `6d6307d`); under two simultaneous full runs one test failed once, cause unproven (finding F1) |
 | A4c | Fail-closed behaviour | met, **gap found by review** | guard tests for failing, empty and interrupted parts and for a missing Keycloak test; both observed failures were reported FAIL. A duplicated or substituted test with an unchanged count was accepted (review P3-1; REC-01) |
-| A4d | Isolated workers, safe cleanup, no prune | **not met at the reviewed SHA** | xdist workers were isolated; the Keycloak shards shared one PostgreSQL server (review P1-1), and cleanup with another `ATCI_STATE_DIR` could remove an active run (review P3-2, REC-01 also found containers affected). No `docker … prune`. Corrections: REC-01, to be verified |
+| A4d | Isolated workers, safe cleanup, no prune | **not met at the reviewed SHA** | xdist workers were isolated; the Keycloak shards shared one PostgreSQL server (review P1-1), and cleanup with another `ATCI_STATE_DIR` could remove an active run (review P3-2, REC-01 also found containers affected). No `docker … prune`. Corrections: REC-01, verified at `285e638` (section 7) |
 | A5 | Local and GitHub parity on the same clean SHA, independent GitHub success | met after a fix of the comparison tool | section 4 |
 | A6 | Benchmark, limitations, deferred findings, rollback | met | BENCHMARK, IMPLEMENTATION 4 and 5, section 5 |
 | A7 | No application feature, F2 decision, production or deployment change | met | section 1 |
@@ -106,4 +106,49 @@ The three GitHub durations of INFRA-CI-02 are 356, 387 and 479 s ([BENCHMARK 11]
 
 ## 6. Recommendation
 
-The implementer's recommendation (READY FOR INDEPENDENT REVIEW) was followed by the independent review of `1357d89`: **PASS WITH CONDITIONS** (P1-1, P1-2, P2-1, P2-2, P3-1 to P3-7). [INFRA-CI-02-REC-01](INFRA-CI-02-REC-01.md) answers the conditions and records the deferred findings. Next: independent verification of REC-01, then the owner's decision, including F1, F4, F5 and the missed duration goals. No self-acceptance, merge or deployment.
+The implementer's recommendation (READY FOR INDEPENDENT REVIEW) was followed by the independent review of `1357d89`: **PASS WITH CONDITIONS** (P1-1, P1-2, P2-1, P2-2, P3-1 to P3-7). [INFRA-CI-02-REC-01](INFRA-CI-02-REC-01.md) answers the conditions and records the deferred findings. Next: independent verification of REC-01, then the owner's decision, including F1, F4, F5 and the missed duration goals. No self-acceptance, merge or deployment. Both steps followed on 2026-11-27 (section 7).
+
+## 7. Independent verification and owner acceptance
+
+### 7.1 Verification of INFRA-CI-02-REC-01
+
+A separate session, which took no part in the implementation, verified the corrections read-only on 2026-11-27. Its report was returned to the owner and is not a repository file; this section summarises it. Verdict: **PASS — RECOMMENDED FOR OWNER ACCEPTANCE**. REC-01 to REC-06 confirmed; no production-blocking finding within the reviewed scope.
+
+| Evidence | Implementation `3bbdf82` | Verified head `285e638` |
+|---|---|---|
+| Tree | `389b063f12f9f68a3b96608180c09e93f2726dd1` | `8fe97580a5e6192683c68317e6ff9aa46ecd9436` |
+| Local full run, clean content, not targeted | `20261127-190000-b13df1` PASS, 235.5 s | `20261127-191044-97ce4f` PASS, 232.6 s |
+| GitHub run, attempt 1 | [46054031586](https://github.com/AutoTramita-es/autotramita/actions/runs/46054031586) success, 5 of 5 jobs, 344 s | [46054830681](https://github.com/AutoTramita-es/autotramita/actions/runs/46054830681) success, 5 of 5 jobs, 439 s |
+| Comparison, recomputed by the verifier | **EQUIVALENT** | **EQUIVALENT** |
+| Commits scanned without a leak | 575 | 576 |
+
+Both SHAs: main suite 1733 (1632 parallel, 101 serial), Keycloak 265, migration step 6, rate-limit regression 3 × 59; 2181 executions, none failed, errored or skipped. Inventory digests as in [REC-01 4.2](INFRA-CI-02-REC-01.md#42-final-checkpoint-the-tested-implementation), recomputed from the local result files (for the main suite after restoring four redacted test parameters from the source). Against `1357d89` no test case is missing and 119 are added.
+
+Limits of the verification: it did not repeat the full runs, the GitHub runs, the PostgreSQL race experiment or the cleanup runs with the real Docker daemon; for these it relied on saved logs, partly those of the implementing session.
+
+### 7.2 Findings added by the verification (not blocking, not corrected)
+
+| ID | Finding |
+|---|---|
+| N1 | Checkouts with the older runner (the feature worktrees on the development server, and this branch after a rollback) can remove containers, networks and images of an active run that uses another state directory, also when started with the default one. [REC-01 section 9](INFRA-CI-02-REC-01.md#9-rollback) warns of one direction only, and not of the returning permission change of an existing state directory. Until those checkouts have REC-01, and after a rollback: run `cleanup.sh` only while no CI run is active. Concluded from the code, not executed |
+| N2 | LOCAL-CI says cleanup removes only what a run of the same state directory created; `--results-older-than` also removes old finished results of other state directories, as its table row says |
+| N3 | `compare-github.sh` skips the inventory digest if neither side printed it. The current scripts cannot succeed without printing it, and a test keeps the workflow on those scripts |
+
+### 7.3 Owner acceptance
+
+The owner, 2026-11-27, verbatim: „Prihvaćam INFRA-CI-02 i REC-01, upiši prihvaćanje u dokumente."
+
+- INFRA-CI-02 and INFRA-CI-02-REC-01 are **accepted and closed**, on the verification of `285e638` (the order itself names no SHA).
+- Acceptance changes no measured result: A4b stays partly met, the duration goals that were missed stay missed (F4), and the cause of F1 stays unproven.
+- P3-3 to P3-7, the other entries of [REC-01 section 5](INFRA-CI-02-REC-01.md#5-deferred-findings), the limitations in REC-01 section 7 and N1 to N3 remain recorded and not corrected.
+- It authorizes no merge into `main`, deployment, trigger or host change, or further package.
+
+Final confirmation by the owner, 2026-11-27, verbatim: „Potvrđujem konačno prihvaćanje i zatvaranje INFRA-CI-02 i INFRA-CI-02-REC-01.“
+
+### 7.4 Open obligation from F2: IR-05 and IR-06
+
+The F2 decisions D46 and D47 ([decision register](../design/F2-DECISION-REGISTER.md), 2026-11-25) deferred IR-05 (scan-gate hardening) and IR-06 (Local CI broker build network) **to INFRA-CI-02**, and D47 made severity binding of vulnerability acceptances a **mandatory INFRA-CI-02 requirement**. The INFRA-CI-02 specification, implementation and review reports do not address them, and the verification in 7.1 did not cover them; this was noticed while the acceptance was being recorded. `scripts/identity/scan_gate.py`, the acceptances and `scripts/ci/lib/broker.py` are unchanged since `b24da2a`: the gate still matches an acceptance by finding and package, not by severity.
+
+The acceptance order does not mention these items. It therefore **neither fulfilled, waived nor reassigned** them.
+
+**Decided afterwards (2026-11-27, D48):** the owner transferred the obligations to the production security package [PROD-SEC-01](PROD-SEC-01.md). IR-05 must be resolved and independently verified before any production deployment; for IR-06 applicability and scope are determined first. Nothing is fulfilled yet. Until PROD-SEC-01 is formally closed, D46 and D47 and their interim controls stay in force: the severity is reassessed whenever an acceptance is renewed or extended, zero CRITICAL findings are confirmed manually before any production deployment, and existing network access is not extended.

@@ -1,6 +1,6 @@
 # INFRA-CI-02-REC-01 — Independent review remediation
 
-Date: 2026-11-27. **Status: READY FOR INDEPENDENT VERIFICATION — not accepted.** The implementing session does not accept its own corrections. Nothing here authorizes a merge into `main`, a deployment, or a change of triggers, branch protection, job structure, Docker address pools, host firewall or broker permissions; none was made.
+Date: 2026-11-27. **Status: ACCEPTED and closed by the owner on 2026-11-27, after independent verification of `285e638`** (PASS — RECOMMENDED FOR OWNER ACCEPTANCE); record, evidence of `285e638`, further findings and what stays open: [INFRA-CI-02 acceptance, section 7](INFRA-CI-02-ACCEPTANCE.md#7-independent-verification-and-owner-acceptance). The sections below are the implementer's report as written before the verification. Nothing here authorizes a merge into `main`, a deployment, or a change of triggers, branch protection, job structure, Docker address pools, host firewall or broker permissions; none was made.
 
 [Specification](INFRA-CI-02.md) · [Implementation](INFRA-CI-02-IMPLEMENTATION.md) · [Benchmark](INFRA-CI-02-BENCHMARK.md) · [Acceptance](INFRA-CI-02-ACCEPTANCE.md) · [Local CI guide](LOCAL-CI.md)
 

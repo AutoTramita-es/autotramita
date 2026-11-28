@@ -400,6 +400,24 @@ Zabranjeno: ponovno otvaranje T09 bez novog konkretnog nalaza, T11–T13, INFRA-
 Završni status: "F2-T10 — IMPLEMENTATION COMPLETED / READY FOR INDEPENDENT SECURITY REVIEW" ili "F2-T10 — BLOCKED / OWNER DECISION REQUIRED".
 ```
 
+```
+Prihvaćanje INFRA-CI-02 i prijenos IR-05/IR-06 u PROD-SEC-01 | 2026-11-27 | D48 | Verificirani SHA 285e638
+Tekst vlasnika (doslovno, cijeli nalog):
+"Potvrđujem konačno prihvaćanje i zatvaranje INFRA-CI-02 i INFRA-CI-02-REC-01."
+"Potvrđujem prijenos obveza IR-05 i IR-06 iz odluka D46 i D47 u zaseban produkcijski sigurnosni paket PROD-SEC-01."
+"IR-05 mora biti riješen i neovisno verificiran prije produkcijskog deploymenta."
+"Za IR-06 prvo utvrditi aktualnu primjenjivost i potreban opseg korekcije."
+"Postojeće sigurnosne obveze i privremene kontrole iz D46 i D47 ostaju na snazi do formalnog zatvaranja PROD-SEC-01."
+"Ažuriraj odgovarajuće dokumente i registar odluka F2. Evidentiraj prijenos obveza bez poništavanja povijesnih odluka."
+"Pripremi dokument docs/infrastructure/PROD-SEC-01.md s preciznim opsegom, izvornim nalazima, acceptance kriterijima i produkcijskim blockerima."
+"Commitaj isključivo autorizirane dokumentacijske izmjene, pushaj na dev i provjeri GitHub Actions."
+"Ne implementiraj sigurnosne korekcije u ovoj revizorskoj sesiji."
+"Bez novih optimizacija CI-ja, mergea u main ili deploymenta."
+"Dostavi završni SHA, poveznice na dokumentaciju i rezultat GitHub CI-ja."
+Zabranjeno izričito: sigurnosne korekcije, nove optimizacije CI-ja, merge u main, deployment
+Napomena: PROD-SEC-01 je definiran, nije autoriziran za implementaciju; D48 ne mijenja autorizacije F2 paketa.
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
@@ -412,7 +430,7 @@ Završni status: "F2-T10 — IMPLEMENTATION COMPLETED / READY FOR INDEPENDENT SE
 | F2-CP06 | T06 | **PRIHVAĆEN 2026-11-24**: web tok, kolačić, CSRF | CI run 45467370715 (kod e2736d6) |
 | F2-CP07 | T07 | **PRIHVAĆEN 2026-11-24**: mobilni tok | CI run 45469542994 (kod 850316b) |
 | F2-CP08 | T08 | **PRIHVAĆEN 2026-11-24**: pipeline konteksta, port AT-03, cross-tenant | CI run 45472663659 (kod dd7f492) |
-| F2-CP09 | T09-REC | **PRIHVAĆEN 2026-11-25** na verificiranom SHA `b24da2a` (vlasnik prihvaća neovisnu verifikaciju, AC-POL-10, AC-CTX-01, dokumentirana odstupanja i ograničenja dokaza); Keycloak 26.8.2 (D45); KC-SP-12 PASS uz vremenski ograničeno prihvaćanje vlasnika (`cfbc8f7`); IR-05/06 → INFRA-CI-02 (IR-05 uključuje obvezno vezivanje ozbiljnosti, D47); IR-07 obavezni produkcijski blocker | [Izvještaj CP09](F2-CP09-RECONCILIATION-REPORT.md) §1.0; GitHub run 45673597875, lokalni FULL CI `20261125-181014-774b23` (1.706 testova, 1.889 izvođenja, 0 failures/errors/skipped); neovisni pregled `F2-CP09-INDEPENDENT-ACCEPTANCE-REVIEW.md` (izvan repozitorija) |
+| F2-CP09 | T09-REC | **PRIHVAĆEN 2026-11-25** na verificiranom SHA `b24da2a` (vlasnik prihvaća neovisnu verifikaciju, AC-POL-10, AC-CTX-01, dokumentirana odstupanja i ograničenja dokaza); Keycloak 26.8.2 (D45); KC-SP-12 PASS uz vremenski ograničeno prihvaćanje vlasnika (`cfbc8f7`); IR-05/06 → INFRA-CI-02 (IR-05 uključuje obvezno vezivanje ozbiljnosti, D47), od 2026-11-27 preneseno u [PROD-SEC-01](../infrastructure/PROD-SEC-01.md) (D48); IR-07 obavezni produkcijski blocker | [Izvještaj CP09](F2-CP09-RECONCILIATION-REPORT.md) §1.0; GitHub run 45673597875, lokalni FULL CI `20261125-181014-774b23` (1.706 testova, 1.889 izvođenja, 0 failures/errors/skipped); neovisni pregled `F2-CP09-INDEPENDENT-ACCEPTANCE-REVIEW.md` (izvan repozitorija) |
 | F2-CP10 | T10 | `platform_grants`, eskalacije, bootstrap — **IMPLEMENTIRANO 2026-11-25, NIJE PRIHVAĆEN** (čeka neovisnu sigurnosnu reviziju i vlasnika) | [Izvještaj CP10](F2-CP10-REPORT.md); migracija 0010; konačni SHA, lokalni FULL CI i GitHub run u izvještaju vlasniku |
 | F2-CP11 | T11 | Admin korisnika, outbox, KC događaji | CI run, pregled migracije (sljedeći slobodan broj) |
 | F2-CP12 | T12 | Zamrznuti API ugovor | CI run, OpenAPI diff, klijenti |
