@@ -15,6 +15,7 @@ on the development server.
 | The component you changed | `./scripts/ci/run-unit.sh -- <paths>` or `./scripts/ci/run-integration.sh -- <paths>` |
 | Identity, migrations, dependencies, API contract | `run-keycloak.sh`, `run-migrations.sh`, `run-security.sh`, `run-contracts.sh` |
 | Defined checkpoint (end of a T package) | `./scripts/ci/run-all.sh` |
+| Final verification of the exact SHA | GitHub Actions on the push to `dev` |
 | Result of the last run | `cat .ci-results/latest/brief.txt` (details: `report.txt`, `summary.json`) |
 
 Rules ([full list](docs/infrastructure/LOCAL-CI.md#rules-for-claude-code-codex-and-other-agents)):
@@ -22,6 +23,8 @@ Rules ([full list](docs/infrastructure/LOCAL-CI.md#rules-for-claude-code-codex-a
 - Never weaken, skip, deselect or remove a test or a security control to make a run pass.
 - A targeted, partial or dirty-tree run is never acceptance evidence; neither is an exit code
   other than 0. Report the run id, tested SHA and tree.
+- A documentation-only change does not require a new full local run: reuse the earlier valid
+  evidence and name its run id and SHA.
 - Do not push every intermediate correction. GitHub CI on the exact SHA is the independent
   evidence at the checkpoints and cannot be replaced by a local PASS.
 - Workflow triggers, branch protection, the Docker broker policy, host firewall rules and

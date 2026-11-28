@@ -1,5 +1,7 @@
 # INFRA-CI-01 — Local CI Runner: acceptance report
 
+> **CLOSED by the owner on 2026-11-28** (final closure order, [execution order](../design/F2-EXECUTION-ORDER.md)). The limitations stay recorded; item 8 of section 7 is out of date, because `AGENTS.md` and `CLAUDE.md` exist. Current status and workflow: [LOCAL-CI](LOCAL-CI.md#status-2026-11-28). The text below is the report of 2026-11-25.
+
 Date: 2026-11-25. **Status: CONDITIONALLY ACCEPTED for development use** (owner order, 2026-11-25: accepted with the documented limitations LCI-04 and LCI-05; the repository stays public until a separate owner decision; INFRA-CI-02 is deferred). Reported as READY FOR OWNER ACCEPTANCE. Nothing here accepts CP09 or authorizes T10–T13; F2 decisions are unchanged.
 
 How to use the runner: [LOCAL-CI.md](LOCAL-CI.md).

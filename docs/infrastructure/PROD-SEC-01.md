@@ -1,6 +1,6 @@
 # PROD-SEC-01 — Production security package: IR-05 and IR-06
 
-Date: 2026-11-27, decisions and implementation 2026-11-28. **Status: DECIDED (D49) — IMPLEMENTED on `dev`, AWAITING INDEPENDENT VERIFICATION (PS-AC-10) AND THE OWNER'S CLOSING DECISION (PS-AC-11). Production blocker (IR-05) until then.** The owner answered Q1–Q5 and authorized the implementation (D49, section 7); implementation, evidence and the proposal that replaces C2: [PROD-SEC-01 implementation](PROD-SEC-01-IMPLEMENTATION.md). A merge into `main` and a deployment each still need the owner's separate order; C1–C3 (section 5) stay in force until the owner formally closes the package.
+Date: 2026-11-27, decisions, implementation, verification and closure 2026-11-28. **Status: ACCEPTED AND CLOSED BY THE OWNER ON 2026-11-28 ON `c08845a` (D50, [section 9](#9-independent-verification-and-closure-d50)). PB-1 is lifted.** C2 is replaced; C1 and C3 are permanent rules ([section 5](#5-interim-controls)). Closure is not a deployment authorization: the remaining production obligations are in [PRODUCTION-READINESS-01](PRODUCTION-READINESS-01.md). Implementation and evidence: [PROD-SEC-01 implementation](PROD-SEC-01-IMPLEMENTATION.md). Sections 1 to 8 keep the record as it was before the closure, except the notes marked D50.
 
 [Implementation record](PROD-SEC-01-IMPLEMENTATION.md) · [F2 decision register (D46–D49)](../design/F2-DECISION-REGISTER.md) · [F2 execution order](../design/F2-EXECUTION-ORDER.md) · [CP09 report](../design/F2-CP09-RECONCILIATION-REPORT.md) · [INFRA-CI-02 acceptance](INFRA-CI-02-ACCEPTANCE.md#74-open-obligation-from-f2-ir-05-and-ir-06)
 
@@ -15,6 +15,8 @@ Date: 2026-11-27, decisions and implementation 2026-11-28. **Status: DECIDED (D4
 | 2026-11-27 | **D48** (owner) | the obligations of D46 and D47 are **transferred to PROD-SEC-01**; nothing is waived or fulfilled |
 | 2026-11-28 | Decision preparation (W1 read-out, W2 design; outside the repository) | IR-05 applies; IR-06 does not apply to the Local CI broker but to the GitHub builds and the prepared production build |
 | 2026-11-28 | **D49** (owner) | Q1–Q5 answered, clarifications of the criteria approved, implementation authorized (section 7) |
+| 2026-11-28 | Independent verification of `c08845a` | PASS, no open P0 or P1 (section 9) |
+| 2026-11-28 | **D50** (owner) | accepted and closed; C2 replaced, C1 and C3 permanent (section 9) |
 
 D48 changes only which package carries the obligations. D46 and D47 and the reports that name INFRA-CI-02 remain as the historical record.
 
@@ -93,6 +95,8 @@ IR-07 and every other production blocker (section 6); a Keycloak or dependency u
 
 ## 5. Interim controls
 
+**Since 2026-11-28 (D50):** C1 and C3 are permanent rules. C2 has ended and is replaced by [step 4 of the production upgrade](../../identity/keycloak/UPGRADE-26.8.2.md#production-upgrade-prepared-not-applied) (build, scan the exact image, gate, record, create, check the container's image, start). The text below is the state before the closure.
+
 In force until PROD-SEC-01 is **formally closed** (D48, confirmed by D49). Implementing or verifying a part of the package does not lift them. The replacement proposed for C2 is in [the implementation record, section 7](PROD-SEC-01-IMPLEMENTATION.md#7-deployment-safety-replacement-proposed-for-c2).
 
 | # | Control | Source |
@@ -104,6 +108,8 @@ In force until PROD-SEC-01 is **formally closed** (D48, confirmed by D49). Imple
 Dates: the acceptance of CVE-2026-102554 (Guava) expires on **2026-12-31**, the other five on 2027-02-22. After expiry the gate fails; a renewal is subject to C1.
 
 ## 6. Production blockers
+
+**Since 2026-11-28 (D50):** PB-1 is lifted; PB-2 is replaced together with C2. Current obligations: [PRODUCTION-READINESS-01](PRODUCTION-READINESS-01.md).
 
 | ID | Blocker | Lifted by |
 |---|---|---|
@@ -145,3 +151,35 @@ Elements of IR-05 other than severity binding (PS-AC-04 to PS-AC-07) are met whe
 | PS-AC-09 | IR-06: a written determination with run-time evidence for the brokered build and an assessment of the GitHub build; the owner's decision on it; any ordered correction has a regression test and extends no network access | report, decision, tests | results of the decision preparation are not durable evidence; the implementation repeats and records them |
 | PS-AC-10 | An independent session verifies the result, with no open P0 or P1 | verification report | unchanged |
 | PS-AC-11 | The owner formally closes PROD-SEC-01 in the decision register; only then do C1–C3 end as interim controls, replaced by what the closing decision states | register entry | the closing decision must say what replaces C2 (proposal: [implementation, section 7](PROD-SEC-01-IMPLEMENTATION.md#7-deployment-safety-replacement-proposed-for-c2)) |
+
+## 9. Independent verification and closure (D50)
+
+### 9.1 Verification
+
+A session that had not taken part in the preparation or the implementation verified the final SHA read-only on 2026-11-28. Verdict: **PASS — RECOMMENDED FOR OWNER ACCEPTANCE**; no open P0 or P1. This is the summary of its report, which was delivered to the owner and is not a file in the repository.
+
+| Item | Result |
+|---|---|
+| Verified | `c08845a00b664a02ddcec74464ca95cef31b2657`, tree `a128e6e9ad5701c7114a040867c35184a583ab2a`; it differs from the tested implementation `208ad7f` (tree `86725a514eebb03b3ffb651780153e355babb4af`) only in `PROD-SEC-01-IMPLEMENTATION.md` |
+| IR-05 | resolved: targeted adversarial probes; 121 gate and environment tests and the 51 runner self-tests repeated; old and new gate compared on a real scan report with 11 cases |
+| IR-06 | resolved: run-time network probes of `docker build` and Compose, with controls; broker probes. The finding did not apply to the Local CI broker |
+| CI | Local FULL CI `20261128-093213-d30c46` on `208ad7f` (6/6 jobs, 2,266 test executions, no failure, error or skip); GitHub runs 46131267013 and 46131808660 (5/5 jobs); test inventory digests equal. FULL CI was not repeated |
+| Criteria | PS-AC-01 to PS-AC-10 met (PS-AC-06 by the Q3 disposition; PS-AC-08 on the implementation tree, the final commit being documentation only); PS-AC-11 then open |
+| C2 proposal | build, save, scan and gate of a production-file build passed under a probe tag. `up --no-build` does **not** stop a moved tag (V-01); `create --no-build`, check, `start` does |
+| Limits | nothing was deployed; the production daemon and the GitHub runner daemon were not inspected; start behaviour was probed with substitute commands and images, not with Keycloak |
+
+### 9.2 Findings
+
+| ID | Class | Finding | Disposition (D50) |
+|---|---|---|---|
+| V-01 | P2 | with `up --no-build` a substituted image is noticed only after it has started | **resolved by the accepted C2 replacement**: create, check, start |
+| V-02 | P3 | the archive is tied to the daemon id only by "the id is unchanged around `docker save`"; the archive's `index.json` digest equalled the daemon id and could be compared directly | deferred (technical debt) |
+| V-03 | P3 | the gate does not bind a report to the databases it was scanned with, so an older report of the same image passes next to fresh databases (as before D49); scan and gate run in one sequence | deferred |
+| V-04 | P3 | `Vulnerabilities` given as `{}`, `""`, `0` or `false` counts as no findings, although the documentation says a non-list fails (as the old gate did) | deferred |
+| V-05 | P3 | some wrongly typed reports end in a traceback without a summary; still a failure | deferred |
+| V-06 | P3 | `severity_note` in `vulnerability-review-26.8.2.json` still says the gate counts the scanner's severity | deferred |
+| V-07 | Info | an acceptance is not bound to a file path; `network: none` covers `RUN` steps, not the pull of the digest-pinned base images | deferred |
+
+### 9.3 Owner decision (2026-11-28)
+
+Accepted and closed on `c08845a` (PS-AC-11 met, [D50](../design/F2-DECISION-REGISTER.md); verbatim order in the [execution order](../design/F2-EXECUTION-ORDER.md)). C2 is replaced; C1 and C3 are permanent; V-02 to V-07 are technical debt; no further correction package or repeated review of this package is authorized.

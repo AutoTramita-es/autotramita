@@ -497,6 +497,8 @@ Keycloak Security Upgrade (26.8.2): no test removed, skipped or weakened.
 
 ## 10. Open production blockers
 
+> **2026-11-28 (D50):** PROD-SEC-01 is closed (IR-05 and IR-06). The current list is [PRODUCTION-READINESS-01](../infrastructure/PRODUCTION-READINESS-01.md); the list below is the historical record.
+
 - **Image vulnerabilities (KC-SP-12)**: Keycloak 26.8.2 — 0 CRITICAL / 6 HIGH, accepted by the owner for a limited time; the acceptances expire 2026-12-31 (Guava: upgrade to the 26.8.x patch with Guava 33.7.2) and 2027-02-22; production needs them valid, or renewed by the owner after a recheck.
 - **IR-07 (mandatory, D46)**: guarded credential changes with Keycloak's production cache stack (default Infinispan of `start`) and a database failover or restart during a change have not been tested (evidence: two nodes with local caches); test before production.
 - **IR-05 (added 2026-11-27, D48)**: severity binding and the other scan-gate hardening, resolved and independently verified before production; until [PROD-SEC-01](../infrastructure/PROD-SEC-01.md) is formally closed, zero CRITICAL findings are also confirmed manually before any production deployment (D47). IR-06: applicability and scope to be determined in the same package.

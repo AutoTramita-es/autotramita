@@ -1,5 +1,7 @@
 # PROD-SEC-01 — Implementation record (IR-05 and IR-06)
 
+> **Closed 2026-11-28 (D50):** verified independently and accepted on `c08845a`; C2 replaced with the amendment create, check, start; C1 and C3 permanent ([PROD-SEC-01, section 9](PROD-SEC-01.md#9-independent-verification-and-closure-d50)). The text below is the implementer's report as it was before that.
+
 Date: 2026-11-28. **Status: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (PS-AC-10) AND THE OWNER'S DECISION (PS-AC-11).** This is the implementer's report; it accepts nothing. C1–C3 ([PROD-SEC-01, section 5](PROD-SEC-01.md#5-interim-controls)) stay in force until the owner formally closes the package. Nothing here authorizes a merge into `main`, a deployment, a new or renewed acceptance, or an upgrade.
 
 [Package definition](PROD-SEC-01.md) · [D49 in the F2 decision register](../design/F2-DECISION-REGISTER.md) · [Upgrade and deployment procedure](../../identity/keycloak/UPGRADE-26.8.2.md#production-upgrade-prepared-not-applied) · [Local CI guide](LOCAL-CI.md)

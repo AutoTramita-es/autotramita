@@ -2,6 +2,31 @@
 
 Runs every check of the GitHub Actions workflow on the development server, on uncommitted work, with no commit or push. **A local PASS is development feedback. It does not replace the GitHub CI evidence** required at the control points listed in [Agent rules](#rules-for-claude-code-codex-and-other-agents).
 
+## Status (2026-11-28)
+
+**Local CI is operational.** The owner closed the CI infrastructure task on 2026-11-28 (record in the [execution order](../design/F2-EXECUTION-ORDER.md)).
+
+| Item | Status | Record |
+|---|---|---|
+| INFRA-CI-01 | **CLOSED** (accepted for development use on 2026-11-25 with LCI-04 and LCI-05) | [acceptance](INFRA-CI-01-ACCEPTANCE.md) |
+| INFRA-CI-02 | **CLOSED** (2026-11-27) | [acceptance](INFRA-CI-02-ACCEPTANCE.md#7-independent-verification-and-owner-acceptance) |
+| INFRA-CI-02-REC-01 | **CLOSED** (2026-11-27) | [report](INFRA-CI-02-REC-01.md) |
+| PROD-SEC-01 | **ACCEPTED / CLOSED** under D50 | [package, section 9](PROD-SEC-01.md#9-independent-verification-and-closure-d50) |
+
+Evidence: Local full run `20261128-093213-d30c46` on `208ad7f` (6 of 6 jobs, 2,266 test executions, no failure, error or skip), compared EQUIVALENT with GitHub run 46131267013. The later commits up to this status change documentation only.
+
+### Where it works, and where it does not
+
+- **Works:** `dev` and branches based on it, as long as `ci.yml` uses only what the runner knows.
+- **Does not work on the calculator feature branches** (`feature/demo-calc-01`, `feature/demo-calc-01-document-extraction`, `feature/calc-rdw-01`, read on 2026-11-28): their `ci.yml` adds a step with `${{ job.services.postgres.id }}`, which the runner of those branches and of `dev` refuses ("GitHub expressions are not supported locally", exit 2). Merging `dev` into them does not remove the refusal. Their added `docker exec`, calculator image build and web job were not tried; the [broker rules](#docker-isolation) allow neither `docker exec` nor that build.
+- Those branches also carry the runner from before INFRA-CI-02-REC-01 (finding N1 of the [acceptance](INFRA-CI-02-ACCEPTANCE.md#72-findings-added-by-the-verification-not-blocking-not-corrected)): run their `cleanup.sh` only while no CI run is active.
+
+### Preserved limitations and deferred findings
+
+- [INFRA-CI-01, section 7](INFRA-CI-01-ACCEPTANCE.md#7-remaining-limitations), items 1 to 7, among them the network boundary (LCI-04, LCI-05). Item 8 is out of date: `AGENTS.md` and `CLAUDE.md` exist.
+- INFRA-CI-02: the cause of F1 stays unproven and the missed duration goals stay missed (F4); P3-3 to P3-7, the other deferred findings of [REC-01 section 5](INFRA-CI-02-REC-01.md#5-deferred-findings), its section 7 and N1 to N3 stay recorded and uncorrected.
+- PROD-SEC-01: V-02 to V-07 are technical debt.
+
 ## Quick start
 
 ```sh
@@ -281,17 +306,26 @@ Leftovers of a run with `ATCI_STATE_DIR` are removed with the same variable set:
 
 ## Rules for Claude Code, Codex and other agents
 
-Proposed workflow (to be confirmed by the owner):
+Workflow, confirmed by the owner on 2026-11-28:
+
+| Level | Command | When | Evidence value |
+|---|---|---|---|
+| **FAST** | `run-fast.sh` | during development | feedback |
+| **TARGETED** | `run-unit.sh -- <paths>`, `run-integration.sh -- <paths>`; `run-keycloak.sh` (identity), `run-migrations.sh` (migrations), `run-security.sh` (dependencies, secrets, image), `run-contracts.sh` (API contract) | for the affected components | feedback |
+| **FULL LOCAL CI** | `run-all.sh` | at the mandatory checkpoints, before finishing a T package | checkpoint evidence, if the tree is clean |
+| **GitHub Actions** | push to `dev`; optionally `compare-github.sh` | final verification of the exact SHA | independent evidence |
 
 1. Implement the change.
-2. `run-fast.sh`.
-3. Targeted tests of the changed components (`run-unit.sh -- <paths>`, `run-integration.sh -- <paths>`, `run-keycloak.sh` for identity changes, `run-migrations.sh` for migrations).
+2. FAST.
+3. TARGETED for the changed components.
 4. Fix and repeat. Do not push each intermediate correction.
-5. `run-all.sh` before finishing a T package (the defined checkpoint).
+5. FULL LOCAL CI at the checkpoint.
 6. Commit and push to `dev`.
-7. GitHub Actions final check; optionally `compare-github.sh`.
+7. GitHub Actions final check.
 8. Acceptance report.
 9. Owner acceptance.
+
+**Reuse valid evidence.** A change of documentation only does not require a new full local run: cite the earlier run id and tested SHA and state that the difference is documentation only. This holds only while no test or script reads the changed files. GitHub Actions still runs on the pushed commit, the secret scan included.
 
 GitHub CI stays mandatory for: completion of a T package, CP control points, completion of a phase, release and merge into `main`.
 

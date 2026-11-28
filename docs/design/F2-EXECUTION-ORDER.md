@@ -418,6 +418,33 @@ Zabranjeno izričito: sigurnosne korekcije, nove optimizacije CI-ja, merge u mai
 Napomena: PROD-SEC-01 je definiran, nije autoriziran za implementaciju; D48 ne mijenja autorizacije F2 paketa.
 ```
 
+```
+Zatvaranje PROD-SEC-01 i PRODUCTION-READINESS-01 | 2026-11-28 | D50 | Verificirani SHA c08845a
+Tekst vlasnika (doslovno, cijeli nalog):
+"Potvrđujem konačno prihvaćanje i zatvaranje PROD-SEC-01 na SHA c08845a00b664a02ddcec74464ca95cef31b2657."
+"Prihvaćam predloženu zamjenu kontrole C2: create --no-build, provjera identiteta slike kontejnera i tek zatim start."
+"C1 i C3 ostaju trajna pravila. Nalazi V-02 do V-07 odgađaju se kao tehnički dug."
+"Ne autoriziram dodatne korekcijske pakete ni ponovljene revizije PROD-SEC-01."
+"Preostale produkcijske obveze objediniti u PRODUCTION-READINESS-01, s ciljem što skorijeg sigurnog lansiranja AutoTramita.es."
+Napomena: nalog ne navodi implementaciju, merge u main ni deployment; D50 ih ne autorizira.
+```
+
+```
+INFRA-CI — završno zatvaranje i operativna aktivacija | 2026-11-28 | Polazni SHA c08845a
+Tekst vlasnika (doslovno, izvaci):
+"Autoriziram završni commit i push svih odobrenih izmjena nastalih tijekom INFRA-CI-01, INFRA-CI-02, INFRA-CI-02-REC-01 i PROD-SEC-01."
+"Preserve the approved C2 replacement: create, verify image identity, then start."
+"Preserve C1, C3 and the mandatory CVE-2026-91403 reassessment."
+"Preserve PRODUCTION-READINESS-01 as a separate pending task, without authorizing its implementation."
+"Do not repeat FULL LOCAL CI solely because of documentation-only changes."
+"Do not introduce further CI optimizations or benchmarks."
+"INFRA-CI-01: CLOSED." "INFRA-CI-02: CLOSED." "INFRA-CI-02-REC-01: CLOSED."
+"PROD-SEC-01: ACCEPTED / CLOSED under D50." "Local CI infrastructure: OPERATIONAL."
+"Preserve any existing limitations and deferred findings."
+Zabranjeno: deployment aplikacije, restart produkcijskih kontejnera, nadogradnja Keycloaka, merge u main, implementacija PRODUCTION-READINESS-01, izmjene poslovnih modula, dodatne sigurnosne revizije, novi infrastrukturni paketi.
+Status i ograničenja: docs/infrastructure/LOCAL-CI.md, "Status (2026-11-28)".
+```
+
 ## 4. Checkpointovi
 | CP | Nakon | Što vlasnik prihvaća | Dokaz |
 |---|---|---|---|
