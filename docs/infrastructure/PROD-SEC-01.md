@@ -1,8 +1,8 @@
 # PROD-SEC-01 — Production security package: IR-05 and IR-06
 
-Date: 2026-11-27. **Status: DEFINED — NOT STARTED. Production blocker (IR-05). No implementation is authorized.** This document defines the package; it changes no code, workflow, acceptance or infrastructure, and authorizes none. Implementation, a merge into `main` and a deployment each need the owner's separate order.
+Date: 2026-11-27, decisions 2026-11-28. **Status: DECIDED (D49) — IMPLEMENTATION AUTHORIZED on `dev`. Production blocker (IR-05) until independently verified and closed by the owner.** The owner answered Q1–Q5 and authorized the implementation (D49, section 7). A merge into `main` and a deployment each still need the owner's separate order; C1–C3 (section 5) stay in force until the owner formally closes the package.
 
-[F2 decision register (D46–D48)](../design/F2-DECISION-REGISTER.md) · [F2 execution order](../design/F2-EXECUTION-ORDER.md) · [CP09 report](../design/F2-CP09-RECONCILIATION-REPORT.md) · [INFRA-CI-02 acceptance](INFRA-CI-02-ACCEPTANCE.md#74-open-obligation-from-f2-ir-05-and-ir-06)
+[F2 decision register (D46–D49)](../design/F2-DECISION-REGISTER.md) · [F2 execution order](../design/F2-EXECUTION-ORDER.md) · [CP09 report](../design/F2-CP09-RECONCILIATION-REPORT.md) · [INFRA-CI-02 acceptance](INFRA-CI-02-ACCEPTANCE.md#74-open-obligation-from-f2-ir-05-and-ir-06)
 
 ## 1. Origin and history
 
@@ -13,6 +13,8 @@ Date: 2026-11-27. **Status: DEFINED — NOT STARTED. Production blocker (IR-05).
 | 2026-11-25 | D47 | severity binding named a mandatory INFRA-CI-02 requirement; interim controls (section 5); both stay deferred |
 | 2026-11-27 | INFRA-CI-02 and INFRA-CI-02-REC-01 accepted | neither package addressed them; noticed while the acceptance was recorded |
 | 2026-11-27 | **D48** (owner) | the obligations of D46 and D47 are **transferred to PROD-SEC-01**; nothing is waived or fulfilled |
+| 2026-11-28 | Decision preparation (W1 read-out, W2 design; outside the repository) | IR-05 applies; IR-06 does not apply to the Local CI broker but to the GitHub builds and the prepared production build |
+| 2026-11-28 | **D49** (owner) | Q1–Q5 answered, clarifications of the criteria approved, implementation authorized (section 7) |
 
 D48 changes only which package carries the obligations. D46 and D47 and the reports that name INFRA-CI-02 remain as the historical record.
 
@@ -112,30 +114,34 @@ D48 does not name IR-06 a production blocker; it requires its applicability and 
 
 All other production blockers stay mandatory and unchanged, among them IR-07, the production Keycloak upgrade and the validity of the image acceptances: [CP09 report section 10](../design/F2-CP09-RECONCILIATION-REPORT.md#10-open-production-blockers) and [CP10 report section 9](../design/F2-CP10-REPORT.md#9-production-blockers). Closing this package alone does not make the application ready for production.
 
-## 7. Open owner decisions
+## 7. Owner decisions (D49)
 
-| # | Question | Note |
-|---|---|---|
-| Q1 | Which severity binds an acceptance: the scanner's, the vendor's, or the higher of both? | D47 says "reported severity"; CVE-2026-91403 differs between the two |
-| Q2 | Bind the installed version, fail when a fix appears, or both? | a fixed Guava version (33.7.2) exists upstream, so "fail on `FixedVersion`" is expected to turn the gate red at once for that acceptance; to be confirmed on a scan report |
-| Q3 | How is the gate summary retained? | an upload needs a workflow change |
-| Q4 | IR-06 scope after W1, including the GitHub build | |
-| Q5 | Which session implements, which verifies | they must differ |
+The questions were open until 2026-11-28; the owner approved the recommended answers as [D49](../design/F2-DECISION-REGISTER.md).
+
+| # | Question | Note (2026-11-27) | Decision (D49, 2026-11-28) |
+|---|---|---|---|
+| Q1 | Which severity binds an acceptance: the scanner's, the vendor's, or the higher of both? | D47 says "reported severity"; CVE-2026-91403 differs between the two | the authoritative **package-level** vendor: `redhat` for operating-system packages, `ghsa` for Java components. Scanner `Severity`, `SeveritySource` and that vendor's `VendorSeverity` must agree; missing, unknown, malformed or inconsistent data fails closed. CRITICAL always fails and cannot be accepted; only HIGH may be accepted; a duplicate acceptance fails. For CVE-2026-91403 the package-level HIGH is authoritative; Red Hat's CVE-level Critical stays documented and is reassessed at every renewal and before every deployment |
+| Q2 | Bind the installed version, fail when a fix appears, or both? | a fixed Guava version (33.7.2) exists upstream, so "fail on `FixedVersion`" is expected to turn the gate red at once for that acceptance; to be confirmed on a scan report | both, by exact comparison with the acceptance: `installed` and `fixed` (`null`: no fix). Any difference invalidates the acceptance. Guava's recorded `fixed: 33.7.2` therefore passes; another or a new fix fails |
+| Q3 | How is the gate summary retained? | an upload needs a workflow change | the gate prints its complete summary into the GitHub and Local CI job logs (disposition of PS-AC-06); no artifact upload. Deployment scan evidence is kept separately in the deployment record; log retention is limited and documented |
+| Q4 | IR-06 scope after W1, including the GitHub build | | `--network none` on both image builds of `ci.yml`; `network: none` in the build of `identity/docker-compose.keycloak-production.yml`; the broker accepts exactly `--network none` from a step and keeps its isolation and every other restriction |
+| Q5 | Which session implements, which verifies | they must differ | the implementing session implements; a completely new independent session verifies the final SHA; the owner decides on acceptance |
+
+The six existing acceptances get `severity`, `installed` and `fixed` (values in D49); identifiers, packages, decisions and expiry dates are unchanged, and this is neither a renewal nor a new acceptance.
 
 ## 8. Acceptance criteria
 
-Elements of IR-05 other than severity binding (PS-AC-04 to PS-AC-07) are met when implemented as written, or when the owner records a different disposition with its reason. PS-AC-01 to PS-AC-03 cannot be dispositioned away.
+Elements of IR-05 other than severity binding (PS-AC-04 to PS-AC-07) are met when implemented as written, or when the owner records a different disposition with its reason. PS-AC-01 to PS-AC-03 cannot be dispositioned away. The column *Clarification (D49)* is part of the criterion since 2026-11-28; PS-AC-07 and PS-AC-10 are unchanged.
 
-| ID | Criterion | Evidence required |
-|---|---|---|
-| PS-AC-01 | Every acceptance records the severity it was accepted at; an entry without it, or with an unknown value, fails the gate | negative tests |
-| PS-AC-02 | A finding reported above its accepted severity fails the gate (accepted HIGH reported CRITICAL: FAIL); equal severity passes; a reported severity the gate does not know fails | positive and negative tests, shown to fail against the old gate |
-| PS-AC-03 | The six existing acceptances carry the severity of their review, by an owner-authorized change that alters no identifier, package, decision or expiry | diff, owner order |
-| PS-AC-04 | An acceptance does not survive a change of installed version and, as decided under Q2, the appearance of a fix | tests |
-| PS-AC-05 | The scanned image is bound by exact tag or image ID; a foreign image whose tag merely ends in the expected name fails | tests |
-| PS-AC-06 | The gate summary, with the accepted findings and the image ID, is retained for every run, on GitHub and in Local CI, without secrets | artifacts of both runs |
-| PS-AC-07 | The documentation of acceptances and of the gate states the rules as implemented, including the severity source (Q1) | review |
-| PS-AC-08 | No existing refusal, test or mandatory step is removed or weakened; full local and GitHub CI pass on the exact final SHA and compare as equivalent | run IDs, SHA, tree, comparison |
-| PS-AC-09 | IR-06: a written determination with run-time evidence for the brokered build and an assessment of the GitHub build; the owner's decision on it; any ordered correction has a regression test and extends no network access | report, decision, tests |
-| PS-AC-10 | An independent session verifies the result, with no open P0 or P1 | verification report |
-| PS-AC-11 | The owner formally closes PROD-SEC-01 in the decision register; only then do C1–C3 end as interim controls, replaced by what the closing decision states | register entry |
+| ID | Criterion | Evidence required | Clarification (D49) |
+|---|---|---|---|
+| PS-AC-01 | Every acceptance records the severity it was accepted at; an entry without it, or with an unknown value, fails the gate | negative tests | only `HIGH` is valid in an acceptance; an entry listed twice fails |
+| PS-AC-02 | A finding reported above its accepted severity fails the gate (accepted HIGH reported CRITICAL: FAIL); equal severity passes; a reported severity the gate does not know fails | positive and negative tests, shown to fail against the old gate | "equal severity passes" applies to HIGH only; the rule also covers inconsistent and missing data on every finding, accepted or not; the new negative tests must fail against the old gate |
+| PS-AC-03 | The six existing acceptances carry the severity of their review, by an owner-authorized change that alters no identifier, package, decision or expiry | diff, owner order | `severity`, `installed` and `fixed` are added, not the severity only |
+| PS-AC-04 | An acceptance does not survive a change of installed version and, as decided under Q2, the appearance of a fix | tests | "appearance of a fix" means any difference from the recorded `fixed` |
+| PS-AC-05 | The scanned image is bound by exact tag or image ID; a foreign image whose tag merely ends in the expected name fails | tests | image id = digest of the configuration in the saved archive = `ImageID` of the report; the tag exact, or its exact Local CI form. `docker inspect .Id` gives another value on the development host (containerd image store) |
+| PS-AC-06 | The gate summary, with the accepted findings and the image ID, is retained for every run, on GitHub and in Local CI, without secrets | artifacts of both runs | the evidence is the job logs of both runs (Q3) |
+| PS-AC-07 | The documentation of acceptances and of the gate states the rules as implemented, including the severity source (Q1) | review | unchanged |
+| PS-AC-08 | No existing refusal, test or mandatory step is removed or weakened; full local and GitHub CI pass on the exact final SHA and compare as equivalent | run IDs, SHA, tree, comparison | accepting the exact `--network none` is not a weakening; extending test data with the new fields is not removing a test |
+| PS-AC-09 | IR-06: a written determination with run-time evidence for the brokered build and an assessment of the GitHub build; the owner's decision on it; any ordered correction has a regression test and extends no network access | report, decision, tests | results of the decision preparation are not durable evidence; the implementation repeats and records them |
+| PS-AC-10 | An independent session verifies the result, with no open P0 or P1 | verification report | unchanged |
+| PS-AC-11 | The owner formally closes PROD-SEC-01 in the decision register; only then do C1–C3 end as interim controls, replaced by what the closing decision states | register entry | the closing decision must say what replaces C2 (proposal: [implementation, section 7](PROD-SEC-01-IMPLEMENTATION.md#7-deployment-safety-replacement-proposed-for-c2)) |
