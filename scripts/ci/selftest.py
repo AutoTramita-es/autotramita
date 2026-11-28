@@ -9,6 +9,7 @@ import copy
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -185,6 +186,43 @@ class BrokerPolicy(unittest.TestCase):
         started = self.policy.command(["run", "-d", "--name", "kc", "autotramita-keycloak:ci"])
         self.assertIn("atci-run-job-autotramita-keycloak:ci", started)
 
+    def test_the_build_of_ci_yml_without_network_keeps_the_same_command(self) -> None:
+        # ci.yml names `--network none` (PROD-SEC-01, D49): the broker accepts exactly that and
+        # builds exactly as without it, with one network option, `none`.
+        context = self.context()
+        offline = self.policy.command(
+            ["build", "--network", "none", "--build-arg", f"KEYCLOAK_IMAGE={self.IMAGE}",
+             "--tag", "autotramita-keycloak:ci", str(context)]
+        )  # fmt: skip
+        self.assertEqual(offline, self.build(context))
+        self.assertEqual(offline.count("--network"), 1)
+        self.assertEqual(offline[offline.index("--network") + 1], "none")
+
+    def test_every_build_step_of_ci_yml_passes_the_broker_without_network(self) -> None:
+        raw = yaml.safe_load(CI_YML.read_text())
+        workflow = CI_YML.read_text()
+        images = set(re.findall(r"[a-z0-9./_-]+:[\w.-]+@sha256:[0-9a-f]{64}", workflow))
+        policy = Policy(
+            "atci-run-job", {"com.autotramita.ci": "1"}, "netns-id", self.ws,
+            (self.ws / "src",), frozenset(images),
+        )  # fmt: skip
+        repo = Path(__file__).resolve().parents[2]
+        context = self.context((repo / "identity" / "keycloak" / "Dockerfile").read_text())
+        builds = [
+            step["run"]
+            for job in raw["jobs"].values()
+            for step in job["steps"]
+            if str(step.get("run", "")).lstrip().startswith("docker build")
+        ]
+        self.assertEqual(len(builds), 2)  # the identity job and the image scan
+        for run in builds:
+            argv = shlex.split(run.replace('"$PWD/', f'"{self.ws}/src/'))
+            with self.subTest(run[:40]):
+                self.assertEqual(argv[1:4], ["build", "--network", "none"])
+                command = policy.command(argv[1:])
+                self.assertEqual(command.count("--network"), 1)
+                self.assertEqual(command[:4], ["docker", "build", "--network", "none"])
+
     def test_every_other_build_is_refused(self) -> None:
         context = self.context()
         tag = ["--tag", "autotramita-keycloak:ci"]
@@ -196,6 +234,16 @@ class BrokerPolicy(unittest.TestCase):
             ["build", *tag, "--build-arg", "KEYCLOAK_IMAGE=alpine", str(context)],
             ["build", *tag, "--build-arg", f"OTHER={self.IMAGE}", str(context)],
             ["build", *tag, "--network", "host", str(context)],
+            # only the exact `--network none` of ci.yml, once (PROD-SEC-01, D49)
+            ["build", *tag, "--network", "bridge", str(context)],
+            ["build", *tag, "--network", "default", str(context)],
+            ["build", *tag, "--network", "None", str(context)],
+            ["build", *tag, "--network", "", str(context)],
+            ["build", *tag, "--network", "container:netns-id", str(context)],
+            ["build", *tag, "--network=none", str(context)],
+            ["build", "--network", "none", "--network", "none", *tag, str(context)],
+            ["build", "--network", "none", *tag, "--network", "host", str(context)],
+            ["build", *tag, "--network"],
             ["build", *tag, "--file", "/tmp/Dockerfile", str(context)],  # noqa: S108
             ["build", *tag],
             ["build", str(context)],

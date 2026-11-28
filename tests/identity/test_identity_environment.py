@@ -68,6 +68,15 @@ def test_the_image_is_built_from_the_same_pinned_images_everywhere() -> None:
     )  # after the build, every node runs the built image
 
 
+def test_every_build_of_the_image_runs_without_network() -> None:
+    # PROD-SEC-01 (D49, IR-06): no RUN instruction of the Dockerfile reaches a network, on
+    # GitHub, in Local CI (the broker adds it as well) and in the prepared production build.
+    builds = re.findall(r"run: >-\n\s+docker build(.*)\n", CI)
+    assert builds == [" --network none", " --network none"]
+    assert re.search(r"^    build:\n      context: [^\n]+\n      network: none\b", PRODUCTION, re.M)
+    assert "network:" not in PRODUCTION.split("build:")[0].split("services:")[1]
+
+
 def test_the_runtime_stage_adds_one_read_only_jar_and_stays_non_root() -> None:
     final = DOCKERFILE.split("FROM ${KEYCLOAK_IMAGE}\n")[-1]
     instructions = [line.split()[0] for line in final.splitlines() if line and line[0].isupper()]

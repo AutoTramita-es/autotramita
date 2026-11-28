@@ -300,7 +300,7 @@ jobs:
           PY
       - name: Build the AutoTramita Keycloak image (pinned upstream, provider from source)
         run: >-
-          docker build
+          docker build --network none
           --build-arg KEYCLOAK_IMAGE=quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3
           --build-arg JDK_IMAGE=eclipse-temurin:21-jdk@sha256:8ad118b146aa92da815b576441acd6b42b38236797ad0b6edc8c200b85bb0734
           --tag autotramita-keycloak:ci
@@ -618,8 +618,10 @@ jobs:
 
   image-scan:
     # KC-SP-12: the image Keycloak runs from, scanned for operating-system and Java
-    # vulnerabilities. The databases are downloaded by the pinned scanner, the scan itself runs
-    # without network, and the gate refuses an old database and every unaccepted CRITICAL or HIGH.
+    # vulnerabilities. The image is built without network, the databases are downloaded by the
+    # pinned scanner, the scan itself runs without network, and the gate (PROD-SEC-01, D49) binds
+    # the report to the saved archive and refuses an old database, any CRITICAL, an unaccepted
+    # HIGH and an untrusted severity; it prints its whole summary into this log.
     name: Keycloak image vulnerability scan (Trivy, offline)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -629,7 +631,7 @@ jobs:
           persist-credentials: false
       - name: Build the AutoTramita Keycloak image (pinned upstream, provider from source)
         run: >-
-          docker build
+          docker build --network none
           --build-arg KEYCLOAK_IMAGE=quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3
           --build-arg JDK_IMAGE=eclipse-temurin:21-jdk@sha256:8ad118b146aa92da815b576441acd6b42b38236797ad0b6edc8c200b85bb0734
           --tag autotramita-keycloak:ci
@@ -661,6 +663,7 @@ jobs:
         run: >-
           python3 scripts/identity/scan_gate.py
           --report "$RUNNER_TEMP/scan/report/keycloak.json"
+          --archive "$RUNNER_TEMP/scan/keycloak-image.tar"
           --cache "$RUNNER_TEMP/trivy"
           --acceptances identity/keycloak/vulnerability-acceptances.json
           --image autotramita-keycloak:ci

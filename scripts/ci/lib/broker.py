@@ -2,8 +2,8 @@
 mount only paths of its own workspace, and use only the isolated network namespace of its job
 (`--network host`, as written in ci.yml) or no network at all. It may build exactly one image,
 the AutoTramita Keycloak image, from a directory of its own workspace, from base images the
-workflow names by digest, without network and without the build cache, from a Dockerfile that
-pulls nothing else. It may save that image into its workspace for the scanner. Only the pinned
+workflow names by digest, without network (the only network option a build may name is
+`--network none`) and without the build cache, from a Dockerfile that pulls nothing else. It may save that image into its workspace for the scanner. Only the pinned
 Trivy image reaches a network, and only to download its vulnerability databases into the
 workspace (the job's egress network); every scan runs without network. Anything else is refused.
 
@@ -99,13 +99,20 @@ class Policy:
         for key, value in self.labels.items():
             out += ["--label", f"{key}={value}"]
         tag = ""
+        offline = False
         index = 0
         while index < len(args) and args[index].startswith("-"):
             flag = args[index]
             if index + 1 >= len(args):
                 raise Refused(f"flag {flag} has no value")
             value = args[index + 1]
-            if flag in ("-t", "--tag"):
+            if flag == "--network":
+                # ci.yml builds without network (PROD-SEC-01, D49); the brokered build always
+                # does. Exactly this one value is accepted, once; it changes nothing above.
+                if value != "none" or offline:
+                    raise Refused(f"docker build --network {value!r} is not allowed in Local CI")
+                offline = True
+            elif flag in ("-t", "--tag"):
                 if value not in BUILDABLE or tag:
                     raise Refused(f"image {value!r} may not be built in Local CI")
                 tag = value

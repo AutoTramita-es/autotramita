@@ -1,8 +1,8 @@
 # PROD-SEC-01 — Production security package: IR-05 and IR-06
 
-Date: 2026-11-27, decisions 2026-11-28. **Status: DECIDED (D49) — IMPLEMENTATION AUTHORIZED on `dev`. Production blocker (IR-05) until independently verified and closed by the owner.** The owner answered Q1–Q5 and authorized the implementation (D49, section 7). A merge into `main` and a deployment each still need the owner's separate order; C1–C3 (section 5) stay in force until the owner formally closes the package.
+Date: 2026-11-27, decisions and implementation 2026-11-28. **Status: DECIDED (D49) — IMPLEMENTED on `dev`, AWAITING INDEPENDENT VERIFICATION (PS-AC-10) AND THE OWNER'S CLOSING DECISION (PS-AC-11). Production blocker (IR-05) until then.** The owner answered Q1–Q5 and authorized the implementation (D49, section 7); implementation, evidence and the proposal that replaces C2: [PROD-SEC-01 implementation](PROD-SEC-01-IMPLEMENTATION.md). A merge into `main` and a deployment each still need the owner's separate order; C1–C3 (section 5) stay in force until the owner formally closes the package.
 
-[F2 decision register (D46–D49)](../design/F2-DECISION-REGISTER.md) · [F2 execution order](../design/F2-EXECUTION-ORDER.md) · [CP09 report](../design/F2-CP09-RECONCILIATION-REPORT.md) · [INFRA-CI-02 acceptance](INFRA-CI-02-ACCEPTANCE.md#74-open-obligation-from-f2-ir-05-and-ir-06)
+[Implementation record](PROD-SEC-01-IMPLEMENTATION.md) · [F2 decision register (D46–D49)](../design/F2-DECISION-REGISTER.md) · [F2 execution order](../design/F2-EXECUTION-ORDER.md) · [CP09 report](../design/F2-CP09-RECONCILIATION-REPORT.md) · [INFRA-CI-02 acceptance](INFRA-CI-02-ACCEPTANCE.md#74-open-obligation-from-f2-ir-05-and-ir-06)
 
 ## 1. Origin and history
 
@@ -93,7 +93,7 @@ IR-07 and every other production blocker (section 6); a Keycloak or dependency u
 
 ## 5. Interim controls
 
-In force until PROD-SEC-01 is **formally closed** (D48). Implementing or verifying a part of the package does not lift them.
+In force until PROD-SEC-01 is **formally closed** (D48, confirmed by D49). Implementing or verifying a part of the package does not lift them. The replacement proposed for C2 is in [the implementation record, section 7](PROD-SEC-01-IMPLEMENTATION.md#7-deployment-safety-replacement-proposed-for-c2).
 
 | # | Control | Source |
 |---|---|---|
