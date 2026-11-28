@@ -12,7 +12,8 @@ Date: 2026-11-28. **Status: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (P
 | Baseline | `3fd4e4a5ea255365f48481575074d29c11f7baf9` (tree `7efe0e5`), the D48 documentation commit |
 | Owner order | "PROD-SEC-01 — D49 Approval and Implementation", 2026-11-28 |
 | Decision record | `c2a3f34` — D49 in the register, decisions and clarifications in [PROD-SEC-01](PROD-SEC-01.md#7-owner-decisions-d49) (before the code) |
-| Implementation | the commit that adds this file; exact SHA, tree and CI evidence: [section 10](#10-ci-evidence) |
+| Implementation | `208ad7faec10d4ac86fe7b068a6bc5d2436bd8bb`, tree `86725a514eebb03b3ffb651780153e355babb4af` (adds this file); CI evidence: [section 10](#10-ci-evidence) |
+| Evidence record | the documentation commit after it, which changes only this file (section 10) |
 | Implementer | one Claude Code session (Q5); the decision preparation was a different session |
 
 ## 2. Approved decisions (D49)
@@ -168,7 +169,32 @@ Limitations:
 
 ## 10. CI evidence
 
-Recorded in the following documentation commit, after the full Local CI run and the GitHub run on the exact implementation SHA.
+Tested commit: **`208ad7faec10d4ac86fe7b068a6bc5d2436bd8bb`**, tree **`86725a514eebb03b3ffb651780153e355babb4af`** (pushed to `dev` on 2026-11-28 together with `c2a3f34`; `dev` was `3fd4e4a` before).
+
+| Evidence | Result |
+|---|---|
+| Full Local CI | `./scripts/ci/run-all.sh --ref 208ad7f…`, run **`20261128-093213-d30c46`**: **PASS**, commit and tree as above, clean; jobs `test`, `identity`, `secrets`, `dependencies`, `image-scan`, `runner` all PASS; all pytest invocations 2266 passed, 0 failed, 0 errors, 0 skipped; `junit.xml` 1818 passed, `junit-identity.xml` 265 passed; 225.8 s |
+| GitHub Actions | workflow run **`46131267013`** (push, `dev`, head `208ad7f…`), 2026-11-28 09:36–09:42 UTC: **success**; all five jobs success — Lint, types, tests (`140936707471`); Keycloak 26.8.2 integration (`140936707569`); Secret scan (`140936707431`); Dependency audit (`140936707261`); Keycloak image vulnerability scan (`140936707399`) |
+| Equivalence | `./scripts/ci/compare-github.sh .ci-results/20261128-093213-d30c46 --run 46131267013`: **EQUIVALENT** (every job and step with the same outcome; equal pytest summaries and test counts; equal test-inventory digest `81b3921f…` for the 1818 selected tests; 579 commits scanned, no leaks); kept as `.ci-results/20261128-093213-d30c46/github-comparison.txt` on the development host |
+
+Gate summaries (PS-AC-06), as printed into the two logs (GitHub: job `140936707399`, step "CRITICAL and HIGH findings need an owner decision"; Local CI: `.ci-results/20261128-093213-d30c46/logs/image-scan/05-critical-and-high-findings-need-an-owner-decision-.log`):
+
+| Field | GitHub | Local CI |
+|---|---|---|
+| Verdict | PASS, no reason, no blocking finding | PASS, no reason, no blocking finding |
+| Build | `docker build --network none …` | brokered `docker build --network none … --no-cache` |
+| Tag | `autotramita-keycloak:ci` | `atci-20261128-093213-d30c46-image-scan-autotramita-keycloak:ci` |
+| `ImageID` = archive configuration digest | `sha256:2f80423a43120c498bc9e06bdb0591e7596bcccb5108d9d3d224f7fd735dd4d6` | `sha256:426d4bfc3852d9fe3f5538747ac4bdee9c9002735a3355e74e66391be8e3e053` |
+| Archive SHA-256 | `560ccae509cd7b570b6eba9a491184b27333f7754455d65bfb370a9e333b5f82` | `b631ee99f3440f9c805853df8be00a1b4e1ae544b35116533af8a26113d1d999` |
+| Report SHA-256 | `65807378b214c7182b56fc1177d17860e06aaf95b97e9ff7ccbca3683d612890` | `c7612ecd7856711968e7bcd07e3cad4cc04149e503a116ac666018e26891ed70` |
+| Acceptance file SHA-256 | `2bd116341e2f6d0c5d78f019b1ca78f81604f4a65d35024e402a28bb0f1561ec` | same |
+| Databases (`UpdatedAt`) | vulnerabilities 2026-11-28 07:04:51 UTC, Java 2026-11-28 00:57:53 UTC | same |
+| Counts | OS: 5 HIGH, 26 MEDIUM, 32 LOW; Java: 1 HIGH, 4 MEDIUM, 1 LOW; **0 CRITICAL** | same |
+| Accepted | the six of section 2, each with its recorded installed version and fix state; no unused acceptance | same |
+
+The image ids differ because the broker adds its run labels to the Local CI build (a different configuration); each report is bound to its own archive. This CI result is **not** the C2 confirmation for a production image (PB-2): it concerns the CI images, not an image built for deployment.
+
+The evidence commit that records this section changes only this file; GitHub Actions runs on it as on every push to `dev`. A new full Local CI run of it was not made (documentation only, PS-AC-08 evidence is the run above on the implementation tree); the independent verifier verifies the final SHA.
 
 ## 11. Remaining production blockers and next steps
 
